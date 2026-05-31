@@ -1,0 +1,528 @@
+/* =========================
+   RESET
+========================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* =========================
+   ROOT COLORS
+========================= */
+
+:root {
+    --background: #121212;
+    --surface: #1e1e1e;
+    --surface-light: #2a2a2a;
+
+    --primary: #7c4dff;
+    --primary-hover: #9168ff;
+
+    --text-primary: #ffffff;
+    --text-secondary: #b3b3b3;
+
+    --border: #333333;
+
+    --danger: #ff5252;
+    --favorite: #ffd54f;
+
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* =========================
+   BODY
+========================= */
+
+body {
+    background-color: var(--background);
+    color: var(--text-primary);
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif;
+
+    min-height: 100vh;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.app-header {
+    padding: 24px 20px 12px 20px;
+}
+
+.app-header h1 {
+    font-size: 1.8rem;
+    margin-bottom: 6px;
+}
+
+.app-header p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* =========================
+   MAIN CONTAINER
+========================= */
+
+.app-container {
+    padding: 0 16px 100px 16px;
+}
+
+/* =========================
+   SEARCH
+========================= */
+
+.search-section {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+
+    background-color: var(--background);
+
+    padding: 12px 0;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.search-input {
+    width: 100%;
+
+    padding: 14px 16px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+    color: var(--text-primary);
+
+    font-size: 1rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* =========================
+   FILTER CHIPS
+========================= */
+
+.filter-section {
+    display: flex;
+    gap: 10px;
+
+    overflow-x: auto;
+
+    margin-top: 12px;
+    padding-bottom: 4px;
+}
+
+.filter-section::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-chip {
+    border: none;
+
+    background-color: var(--surface);
+    color: var(--text-secondary);
+
+    padding: 10px 16px;
+
+    border-radius: 999px;
+
+    white-space: nowrap;
+
+    font-size: 0.9rem;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.filter-chip:hover {
+    background-color: var(--surface-light);
+}
+
+.filter-chip.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* =========================
+   LORA LIST
+========================= */
+
+.lora-list {
+    margin-top: 20px;
+
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+/* =========================
+   LORA CARD
+========================= */
+
+.lora-card {
+    position: relative;
+
+    overflow: hidden;
+
+    aspect-ratio: 3 / 4;
+
+    background-color: var(--surface);
+
+    border: 1px solid var(--border);
+    border-radius: 18px;
+
+    box-shadow: var(--shadow);
+
+    cursor: pointer;
+}
+
+.lora-card img,
+.lora-card-image {
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+    display: block;
+}
+
+.lora-card-placeholder {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background-color: var(--surface-light);
+    color: var(--text-secondary);
+
+    font-size: 0.9rem;
+}
+
+.lora-card-header {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    bottom: 0;
+
+    padding: 42px 12px 12px 12px;
+
+    background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.92),
+        rgba(0, 0, 0, 0.45),
+        transparent
+    );
+
+    color: var(--text-primary);
+
+    z-index: 2;
+}
+
+.lora-card-header h2 {
+    margin: 0;
+
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.lora-meta {
+    margin-bottom: 3px;
+
+    color: var(--text-secondary);
+
+    font-size: 0.75rem;
+}
+
+.favorite-button {
+    position: absolute;
+
+    top: 10px;
+    right: 10px;
+
+    width: 38px;
+    height: 38px;
+
+    border: none;
+    border-radius: 50%;
+
+    background-color: rgba(0, 0, 0, 0.6);
+    color: var(--favorite);
+
+    font-size: 1.35rem;
+
+    cursor: pointer;
+
+    z-index: 3;
+}
+
+/* =========================
+   FLOATING BUTTONS
+========================= */
+
+.floating-add-button {
+    position: fixed;
+
+    right: 20px;
+    bottom: 24px;
+
+    width: 64px;
+    height: 64px;
+
+    border-radius: 50%;
+
+    border: none;
+
+    background-color: var(--primary);
+
+    color: white;
+
+    font-size: 2rem;
+
+    cursor: pointer;
+
+    box-shadow: var(--shadow);
+
+    transition: 0.2s;
+
+    z-index: 900;
+}
+
+.floating-add-button:hover {
+    background-color: var(--primary-hover);
+    transform: scale(1.05);
+}
+
+.go-top-button {
+    position: fixed;
+
+    right: 20px;
+    bottom: 96px;
+
+    width: 48px;
+    height: 48px;
+
+    border: none;
+    border-radius: 50%;
+
+    background-color: rgba(0, 0, 0, 0.75);
+    color: white;
+
+    font-size: 1.4rem;
+
+    cursor: pointer;
+
+    box-shadow: var(--shadow);
+
+    z-index: 900;
+}
+
+/* =========================
+   EMPTY MESSAGE
+========================= */
+
+.empty-message {
+    grid-column: 1 / -1;
+
+    color: var(--text-secondary);
+
+    text-align: center;
+
+    margin-top: 40px;
+
+    font-size: 0.95rem;
+}
+
+/* =========================
+   MODAL
+========================= */
+
+.modal-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    background-color: rgba(0, 0, 0, 0.7);
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+
+    z-index: 1000;
+}
+
+.hidden {
+    display: none;
+}
+
+/* =========================
+   BOTTOM SHEET
+========================= */
+
+.bottom-sheet {
+    width: 100%;
+    max-height: 92vh;
+
+    overflow-y: auto;
+
+    background-color: var(--surface);
+
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+
+    padding: 20px;
+
+    animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* =========================
+   SHEET HEADER
+========================= */
+
+.sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 20px;
+}
+
+.sheet-header h2 {
+    font-size: 1.3rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+
+    color: white;
+
+    font-size: 2rem;
+
+    cursor: pointer;
+}
+
+/* =========================
+   FORM
+========================= */
+
+.lora-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.lora-form label {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+
+    font-size: 0.9rem;
+}
+
+.lora-form input,
+.lora-form textarea,
+.lora-form select {
+    background-color: var(--surface-light);
+
+    border: 1px solid var(--border);
+
+    border-radius: 14px;
+
+    padding: 14px;
+
+    color: white;
+
+    font-size: 1rem;
+}
+
+.lora-form textarea {
+    resize: vertical;
+}
+
+.lora-form input:focus,
+.lora-form textarea:focus,
+.lora-form select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* =========================
+   SUBMIT BUTTON
+========================= */
+
+.submit-button {
+    margin-top: 10px;
+
+    border: none;
+
+    background-color: var(--primary);
+
+    color: white;
+
+    padding: 16px;
+
+    border-radius: 14px;
+
+    font-size: 1rem;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.submit-button:hover {
+    background-color: var(--primary-hover);
+}
+
+/* =========================
+   DESKTOP ENHANCEMENTS
+========================= */
+
+@media (min-width: 768px) {
+
+    .app-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .lora-list {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .bottom-sheet {
+        max-width: 700px;
+        border-radius: 24px;
+    }
+
+    .modal-overlay {
+        align-items: center;
+    }
+}

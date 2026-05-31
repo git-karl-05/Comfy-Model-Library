@@ -1,0 +1,77 @@
+package com.comfy.library.controller;
+
+import com.comfy.library.dto.CreateLoraRequest;
+import com.comfy.library.dto.LoraResponse;
+import com.comfy.library.dto.UpdateLoraRequest;
+import com.comfy.library.entity.LoraCategory;
+import com.comfy.library.service.LoraService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/loras")
+public class LoraController {
+
+    private final LoraService loraService;
+
+    public LoraController(LoraService loraService) {
+        this.loraService = loraService;
+    }
+
+    @PostMapping
+    public ResponseEntity<LoraResponse> saveLora(@RequestBody CreateLoraRequest loraRequest) {
+        return ResponseEntity.ok(loraService.saveLora(loraRequest));
+    }
+
+    @GetMapping("/{loraId}")
+    public ResponseEntity<LoraResponse> getLoraById(@PathVariable long loraId) {
+        return ResponseEntity.ok(loraService.getLoraById(loraId));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<LoraResponse>> getAllLoras() {
+        return ResponseEntity.ok(loraService.getAllLoras());
+    }
+
+    @PutMapping("/{loraId}")
+    public ResponseEntity<LoraResponse> updateLora(@RequestBody UpdateLoraRequest request, @PathVariable Long loraId) {
+        return ResponseEntity.ok(loraService.updateLoraById(request, loraId));
+    }
+
+    @DeleteMapping("/{loraId}")
+    public ResponseEntity<String> deleteLora(@PathVariable Long loraId) {
+        return ResponseEntity.ok(loraService.deleteLoraById(loraId));
+    }
+
+    @GetMapping("/search")
+    public List<LoraResponse> searchLoras(@RequestParam String keyword) {
+        return loraService.searchLoras(keyword);
+    }
+
+    @GetMapping("/category/{category}")
+    public List<LoraResponse> getLorasByCategory(@PathVariable LoraCategory category){
+        return loraService.getLorasByCategory(category);
+    }
+
+    @GetMapping("/group/{groupName}")
+    public List<LoraResponse> getLorasByGroup(@PathVariable String groupName) {
+        return loraService.getLorasByGroup(groupName);
+    }
+
+    @GetMapping("/favorites")
+    public List<LoraResponse> getFavoriteLoras() {
+        return loraService.getFavoriteLoras();
+    }
+
+    @PutMapping("/{loraId}/favorite")
+    public LoraResponse toggleFavorite(@PathVariable Long loraId) {
+        return loraService.toggleFavorite(loraId);
+    }
+
+    @GetMapping("/sorted/group")
+    public List<LoraResponse> getAllLorasSortedByGroupName() {
+        return loraService.getAllLorasSortedByGroupname();
+    }
+}

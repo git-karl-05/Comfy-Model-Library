@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRA Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/app.js" defer></script>
+</head>
+<body>
+
+<header class="app-header">
+    <h1>LoRA Manager</h1>
+    <p>Save prompts, seeds, notes, and favorite LoRAs.</p>
+</header>
+
+<main class="app-container">
+
+    <section class="search-section">
+        <input
+                type="text"
+                id="searchInput"
+                placeholder="Search LoRAs..."
+                class="search-input"
+        >
+    </section>
+
+    <section class="filter-section">
+        <button class="filter-chip active">All</button>
+        <button class="filter-chip">Favorites</button>
+        <button class="filter-chip">Background</button>
+        <button class="filter-chip">Character</button>
+        <button class="filter-chip">Concept</button>
+        <button class="filter-chip">Enhancer</button>
+        <button class="filter-chip">Outfit</button>
+        <button class="filter-chip">Poses</button>
+        <button class="filter-chip">Slider</button>
+        <button class="filter-chip">Style</button>
+
+    </section>
+    <button id="layoutToggleButton" class="layout-toggle-button">
+        Single Column
+    </button>
+
+    <section id="loraList" class="lora-list">
+        <!-- LoRA cards will be loaded here by JavaScript -->
+
+        <article class="lora-card">
+
+            <img
+                    class="lora-card-image"
+                    src="/images/example.jpg"
+                    alt="LoRA Preview"
+            >
+
+            <button class="favorite-button">☆</button>
+
+            <div class="lora-card-header">
+                <p class="lora-meta">by Creator</p>
+                <h2>LoRA Name</h2>
+            </div>
+
+        </article>
+    </section>
+
+</main>
+
+<button id="openAddModalButton" class="floating-add-button">+</button>
+
+<div id="modalOverlay" class="modal-overlay hidden">
+    <section class="bottom-sheet">
+
+        <div class="sheet-header">
+            <h2>Add LoRA</h2>
+            <button id="closeAddModalButton" class="close-button">×</button>
+        </div>
+
+        <form id="addLoraForm" class="lora-form">
+
+            <label>
+                LoRA Name
+                <input type="text" id="loraName" name="loraName" required>
+            </label>
+
+            <label>
+                Version
+                <input type="text" id="version" name="version">
+            </label>
+
+            <label>
+                Creator
+                <input type="text" id="creator" name="creator">
+            </label>
+
+            <label>
+                URL
+                <input type="url" id="url" name="url">
+            </label>
+
+            <label>
+                Category
+                <select id="category" name="category">
+                    <option value="">Select category</option>
+                    <option value="CHARACTER">Character</option>
+                    <option value="STYLE">Style</option>
+                    <option value="CLOTHING">Clothing</option>
+                    <option value="POSE">Pose</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </label>
+
+            <label>
+                Subcategory
+                <input type="text" id="subCategory" name="subCategory">
+            </label>
+
+            <label>
+                Group Name
+                <input type="text" id="groupName" name="groupName">
+            </label>
+
+            <label>
+                Positive Prompt
+                <textarea id="positivePrompt" name="positivePrompt" rows="4"></textarea>
+            </label>
+
+            <label>
+                Negative Prompt
+                <textarea id="negativePrompt" name="negativePrompt" rows="4"></textarea>
+            </label>
+
+            <label>
+                Seed Number
+                <input type="number" id="seedNumber" name="seedNumber">
+            </label>
+
+            <label>
+                Notes
+                <textarea id="notes" name="notes" rows="4"></textarea>
+            </label>
+
+            <button type="submit" class="submit-button">Save LoRA</button>
+
+        </form>
+    </section>
+</div>
+
+</body>
+</html>
