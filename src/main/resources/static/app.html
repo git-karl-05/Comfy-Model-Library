@@ -38,11 +38,17 @@
         <button class="filter-chip">Style</button>
 
     </section>
-    <button id="layoutToggleButton" class="layout-toggle-button">
-        Single Column
-    </button>
+    <section class="layout-controls">
+        <button id="singleColumnButton" class="layout-toggle-button active">
+            Single Column
+        </button>
 
-    <section id="loraList" class="lora-list">
+        <button id="doubleColumnButton" class="layout-toggle-button">
+            Double Column
+        </button>
+    </section>
+
+    <section id="loraList" class="lora-list single-column">
         <!-- LoRA cards will be loaded here by JavaScript -->
 
         <article class="lora-card">
@@ -101,11 +107,15 @@
                 Category
                 <select id="category" name="category">
                     <option value="">Select category</option>
+                    <option value="BACKGROUND">Background</option>
                     <option value="CHARACTER">Character</option>
+                    <option value="CONCEPT">Concept</option>
+                    <option value="ENHANCER">Enhancer</option>
+                    <option value="OUTFIT">Select category</option>
+                    <option value="POSES">Poses</option>
                     <option value="STYLE">Style</option>
-                    <option value="CLOTHING">Clothing</option>
-                    <option value="POSE">Pose</option>
-                    <option value="OTHER">Other</option>
+                    <option value="SLIDER">Slider</option>
+                    <option value="STYLE">Style</option>
                 </select>
             </label>
 

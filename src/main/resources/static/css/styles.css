@@ -164,8 +164,15 @@ body {
     margin-top: 20px;
 
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
     gap: 14px;
+}
+
+.lora-list.single-column {
+    grid-template-columns: 1fr;
+}
+
+.lora-list.double-column {
+    grid-template-columns: repeat(2, 1fr);
 }
 
 /* =========================
@@ -503,6 +510,42 @@ body {
 }
 
 /* =========================
+   LAYOUT CONTROLS
+========================= */
+
+.layout-controls {
+    display: flex;
+    gap: 10px;
+
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+.layout-toggle-button {
+    border: none;
+
+    background-color: var(--surface);
+    color: var(--text-secondary);
+
+    padding: 10px 16px;
+
+    border-radius: 12px;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+.layout-toggle-button:hover {
+    background-color: var(--surface-light);
+}
+
+.layout-toggle-button.active {
+    background-color: var(--primary);
+    color: white;
+}
+
+/* =========================
    DESKTOP ENHANCEMENTS
 ========================= */
 
@@ -511,10 +554,6 @@ body {
     .app-container {
         max-width: 900px;
         margin: 0 auto;
-    }
-
-    .lora-list {
-        grid-template-columns: repeat(3, 1fr);
     }
 
     .bottom-sheet {

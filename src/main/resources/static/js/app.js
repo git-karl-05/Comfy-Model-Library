@@ -2,6 +2,7 @@ const API_BASE_URL = "/api/loras";
 
 document.addEventListener("DOMContentLoaded", () => {
     fetchAllLoras();
+    setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
 });
@@ -256,5 +257,31 @@ function setupGoToTopButton() {
             top: 0,
             behavior: "smooth"
         });
+    });
+}
+
+function setupLayoutButtons() {
+    const singleButton = document.getElementById("singleColumnButton");
+    const doubleButton = document.getElementById("doubleColumnButton");
+    const loraList = document.getElementById("loraList");
+
+    if (!singleButton || !doubleButton || !loraList) {
+        return;
+    }
+
+    singleButton.addEventListener("click", () => {
+        loraList.classList.remove("double-column");
+        loraList.classList.add("single-column");
+
+        singleButton.classList.add("active");
+        doubleButton.classList.remove("active");
+    });
+
+    doubleButton.addEventListener("click", () => {
+        loraList.classList.remove("single-column");
+        loraList.classList.add("double-column");
+
+        doubleButton.classList.add("active");
+        singleButton.classList.remove("active");
     });
 }
