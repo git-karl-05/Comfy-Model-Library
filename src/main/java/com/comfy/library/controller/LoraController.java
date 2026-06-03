@@ -8,6 +8,7 @@ import com.comfy.library.service.LoraService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -73,5 +74,10 @@ public class LoraController {
     @GetMapping("/sorted/group")
     public List<LoraResponse> getAllLorasSortedByGroupName() {
         return loraService.getAllLorasSortedByGroupname();
+    }
+
+    @GetMapping("/categories")
+    public List<LoraCategory> getCategories() {
+        return loraService.getCategories();
     }
 }

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add LoRA</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/add-lora.js" defer></script>
+</head>
+<body>
+
+<header class="app-header">
+    <h1>Add LoRA</h1>
+    <p>Create a new LoRA, pose, style, or prompt asset.</p>
+</header>
+
+
+<main class="app-container">
+
+    <form id="addLoraForm" class="lora-form">
+
+        <label>
+            LoRA Name
+            <input type="text" id="loraName" required>
+        </label>
+
+        <label>
+            Version
+            <input type="text" id="version">
+        </label>
+
+        <label>
+            Creator
+            <input type="text" id="creator">
+        </label>
+
+        <label>
+            URL
+            <input type="url" id="url">
+        </label>
+
+        <label>
+            Category
+            <select id="category" required>
+                <option value="">Loading categories...</option>
+            </select>
+        </label>
+
+        <label>
+            Subcategory
+            <input type="text" id="subCategory">
+        </label>
+
+        <label>
+            Group Name
+            <input type="text" id="groupName">
+        </label>
+
+        <label>
+            Positive Prompt
+            <textarea id="positivePrompt" rows="5"></textarea>
+        </label>
+
+        <label>
+            Negative Prompt
+            <textarea id="negativePrompt" rows="5"></textarea>
+        </label>
+
+        <label>
+            Seed Number
+            <input type="number" id="seedNumber">
+        </label>
+
+        <label>
+            Notes
+            <textarea id="notes" rows="5"></textarea>
+        </label>
+
+        <button type="submit" class="submit-button">Save LoRA</button>
+
+        <a href="/html/index.html" class="secondary-link">Back to Gallery</a>
+
+    </form>
+
+</main>
+
+</body>
+</html>

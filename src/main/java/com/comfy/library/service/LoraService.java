@@ -9,6 +9,7 @@ import com.comfy.library.repository.LoraRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -138,6 +139,10 @@ public class LoraService {
                 .stream()
                 .map(LoraResponse::new)
                 .collect(Collectors.toList());
+    }
+
+    public List<LoraCategory> getCategories() {
+        return Arrays.asList(LoraCategory.values());
     }
 }
 
