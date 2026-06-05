@@ -49,6 +49,14 @@ body {
     min-height: 100vh;
 }
 
+.content-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
 /* =========================
    HEADER
 ========================= */
@@ -79,10 +87,18 @@ body {
    SEARCH
 ========================= */
 
-.search-section {
+/* =========================
+   TOP TOOLBAR
+========================= */
+
+.top-toolbar {
     position: sticky;
     top: 0;
     z-index: 900;
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
 
     background-color: var(--background);
 
@@ -91,7 +107,30 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
+.options-button {
+    width: 44px;
+    height: 44px;
+
+    flex: 0 0 44px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+    color: var(--text-primary);
+
+    font-size: 1.4rem;
+
+    cursor: pointer;
+}
+
+.options-button:hover {
+    background-color: var(--surface-light);
+}
+
 .search-input {
+    flex: 1;
+
     width: 100%;
 
     padding: 14px 16px;
@@ -162,7 +201,6 @@ body {
 
 .lora-list {
     margin-top: 20px;
-
     display: grid;
     gap: 14px;
 }
@@ -175,24 +213,25 @@ body {
     grid-template-columns: repeat(2, 1fr);
 }
 
+.lora-list.single-column .lora-card {
+    aspect-ratio: 3 / 4;
+}
+
+.lora-list.double-column .lora-card {
+    aspect-ratio: 4 / 5;
+}
+
 /* =========================
    LORA CARD
 ========================= */
 
 .lora-card {
     position: relative;
-
     overflow: hidden;
-
-    aspect-ratio: 3 / 4;
-
     background-color: var(--surface);
-
     border: 1px solid var(--border);
     border-radius: 18px;
-
     box-shadow: var(--shadow);
-
     cursor: pointer;
 }
 
@@ -510,37 +549,84 @@ body {
 }
 
 /* =========================
-   LAYOUT CONTROLS
+   GALLERY CONTROLS
 ========================= */
 
-.layout-controls {
+.gallery-controls {
     display: flex;
+    align-items: flex-end;
     gap: 10px;
 
-    margin-top: 16px;
+    margin-top: 12px;
     margin-bottom: 16px;
 }
 
-.layout-toggle-button {
-    border: none;
+.category-filter-wrapper {
+    flex: 1;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.category-filter-label {
+    flex: 0 0 auto;
+
+    color: var(--text-secondary);
+
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.category-filter {
+    width: 100%;
+
+    padding: 12px 14px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+    color: var(--text-primary);
+
+    font-size: 0.95rem;
+}
+
+.category-filter:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.layout-icon-controls {
+    display: flex;
+    gap: 8px;
+
+    flex: 0 0 auto;
+}
+
+.layout-icon-button {
+    width: 42px;
+    height: 42px;
+
+    border: 1px solid var(--border);
+    border-radius: 12px;
 
     background-color: var(--surface);
     color: var(--text-secondary);
 
-    padding: 10px 16px;
-
-    border-radius: 12px;
+    font-size: 1.1rem;
 
     cursor: pointer;
 
     transition: 0.2s;
 }
 
-.layout-toggle-button:hover {
+.layout-icon-button:hover {
     background-color: var(--surface-light);
 }
 
-.layout-toggle-button.active {
+.layout-icon-button.active {
     background-color: var(--primary);
     color: white;
 }
