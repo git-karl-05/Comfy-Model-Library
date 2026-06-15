@@ -25,27 +25,39 @@
         >
     </section>
 
-    <section class="filter-section">
-        <button class="filter-chip active">All</button>
-        <button class="filter-chip">Favorites</button>
-        <button class="filter-chip">Background</button>
-        <button class="filter-chip">Character</button>
-        <button class="filter-chip">Concept</button>
-        <button class="filter-chip">Enhancer</button>
-        <button class="filter-chip">Outfit</button>
-        <button class="filter-chip">Poses</button>
-        <button class="filter-chip">Slider</button>
-        <button class="filter-chip">Style</button>
+    <section class="filter-toolbar">
 
-    </section>
-    <section class="layout-controls">
-        <button id="singleColumnButton" class="layout-toggle-button active">
-            Single Column
-        </button>
+        <div class="filter-carousel">
+            <button class="filter-chip active">All</button>
+            <button class="filter-chip">Favorites</button>
+            <button class="filter-chip">Background</button>
+            <button class="filter-chip">Character</button>
+            <button class="filter-chip">Concept</button>
+            <button class="filter-chip">Enhancer</button>
+            <button class="filter-chip">Outfit</button>
+            <button class="filter-chip">Poses</button>
+            <button class="filter-chip">Slider</button>
+            <button class="filter-chip">Style</button>
+        </div>
 
-        <button id="doubleColumnButton" class="layout-toggle-button">
-            Double Column
-        </button>
+        <div class="layout-controls">
+            <button
+                    id="singleColumnButton"
+                    class="layout-toggle-button active"
+                    title="Single Column"
+            >
+                <span class="layout-icon single"></span>
+            </button>
+
+            <button
+                    id="doubleColumnButton"
+                    class="layout-toggle-button"
+                    title="Double Column"
+            >
+                <span class="layout-icon double"></span>
+            </button>
+        </div>
+
     </section>
 
     <section id="loraList" class="lora-list single-column">

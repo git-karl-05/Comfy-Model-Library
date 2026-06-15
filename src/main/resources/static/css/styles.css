@@ -114,17 +114,32 @@ body {
    FILTER CHIPS
 ========================= */
 
-.filter-section {
+/* =========================
+   FILTER TOOLBAR
+========================= */
+
+.filter-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    margin-top: 12px;
+}
+
+.filter-carousel {
+    flex: 1;
+
     display: flex;
     gap: 10px;
 
     overflow-x: auto;
 
-    margin-top: 12px;
     padding-bottom: 4px;
+
+    scrollbar-width: none;
 }
 
-.filter-section::-webkit-scrollbar {
+.filter-carousel::-webkit-scrollbar {
     display: none;
 }
 
@@ -515,21 +530,24 @@ body {
 
 .layout-controls {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 
-    margin-top: 16px;
-    margin-bottom: 16px;
+    flex-shrink: 0;
 }
 
 .layout-toggle-button {
+    width: 42px;
+    height: 42px;
+
     border: none;
+    border-radius: 12px;
 
     background-color: var(--surface);
     color: var(--text-secondary);
 
-    padding: 10px 16px;
-
-    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     cursor: pointer;
 
@@ -543,6 +561,52 @@ body {
 .layout-toggle-button.active {
     background-color: var(--primary);
     color: white;
+}
+.layout-icon.single {
+    width: 18px;
+    height: 18px;
+
+    background:
+            linear-gradient(currentColor 0 0) 0 0/100% 4px no-repeat,
+            linear-gradient(currentColor 0 0) 0 7px/100% 4px no-repeat,
+            linear-gradient(currentColor 0 0) 0 14px/100% 4px no-repeat;
+}
+
+.layout-icon.double {
+    width: 18px;
+    height: 18px;
+
+    background:
+            linear-gradient(currentColor 0 0) 0 0/7px 4px no-repeat,
+            linear-gradient(currentColor 0 0) 11px 0/7px 4px no-repeat,
+
+            linear-gradient(currentColor 0 0) 0 7px/7px 4px no-repeat,
+            linear-gradient(currentColor 0 0) 11px 7px/7px 4px no-repeat,
+
+            linear-gradient(currentColor 0 0) 0 14px/7px 4px no-repeat,
+            linear-gradient(currentColor 0 0) 11px 14px/7px 4px no-repeat;
+}
+
+.layout-icon.double::before,
+.layout-icon.double::after {
+    content: "";
+
+    position: absolute;
+    top: 0;
+
+    width: 7px;
+    height: 18px;
+
+    border: 2px solid currentColor;
+    border-radius: 3px;
+}
+
+.layout-icon.double::before {
+    left: 0;
+}
+
+.layout-icon.double::after {
+    right: 0;
 }
 
 /* =========================
