@@ -19,12 +19,25 @@
                 ☰
             </button>
 
-            <input
-                    type="text"
-                    id="searchInput"
-                    placeholder="Search LoRAs..."
-                    class="search-input"
-            >
+            <div class="toolbar-actions">
+                <div class="search-wrapper" id="searchWrapper">
+                    <button id="openSearchButton" class="search-icon-button" aria-label="Open search">
+                        🔍
+                    </button>
+
+                    <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Search LoRAs..."
+                            class="search-input"
+                    >
+
+                    <button id="closeSearchButton" class="search-close-button" aria-label="Close search">
+                        ×
+                    </button>
+                </div>
+
+            </div>
         </section>
 
         <section class="gallery-controls">

@@ -358,3 +358,20 @@ function populateLoraDetailsModal(lora) {
         urlLink.classList.add("hidden");
     }
 }
+
+const searchWrapper = document.getElementById("searchWrapper");
+const openSearchButton = document.getElementById("openSearchButton");
+const closeSearchButton = document.getElementById("closeSearchButton");
+const searchInput = document.getElementById("searchInput");
+
+openSearchButton.addEventListener("click", () => {
+    searchWrapper.classList.add("active");
+    searchInput.focus();
+});
+
+closeSearchButton.addEventListener("click", () => {
+    searchInput.value = "";
+    searchWrapper.classList.remove("active");
+
+    searchInput.dispatchEvent(new Event("input"));
+});

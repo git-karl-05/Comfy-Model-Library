@@ -149,6 +149,113 @@ body {
     border-color: var(--primary);
 }
 
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    margin-left: auto;
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
+
+    width: 44px;
+    height: 44px;
+
+    overflow: hidden;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+
+    transition: width 0.25s ease;
+}
+
+.search-wrapper.active {
+    width: min(260px, 62vw);
+}
+
+.search-icon-button,
+.search-close-button {
+    width: 44px;
+    height: 44px;
+
+    flex: 0 0 44px;
+
+    border: none;
+
+    background: transparent;
+    color: var(--text-primary);
+
+    font-size: 1.1rem;
+
+    cursor: pointer;
+}
+
+.search-input {
+    width: 0;
+    flex: 1;
+
+    padding: 0;
+
+    border: none;
+    background: transparent;
+
+    color: var(--text-primary);
+
+    font-size: 0.95rem;
+
+    opacity: 0;
+    pointer-events: none;
+}
+
+.search-wrapper.active .search-input {
+    width: auto;
+    padding: 0 6px;
+
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: transparent;
+}
+
+.search-close-button {
+    display: none;
+    color: var(--text-secondary);
+}
+
+.search-wrapper.active .search-close-button {
+    display: block;
+}
+
+.top-add-button {
+    width: 44px;
+    height: 44px;
+
+    border: none;
+    border-radius: 14px;
+
+    background-color: var(--primary);
+    color: white;
+
+    font-size: 1.6rem;
+    line-height: 1;
+
+    cursor: pointer;
+
+    box-shadow: var(--shadow);
+}
+
+.top-add-button:hover {
+    background-color: var(--primary-hover);
+}
+
 /* =========================
    FILTER CHIPS
 ========================= */
