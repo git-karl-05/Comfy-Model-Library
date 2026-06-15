@@ -256,6 +256,83 @@ body {
     background-color: var(--primary-hover);
 }
 
+.top-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: 10px;
+
+    background-color: var(--background);
+    padding: 12px 0;
+
+    border-bottom: 1px solid var(--border);
+}
+
+.toolbar-title {
+    text-align: center;
+
+    font-size: 1.05rem;
+    font-weight: 700;
+
+    color: var(--text-primary);
+}
+
+.search-icon-button {
+    width: 44px;
+    height: 44px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+    color: var(--text-primary);
+
+    font-size: 1.1rem;
+
+    cursor: pointer;
+}
+
+.search-bar-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 12px;
+}
+
+.search-bar-section .search-input {
+    flex: 1;
+
+    padding: 14px 16px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+    color: var(--text-primary);
+
+    font-size: 1rem;
+}
+
+.search-close-button {
+    width: 44px;
+    height: 44px;
+
+    border: 1px solid var(--border);
+    border-radius: 14px;
+
+    background-color: var(--surface);
+    color: var(--text-secondary);
+
+    font-size: 1.5rem;
+
+    cursor: pointer;
+}
+
 /* =========================
    FILTER CHIPS
 ========================= */

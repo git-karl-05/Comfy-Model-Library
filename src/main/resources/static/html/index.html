@@ -19,25 +19,24 @@
                 ☰
             </button>
 
-            <div class="toolbar-actions">
-                <div class="search-wrapper" id="searchWrapper">
-                    <button id="openSearchButton" class="search-icon-button" aria-label="Open search">
-                        🔍
-                    </button>
+            <h1 class="toolbar-title">LoRA Gallery</h1>
 
-                    <input
-                            type="text"
-                            id="searchInput"
-                            placeholder="Search LoRAs..."
-                            class="search-input"
-                    >
+            <button id="openSearchButton" class="search-icon-button" aria-label="Open search">
+                🔍
+            </button>
+        </section>
 
-                    <button id="closeSearchButton" class="search-close-button" aria-label="Close search">
-                        ×
-                    </button>
-                </div>
+        <section id="searchBarSection" class="search-bar-section hidden">
+            <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search LoRAs..."
+                    class="search-input"
+            >
 
-            </div>
+            <button id="closeSearchButton" class="search-close-button" aria-label="Close search">
+                ×
+            </button>
         </section>
 
         <section class="gallery-controls">
@@ -89,7 +88,6 @@
 
 </main>
 
-<button id="openAddModalButton" class="floating-add-button">+</button>
 <div id="loraDetailsModal" class="modal-overlay hidden">
     <section class="bottom-sheet lora-details-sheet">
 
