@@ -7,165 +7,120 @@
     <link rel="stylesheet" href="/css/styles.css">
     <script src="/js/app.js" defer></script>
 </head>
-<body>
 
-<header class="app-header">
-    <h1>LoRA Manager</h1>
-    <p>Save prompts, seeds, notes, and favorite LoRAs.</p>
-</header>
+<body>
 
 <main class="app-container">
 
-    <section class="search-section">
-        <input
-                type="text"
-                id="searchInput"
-                placeholder="Search LoRAs..."
-                class="search-input"
-        >
-    </section>
+    <div class="content-container">
 
-    <section class="filter-toolbar">
-
-        <div class="filter-carousel">
-            <button class="filter-chip active">All</button>
-            <button class="filter-chip">Favorites</button>
-            <button class="filter-chip">Background</button>
-            <button class="filter-chip">Character</button>
-            <button class="filter-chip">Concept</button>
-            <button class="filter-chip">Enhancer</button>
-            <button class="filter-chip">Outfit</button>
-            <button class="filter-chip">Poses</button>
-            <button class="filter-chip">Slider</button>
-            <button class="filter-chip">Style</button>
-        </div>
-
-        <div class="layout-controls">
-            <button
-                    id="singleColumnButton"
-                    class="layout-toggle-button active"
-                    title="Single Column"
-            >
-                <span class="layout-icon single"></span>
+        <section class="top-toolbar">
+            <button id="optionsButton" class="options-button" aria-label="Open options">
+                ☰
             </button>
 
-            <button
-                    id="doubleColumnButton"
-                    class="layout-toggle-button"
-                    title="Double Column"
+            <input
+                    type="text"
+                    id="searchInput"
+                    placeholder="Search LoRAs..."
+                    class="search-input"
             >
-                <span class="layout-icon double"></span>
-            </button>
-        </div>
+        </section>
 
-    </section>
+        <section class="gallery-controls">
 
-    <section id="loraList" class="lora-list single-column">
-        <!-- LoRA cards will be loaded here by JavaScript -->
+            <div class="category-filter-wrapper">
 
-        <article class="lora-card">
+                <span class="category-filter-label">
+                    Category
+                </span>
 
-            <img
-                    class="lora-card-image"
-                    src="/images/example.jpg"
-                    alt="LoRA Preview"
-            >
-
-            <button class="favorite-button">☆</button>
-
-            <div class="lora-card-header">
-                <p class="lora-meta">by Creator</p>
-                <h2>LoRA Name</h2>
-            </div>
-
-        </article>
-    </section>
-
-</main>
-
-<button id="openAddModalButton" class="floating-add-button">+</button>
-
-<div id="modalOverlay" class="modal-overlay hidden">
-    <section class="bottom-sheet">
-
-        <div class="sheet-header">
-            <h2>Add LoRA</h2>
-            <button id="closeAddModalButton" class="close-button">×</button>
-        </div>
-
-        <form id="addLoraForm" class="lora-form">
-
-            <label>
-                LoRA Name
-                <input type="text" id="loraName" name="loraName" required>
-            </label>
-
-            <label>
-                Version
-                <input type="text" id="version" name="version">
-            </label>
-
-            <label>
-                Creator
-                <input type="text" id="creator" name="creator">
-            </label>
-
-            <label>
-                URL
-                <input type="url" id="url" name="url">
-            </label>
-
-            <label>
-                Category
-                <select id="category" name="category">
-                    <option value="">Select category</option>
+                <select id="categoryFilter" class="category-filter">
+                    <option value="ALL">All</option>
+                    <option value="FAVORITES">Favorites</option>
                     <option value="BACKGROUND">Background</option>
                     <option value="CHARACTER">Character</option>
                     <option value="CONCEPT">Concept</option>
                     <option value="ENHANCER">Enhancer</option>
-                    <option value="OUTFIT">Select category</option>
+                    <option value="OUTFIT">Outfit</option>
                     <option value="POSES">Poses</option>
-                    <option value="STYLE">Style</option>
                     <option value="SLIDER">Slider</option>
                     <option value="STYLE">Style</option>
                 </select>
-            </label>
 
-            <label>
-                Subcategory
-                <input type="text" id="subCategory" name="subCategory">
-            </label>
+            </div>
 
-            <label>
-                Group Name
-                <input type="text" id="groupName" name="groupName">
-            </label>
+            <div class="layout-icon-controls">
+                <button
+                        id="singleColumnButton"
+                        class="layout-icon-button active"
+                        aria-label="Single column view">
+                    ☰
+                </button>
 
-            <label>
-                Positive Prompt
-                <textarea id="positivePrompt" name="positivePrompt" rows="4"></textarea>
-            </label>
+                <button
+                        id="doubleColumnButton"
+                        class="layout-icon-button"
+                        aria-label="Double column view">
+                    ▦
+                </button>
+            </div>
 
-            <label>
-                Negative Prompt
-                <textarea id="negativePrompt" name="negativePrompt" rows="4"></textarea>
-            </label>
+        </section>
 
-            <label>
-                Seed Number
-                <input type="number" id="seedNumber" name="seedNumber">
-            </label>
+        <section id="loraList" class="lora-list single-column">
+            <!-- LoRA cards will be loaded here by JavaScript -->
+        </section>
 
-            <label>
-                Notes
-                <textarea id="notes" name="notes" rows="4"></textarea>
-            </label>
+    </div>
 
-            <button type="submit" class="submit-button">Save LoRA</button>
+</main>
 
-        </form>
+<button id="openAddModalButton" class="floating-add-button">+</button>
+<div id="loraDetailsModal" class="modal-overlay hidden">
+    <section class="bottom-sheet lora-details-sheet">
+
+        <div class="sheet-header">
+            <div>
+                <h2 id="detailsLoraName">LoRA Name</h2>
+                <p id="detailsCreator" class="details-subtitle">by Creator</p>
+            </div>
+
+            <button id="closeLoraDetailsButton" class="close-button">×</button>
+        </div>
+
+        <div id="detailsImageContainer" class="details-image-container">
+            <div class="lora-card-placeholder">No Image</div>
+        </div>
+
+        <section class="details-info">
+            <p><strong>Version:</strong> <span id="detailsVersion">N/A</span></p>
+            <p><strong>Category:</strong> <span id="detailsCategory">N/A</span></p>
+            <p><strong>Subcategory:</strong> <span id="detailsSubCategory">N/A</span></p>
+            <p><strong>Group:</strong> <span id="detailsGroupName">N/A</span></p>
+            <p><strong>Seed:</strong> <span id="detailsSeedNumber">N/A</span></p>
+        </section>
+
+        <section class="details-prompt-section">
+            <h3>Positive Prompt</h3>
+            <pre id="detailsPositivePrompt" class="details-prompt-box"></pre>
+        </section>
+
+        <section class="details-prompt-section">
+            <h3>Negative Prompt</h3>
+            <pre id="detailsNegativePrompt" class="details-prompt-box"></pre>
+        </section>
+
+        <section class="details-prompt-section">
+            <h3>Notes</h3>
+            <pre id="detailsNotes" class="details-prompt-box"></pre>
+        </section>
+
+        <a id="detailsUrl" class="details-url-button hidden" href="#" target="_blank">
+            Open URL
+        </a>
+
     </section>
 </div>
-
 </body>
 </html>

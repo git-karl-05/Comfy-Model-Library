@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setupSearch();
     setupGoToTopButton();
     setupAddButton();
+    setupCategoryFilter();
+    setupLoraDetailsModal();
 });
 
 async function fetchAllLoras() {
@@ -87,7 +89,7 @@ function createLoraCard(lora) {
     `;
 
     card.addEventListener("click", () => {
-        console.log("Clicked LoRA:", lora.id);
+        openLoraDetailsModal(lora.id);
     });
 
     const favoriteButton = card.querySelector(".favorite-button");
@@ -191,6 +193,61 @@ function setupLayoutButtons() {
     });
 }
 
+function setupCategoryFilter() {
+    const categoryFilter = document.getElementById("categoryFilter");
+
+    if (!categoryFilter) {
+        return;
+    }
+
+    categoryFilter.addEventListener("change", async () => {
+        const selectedCategory = categoryFilter.value;
+
+        if (selectedCategory === "ALL") {
+            await fetchAllLoras();
+            return;
+        }
+
+        if (selectedCategory === "FAVORITES") {
+            await fetchFavoriteLoras();
+            return;
+        }
+
+        await fetchLorasByCategory(selectedCategory);
+    });
+}
+async function fetchLorasByCategory(category) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/category/${category}`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch LoRAs by category");
+        }
+
+        const loras = await response.json();
+        displayLoras(loras);
+
+    } catch (error) {
+        console.error("Category filter error:", error);
+    }
+}
+
+async function fetchFavoriteLoras() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/favorites`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch favorite LoRAs");
+        }
+
+        const loras = await response.json();
+        displayLoras(loras);
+
+    } catch (error) {
+        console.error("Favorites filter error:", error);
+    }
+}
+
 function setupAddButton() {
     const addButton = document.getElementById("openAddModalButton");
 
@@ -201,4 +258,103 @@ function setupAddButton() {
     addButton.addEventListener("click", () => {
         window.location.href = "/html/add-lora.html";
     });
+}
+
+function setupLoraDetailsModal() {
+    const closeButton = document.getElementById("closeLoraDetailsButton");
+    const modalOverlay = document.getElementById("loraDetailsModal");
+
+    if (!closeButton || !modalOverlay) {
+        return;
+    }
+
+    closeButton.addEventListener("click", closeLoraDetailsModal);
+
+    modalOverlay.addEventListener("click", (event) => {
+        if (event.target === modalOverlay) {
+            closeLoraDetailsModal();
+        }
+    });
+}
+
+async function openLoraDetailsModal(loraId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/${loraId}`);
+
+        if (!response.ok) {
+            throw new Error("Failed to load LoRA details");
+        }
+
+        const lora = await response.json();
+
+        populateLoraDetailsModal(lora);
+
+        document.getElementById("loraDetailsModal").classList.remove("hidden");
+
+    } catch (error) {
+        console.error("Error loading LoRA details:", error);
+        alert("Unable to load LoRA details.");
+    }
+}
+
+function closeLoraDetailsModal() {
+    document.getElementById("loraDetailsModal").classList.add("hidden");
+}
+
+function populateLoraDetailsModal(lora) {
+    document.getElementById("detailsLoraName").textContent =
+        lora.loraName || "Untitled LoRA";
+
+    document.getElementById("detailsCreator").textContent =
+        lora.creator ? `by ${lora.creator}` : "Unknown creator";
+
+    document.getElementById("detailsVersion").textContent =
+        lora.version || "N/A";
+
+    document.getElementById("detailsCategory").textContent =
+        lora.category || "N/A";
+
+    document.getElementById("detailsSubCategory").textContent =
+        lora.subCategory || "N/A";
+
+    document.getElementById("detailsGroupName").textContent =
+        lora.groupName || "N/A";
+
+    document.getElementById("detailsSeedNumber").textContent =
+        lora.seedNumber ?? "N/A";
+
+    document.getElementById("detailsPositivePrompt").textContent =
+        lora.positivePrompt || "No positive prompt saved.";
+
+    document.getElementById("detailsNegativePrompt").textContent =
+        lora.negativePrompt || "No negative prompt saved.";
+
+    document.getElementById("detailsNotes").textContent =
+        lora.notes || "No notes saved.";
+
+    const imageContainer = document.getElementById("detailsImageContainer");
+
+    if (lora.filePath) {
+        imageContainer.innerHTML = `
+            <img
+                src="${lora.filePath}"
+                alt="${lora.loraName || "LoRA Preview"}"
+                class="details-image"
+            >
+        `;
+    } else {
+        imageContainer.innerHTML = `
+            <div class="lora-card-placeholder">No Image</div>
+        `;
+    }
+
+    const urlLink = document.getElementById("detailsUrl");
+
+    if (lora.url) {
+        urlLink.href = lora.url;
+        urlLink.classList.remove("hidden");
+    } else {
+        urlLink.href = "#";
+        urlLink.classList.add("hidden");
+    }
 }
