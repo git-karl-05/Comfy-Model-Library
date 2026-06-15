@@ -359,18 +359,18 @@ function populateLoraDetailsModal(lora) {
     }
 }
 
-const searchBarSection = document.getElementById("searchBarSection");
+const searchOverlay = document.getElementById("searchOverlay");
 const openSearchButton = document.getElementById("openSearchButton");
 const closeSearchButton = document.getElementById("closeSearchButton");
 const searchInput = document.getElementById("searchInput");
 
 openSearchButton.addEventListener("click", () => {
-    searchBarSection.classList.remove("hidden");
+    searchOverlay.classList.remove("hidden");
     searchInput.focus();
 });
 
 closeSearchButton.addEventListener("click", () => {
     searchInput.value = "";
-    searchBarSection.classList.add("hidden");
+    searchOverlay.classList.add("hidden");
     searchInput.dispatchEvent(new Event("input"));
 });
