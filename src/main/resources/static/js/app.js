@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupCategoryFilter();
     setupLoraDetailsModal();
     setupSearchOverlay();
+    setupMenu();
 });
 
 async function fetchAllLoras() {
@@ -398,4 +399,29 @@ function populateLoraDetailsModal(lora) {
         urlLink.href = "#";
         urlLink.classList.add("hidden");
     }
+}
+
+function setupMenu() {
+    const optionsButton = document.getElementById("optionsButton");
+    const sideMenu = document.getElementById("sideMenu");
+    const closeMenuButton = document.getElementById("closeMenuButton");
+    const menuBackdrop = document.getElementById("menuBackdrop");
+
+    if (!optionsButton || !sideMenu || !closeMenuButton || !menuBackdrop) {
+        return;
+    }
+
+    const openMenu = () => {
+        sideMenu.classList.remove("hidden");
+        menuBackdrop.classList.remove("hidden");
+    };
+
+    const closeMenu = () => {
+        sideMenu.classList.add("hidden");
+        menuBackdrop.classList.add("hidden");
+    };
+
+    optionsButton.addEventListener("click", openMenu);
+    closeMenuButton.addEventListener("click", closeMenu);
+    menuBackdrop.addEventListener("click", closeMenu);
 }
