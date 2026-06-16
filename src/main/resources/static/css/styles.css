@@ -93,7 +93,7 @@ body {
     z-index: 900;
 
     display: grid;
-    grid-template-columns: 44px 1fr 44px;
+    grid-template-columns: 44px 1fr auto;
     align-items: center;
     gap: 10px;
 
@@ -103,15 +103,24 @@ body {
     border-bottom: 1px solid var(--border);
 }
 
+.toolbar-right-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .toolbar-title {
     text-align: center;
-    font-size: 1.05rem;
-    font-weight: 700;
+
+    font-size: 0.92rem;
+    font-weight: 650;
+
     color: var(--text-primary);
 }
 
 .options-button,
-.search-icon-button {
+.search-icon-button,
+.top-add-button {
     width: 44px;
     height: 44px;
 
@@ -121,13 +130,34 @@ body {
     background-color: var(--surface);
     color: var(--text-primary);
 
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+
     cursor: pointer;
 }
 
 .options-button:hover,
-.search-icon-button:hover {
+.search-icon-button:hover,
+.top-add-button:hover {
     background-color: var(--surface-light);
+}
+
+.top-add-button {
+    font-size: 1.45rem;
+    line-height: 1;
+}
+
+
+.search-overlay {
+    position: absolute;
+    inset: 8px 0;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    background-color: var(--background);
+
+    z-index: 5;
 }
 
 /* =========================
