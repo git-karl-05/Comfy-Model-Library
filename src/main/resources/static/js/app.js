@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupAddButton();
     setupCategoryFilter();
     setupLoraDetailsModal();
+    setupSearchOverlay();
 });
 
 async function fetchAllLoras() {
@@ -24,9 +25,7 @@ async function fetchAllLoras() {
     } catch (error) {
         console.error("Error loading LoRAs:", error);
 
-        const loraList = document.getElementById("loraList");
-
-        loraList.innerHTML = `
+        document.getElementById("loraList").innerHTML = `
             <p class="empty-message">
                 Unable to load LoRAs. Check that your backend endpoint is correct.
             </p>
@@ -39,18 +38,17 @@ function displayLoras(loras) {
 
     loraList.innerHTML = "";
 
-    if (loras.length === 0) {
+    if (!loras || loras.length === 0) {
         loraList.innerHTML = `
             <p class="empty-message">
-                No LoRAs saved yet.
+                No LoRAs found.
             </p>
         `;
         return;
     }
 
     loras.forEach(lora => {
-        const card = createLoraCard(lora);
-        loraList.appendChild(card);
+        loraList.appendChild(createLoraCard(lora));
     });
 }
 
@@ -75,7 +73,7 @@ function createLoraCard(lora) {
     card.innerHTML = `
         ${imageHtml}
 
-        <button class="favorite-button">
+        <button class="favorite-button" aria-label="Toggle favorite">
             ${lora.favorite ? "★" : "☆"}
         </button>
 
@@ -112,7 +110,7 @@ async function toggleFavorite(loraId) {
             throw new Error("Failed to toggle favorite");
         }
 
-        await fetchAllLoras();
+        await refreshCurrentView();
 
     } catch (error) {
         console.error("Error toggling favorite:", error);
@@ -127,29 +125,127 @@ function setupSearch() {
     }
 
     searchInput.addEventListener("input", async () => {
-        const keyword = searchInput.value.trim();
-
-        if (keyword === "") {
-            await fetchAllLoras();
-            return;
-        }
-
-        try {
-            const response = await fetch(
-                `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`
-            );
-
-            if (!response.ok) {
-                throw new Error("Search failed");
-            }
-
-            const loras = await response.json();
-            displayLoras(loras);
-
-        } catch (error) {
-            console.error("Search error:", error);
-        }
+        await refreshCurrentView();
     });
+}
+
+function setupSearchOverlay() {
+    const searchOverlay = document.getElementById("searchOverlay");
+    const openSearchButton = document.getElementById("openSearchButton");
+    const closeSearchButton = document.getElementById("closeSearchButton");
+    const searchInput = document.getElementById("searchInput");
+
+    if (!searchOverlay || !openSearchButton || !closeSearchButton || !searchInput) {
+        return;
+    }
+
+    openSearchButton.addEventListener("click", () => {
+        searchOverlay.classList.remove("hidden");
+        searchInput.focus();
+    });
+
+    closeSearchButton.addEventListener("click", async () => {
+        searchInput.value = "";
+        searchOverlay.classList.add("hidden");
+        await refreshCurrentView();
+    });
+}
+
+async function refreshCurrentView() {
+    const searchInput = document.getElementById("searchInput");
+    const categoryFilter = document.getElementById("categoryFilter");
+
+    const keyword = searchInput ? searchInput.value.trim() : "";
+    const selectedCategory = categoryFilter ? categoryFilter.value : "ALL";
+
+    if (keyword !== "") {
+        await searchLoras(keyword);
+        return;
+    }
+
+    if (selectedCategory === "FAVORITES") {
+        await fetchFavoriteLoras();
+        return;
+    }
+
+    if (selectedCategory !== "ALL") {
+        await fetchLorasByCategory(selectedCategory);
+        return;
+    }
+
+    await fetchAllLoras();
+}
+
+async function searchLoras(keyword) {
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`
+        );
+
+        if (!response.ok) {
+            throw new Error("Search failed");
+        }
+
+        let loras = await response.json();
+
+        const categoryFilter = document.getElementById("categoryFilter");
+        const selectedCategory = categoryFilter ? categoryFilter.value : "ALL";
+
+        if (selectedCategory === "FAVORITES") {
+            loras = loras.filter(lora => lora.favorite);
+        } else if (selectedCategory !== "ALL") {
+            loras = loras.filter(lora => lora.category === selectedCategory);
+        }
+
+        displayLoras(loras);
+
+    } catch (error) {
+        console.error("Search error:", error);
+    }
+}
+
+function setupCategoryFilter() {
+    const categoryFilter = document.getElementById("categoryFilter");
+
+    if (!categoryFilter) {
+        return;
+    }
+
+    categoryFilter.addEventListener("change", async () => {
+        await refreshCurrentView();
+    });
+}
+
+async function fetchLorasByCategory(category) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/category/${category}`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch LoRAs by category");
+        }
+
+        const loras = await response.json();
+        displayLoras(loras);
+
+    } catch (error) {
+        console.error("Category filter error:", error);
+    }
+}
+
+async function fetchFavoriteLoras() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/favorites`);
+
+        if (!response.ok) {
+            throw new Error("Failed to fetch favorite LoRAs");
+        }
+
+        const loras = await response.json();
+        displayLoras(loras);
+
+    } catch (error) {
+        console.error("Favorites filter error:", error);
+    }
 }
 
 function setupGoToTopButton() {
@@ -191,61 +287,6 @@ function setupLayoutButtons() {
         doubleButton.classList.add("active");
         singleButton.classList.remove("active");
     });
-}
-
-function setupCategoryFilter() {
-    const categoryFilter = document.getElementById("categoryFilter");
-
-    if (!categoryFilter) {
-        return;
-    }
-
-    categoryFilter.addEventListener("change", async () => {
-        const selectedCategory = categoryFilter.value;
-
-        if (selectedCategory === "ALL") {
-            await fetchAllLoras();
-            return;
-        }
-
-        if (selectedCategory === "FAVORITES") {
-            await fetchFavoriteLoras();
-            return;
-        }
-
-        await fetchLorasByCategory(selectedCategory);
-    });
-}
-async function fetchLorasByCategory(category) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/category/${category}`);
-
-        if (!response.ok) {
-            throw new Error("Failed to fetch LoRAs by category");
-        }
-
-        const loras = await response.json();
-        displayLoras(loras);
-
-    } catch (error) {
-        console.error("Category filter error:", error);
-    }
-}
-
-async function fetchFavoriteLoras() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/favorites`);
-
-        if (!response.ok) {
-            throw new Error("Failed to fetch favorite LoRAs");
-        }
-
-        const loras = await response.json();
-        displayLoras(loras);
-
-    } catch (error) {
-        console.error("Favorites filter error:", error);
-    }
 }
 
 function setupAddButton() {
@@ -358,19 +399,3 @@ function populateLoraDetailsModal(lora) {
         urlLink.classList.add("hidden");
     }
 }
-
-const searchOverlay = document.getElementById("searchOverlay");
-const openSearchButton = document.getElementById("openSearchButton");
-const closeSearchButton = document.getElementById("closeSearchButton");
-const searchInput = document.getElementById("searchInput");
-
-openSearchButton.addEventListener("click", () => {
-    searchOverlay.classList.remove("hidden");
-    searchInput.focus();
-});
-
-closeSearchButton.addEventListener("click", () => {
-    searchInput.value = "";
-    searchOverlay.classList.add("hidden");
-    searchInput.dispatchEvent(new Event("input"));
-});
