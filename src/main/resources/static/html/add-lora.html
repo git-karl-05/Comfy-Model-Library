@@ -4,85 +4,132 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add LoRA</title>
+
     <link rel="stylesheet" href="/css/styles.css">
     <script src="/js/add-lora.js" defer></script>
 </head>
+
 <body>
-
-<header class="app-header">
-    <h1>Add LoRA</h1>
-    <p>Create a new LoRA, pose, style, or prompt asset.</p>
-</header>
-
 
 <main class="app-container">
 
-    <form id="addLoraForm" class="lora-form">
+    <div class="content-container">
 
-        <label>
-            LoRA Name
-            <input type="text" id="loraName" required>
-        </label>
+        <section class="top-toolbar">
 
-        <label>
-            Version
-            <input type="text" id="version">
-        </label>
+            <button
+                    type="button"
+                    id="backButton"
+                    class="options-button"
+                    aria-label="Go Back">
+                ←
+            </button>
 
-        <label>
-            Creator
-            <input type="text" id="creator">
-        </label>
+            <h1 class="toolbar-title">Add LoRA</h1>
 
-        <label>
-            URL
-            <input type="url" id="url">
-        </label>
+            <button
+                    type="button"
+                    id="closeAddLoraButton"
+                    class="top-add-button"
+                    aria-label="Cancel">
+                ×
+            </button>
 
-        <label>
-            Category
-            <select id="category" required>
-                <option value="">Loading categories...</option>
-            </select>
-        </label>
+        </section>
 
-        <label>
-            Subcategory
-            <input type="text" id="subCategory">
-        </label>
+        <section class="form-page-intro">
+            <p>Add a pose, style, character, prompt asset, or model reference.</p>
+        </section>
 
-        <label>
-            Group Name
-            <input type="text" id="groupName">
-        </label>
+        <form id="addLoraForm" class="lora-form form-card">
 
-        <label>
-            Positive Prompt
-            <textarea id="positivePrompt" rows="5"></textarea>
-        </label>
+            <label>
+                LoRA Name
+                <input type="text" id="loraName" required>
+            </label>
 
-        <label>
-            Negative Prompt
-            <textarea id="negativePrompt" rows="5"></textarea>
-        </label>
+            <label>
+                Version
+                <input type="text" id="version">
+            </label>
 
-        <label>
-            Seed Number
-            <input type="number" id="seedNumber">
-        </label>
+            <label>
+                Creator
+                <input type="text" id="creator">
+            </label>
 
-        <label>
-            Notes
-            <textarea id="notes" rows="5"></textarea>
-        </label>
+            <label>
+                URL
+                <input type="url" id="url">
+            </label>
 
-        <button type="submit" class="submit-button">Save LoRA</button>
+            <label>
+                Category
+                <select id="category" required>
+                    <option value="">Loading categories...</option>
+                </select>
+            </label>
 
-        <a href="/html/index.html" class="secondary-link">Back to Gallery</a>
+            <label>
+                Subcategory
+                <input type="text" id="subCategory">
+            </label>
 
-    </form>
+            <label>
+                Group Name
+                <input type="text" id="groupName">
+            </label>
+
+            <label>
+                Positive Prompt
+                <textarea id="positivePrompt" rows="5"></textarea>
+            </label>
+
+            <label>
+                Negative Prompt
+                <textarea id="negativePrompt" rows="5"></textarea>
+            </label>
+
+            <label>
+                Seed Number
+                <input type="number" id="seedNumber">
+            </label>
+
+            <label>
+                Notes
+                <textarea id="notes" rows="5"></textarea>
+            </label>
+
+            <button type="submit" class="submit-button">
+                Save LoRA
+            </button>
+
+        </form>
+
+    </div>
 
 </main>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+
+        const backButton = document.getElementById("backButton");
+        const closeButton = document.getElementById("closeAddLoraButton");
+
+        if (backButton) {
+            backButton.addEventListener("click", () => {
+                history.back();
+            });
+        }
+
+        if (closeButton) {
+            closeButton.addEventListener("click", () => {
+                window.location.href = "/html/index.html";
+            });
+        }
+
+    });
+</script>
 
 </body>
 </html>

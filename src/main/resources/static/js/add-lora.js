@@ -90,3 +90,22 @@ function formatCategoryName(category) {
         .replace("_", " ")
         .replace(/\b\w/g, letter => letter.toUpperCase());
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const backButton = document.getElementById("backButton");
+    const closeButton = document.getElementById("closeAddLoraButton");
+
+    if (backButton) {
+        backButton.addEventListener("click", () => {
+            history.back();
+        });
+    }
+
+    if (closeButton) {
+        closeButton.addEventListener("click", () => {
+            window.location.href = "/html/index.html";
+        });
+    }
+
+});
