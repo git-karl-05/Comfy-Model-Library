@@ -865,6 +865,30 @@
         background-color: var(--surface-light);
     }
 
+    .details-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .icon-button {
+        width: 42px;
+        height: 42px;
+
+        border: 1px solid var(--border);
+        border-radius: 50%;
+
+        background-color: var(--surface);
+        color: var(--text-primary);
+
+        font-size: 1.05rem;
+        cursor: pointer;
+    }
+
+    .icon-button:hover {
+        background-color: var(--surface-light);
+    }
+
     @media (min-width: 768px) {
         .details-info {
             grid-template-columns: repeat(2, 1fr);

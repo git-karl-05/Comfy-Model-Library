@@ -4,9 +4,12 @@ import com.comfy.library.dto.CreateLoraRequest;
 import com.comfy.library.dto.LoraResponse;
 import com.comfy.library.dto.UpdateLoraRequest;
 import com.comfy.library.entity.LoraCategory;
+import com.comfy.library.repository.LoraRepository;
 import com.comfy.library.service.LoraService;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Arrays;
 import java.util.List;
@@ -24,6 +27,13 @@ public class LoraController {
     @PostMapping
     public ResponseEntity<LoraResponse> saveLora(@RequestBody CreateLoraRequest loraRequest) {
         return ResponseEntity.ok(loraService.saveLora(loraRequest));
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public LoraResponse saveLoraWithPreviewImage(
+            @ModelAttribute CreateLoraRequest request,
+            @RequestParam(required = false)MultipartFile previewImage) {
+        return loraService.saveLoraWithPreviewImage(request, previewImage);
     }
 
     @GetMapping("/{loraId}")

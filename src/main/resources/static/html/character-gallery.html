@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoRA Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/app.js" defer></script>
+</head>
+
+<body>
+
+<main class="app-container">
+
+    <div class="content-container">
+
+        <section class="top-toolbar">
+            <button id="optionsButton" class="options-button" aria-label="Open options">
+                ☰
+            </button>
+
+            <h1 class="toolbar-title">Character Gallery</h1>
+
+            <div class="toolbar-right-actions">
+                <button id="openSearchButton" class="search-icon-button" aria-label="Open search">
+                    🔍
+                </button>
+
+                <button id="openAddModalButton" class="top-add-button" aria-label="Add LoRA">
+                    +
+                </button>
+            </div>
+
+            <div id="searchOverlay" class="search-overlay hidden">
+                <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search LoRAs..."
+                        class="search-input"
+                >
+
+                <button id="closeSearchButton" class="search-close-button" aria-label="Close search">
+                    ×
+                </button>
+            </div>
+        </section>
+
+        <nav id="sideMenu" class="side-menu hidden" aria-label="Main menu">
+            <div class="side-menu-header">
+                <h2>Menu</h2>
+
+                <button id="closeMenuButton" class="menu-close-button" aria-label="Close menu">
+                    ×
+                </button>
+            </div>
+
+            <a href="/html/index.html" class="side-menu-link active">
+                LoRA Library
+            </a>
+
+            <a href="/html/character-gallery.html" class="side-menu-link">
+                Character Gallery
+            </a>
+        </nav>
+
+        <div id="menuBackdrop" class="menu-backdrop hidden"></div>
+
+        <section class="gallery-controls">
+
+            <div class="category-filter-wrapper">
+
+                <span class="category-filter-label">
+                    Category
+                </span>
+
+                <select id="categoryFilter" class="category-filter">
+                    <option value="ALL">All</option>
+                    <option value="FAVORITES">Favorites</option>
+                    <option value="BACKGROUND">Background</option>
+                    <option value="CHARACTER">Character</option>
+                    <option value="CONCEPT">Concept</option>
+                    <option value="ENHANCER">Enhancer</option>
+                    <option value="OUTFIT">Outfit</option>
+                    <option value="POSES">Poses</option>
+                    <option value="SLIDER">Slider</option>
+                    <option value="STYLE">Style</option>
+                </select>
+
+            </div>
+
+            <div class="layout-icon-controls">
+                <button
+                        id="singleColumnButton"
+                        class="layout-icon-button active"
+                        aria-label="Single column view">
+                    ☰
+                </button>
+
+                <button
+                        id="doubleColumnButton"
+                        class="layout-icon-button"
+                        aria-label="Double column view">
+                    ▦
+                </button>
+            </div>
+
+        </section>
+
+        <section id="loraList" class="lora-list single-column">
+            <!-- LoRA cards will be loaded here by JavaScript -->
+        </section>
+
+    </div>
+
+</main>
+
+<div id="loraDetailsModal" class="modal-overlay hidden">
+    <section class="bottom-sheet lora-details-sheet">
+
+        <div class="sheet-header">
+            <div>
+                <h2 id="detailsLoraName">LoRA Name</h2>
+                <p id="detailsCreator" class="details-subtitle">by Creator</p>
+            </div>
+
+            <button id="closeLoraDetailsButton" class="close-button">×</button>
+        </div>
+
+        <div id="detailsImageContainer" class="details-image-container">
+            <div class="lora-card-placeholder">No Image</div>
+        </div>
+
+        <section class="details-info">
+            <p><strong>Version:</strong> <span id="detailsVersion">N/A</span></p>
+            <p><strong>Category:</strong> <span id="detailsCategory">N/A</span></p>
+            <p><strong>Subcategory:</strong> <span id="detailsSubCategory">N/A</span></p>
+            <p><strong>Group:</strong> <span id="detailsGroupName">N/A</span></p>
+            <p><strong>Seed:</strong> <span id="detailsSeedNumber">N/A</span></p>
+        </section>
+
+        <section class="details-prompt-section">
+            <h3>Positive Prompt</h3>
+            <pre id="detailsPositivePrompt" class="details-prompt-box"></pre>
+        </section>
+
+        <section class="details-prompt-section">
+            <h3>Negative Prompt</h3>
+            <pre id="detailsNegativePrompt" class="details-prompt-box"></pre>
+        </section>
+
+        <section class="details-prompt-section">
+            <h3>Notes</h3>
+            <pre id="detailsNotes" class="details-prompt-box"></pre>
+        </section>
+
+        <a id="detailsUrl" class="details-url-button hidden" href="#" target="_blank">
+            Open URL
+        </a>
+
+    </section>
+</div>
+</body>
+</html>

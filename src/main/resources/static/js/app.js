@@ -305,6 +305,7 @@ function setupAddButton() {
 function setupLoraDetailsModal() {
     const closeButton = document.getElementById("closeLoraDetailsButton");
     const modalOverlay = document.getElementById("loraDetailsModal");
+    const editButton = document.getElementById("editLoraButton");
 
     if (!closeButton || !modalOverlay) {
         return;
@@ -317,6 +318,16 @@ function setupLoraDetailsModal() {
             closeLoraDetailsModal();
         }
     });
+
+    if (editButton) {
+        editButton.addEventListener("click", () => {
+            const loraId = editButton.dataset.loraId;
+
+            if (loraId) {
+                window.location.href = `/html.add-lora-html?id=${loraId}`;
+            }
+        });
+    }
 }
 
 async function openLoraDetailsModal(loraId) {

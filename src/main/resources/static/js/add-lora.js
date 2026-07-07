@@ -38,27 +38,35 @@ function setupAddLoraForm() {
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const requestBody = {
-            loraName: getValue("loraName"),
-            version: getValue("version"),
-            creator: getValue("creator"),
-            url: getValue("url"),
-            category: getValue("category"),
-            subCategory: getValue("subCategory"),
-            groupName: getValue("groupName"),
-            positivePrompt: getValue("positivePrompt"),
-            negativePrompt: getValue("negativePrompt"),
-            seedNumber: getNullableNumber("seedNumber"),
-            notes: getValue("notes")
-        };
+        const formData = new FormData();
+
+        formData.append("loraName", getValue("loraName"));
+        formData.append("version", getValue("version"));
+        formData.append("creator", getValue("creator"));
+        formData.append("url", getValue("url"));
+        formData.append("category", getValue("category"));
+        formData.append("subCategory", getValue("subCategory"));
+        formData.append("groupName", getValue("groupName"));
+        formData.append("positivePrompt", getValue("positivePrompt"));
+        formData.append("negativePrompt", getValue("negativePrompt"));
+
+        const seedNumber = getValue("seedNumber");
+        if (seedNumber !== "") {
+            formData.append("seedNumber", seedNumber);
+        }
+
+        formData.append("notes", getValue("notes"));
+
+        const previewImage = document.getElementById("previewImage").files[0];
+
+        if (previewImage) {
+            formData.append("previewImage", previewImage);
+        }
 
         try {
             const response = await fetch(API_BASE_URL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(requestBody)
+                body: formData
             });
 
             if (!response.ok) {

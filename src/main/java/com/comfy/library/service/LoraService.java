@@ -6,15 +6,25 @@ import com.comfy.library.dto.UpdateLoraRequest;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
 public class LoraService {
+
+    @Value("${lora.upload.path}")
+    private String uploadPath;
 
     private final LoraRepository loraRepository;
 
@@ -39,6 +49,36 @@ public class LoraService {
         loraEntity.setNotes(request.getNotes());
         loraEntity.setFavorite(false);
         loraEntity.setFilePath(null);
+
+        LoraEntity savedLora = loraRepository.save(loraEntity);
+        return new LoraResponse(savedLora);
+    }
+
+    public LoraResponse saveLoraWithPreviewImage(CreateLoraRequest request, MultipartFile previewImage) {
+        LoraEntity loraEntity = new LoraEntity();
+        loraEntity.setLoraName(request.getLoraName());
+        loraEntity.setVersion(request.getVersion());
+        loraEntity.setCreator(request.getCreator());
+        loraEntity.setUrl(request.getUrl());
+        loraEntity.setCreatedDate(LocalDateTime.now());
+        loraEntity.setLastUpdated(LocalDateTime.now());
+        loraEntity.setCategory(request.getCategory());
+        loraEntity.setSubCategory(request.getSubCategory());
+        loraEntity.setGroupName(request.getGroupName());
+        loraEntity.setPositivePrompt(request.getPositivePrompt());
+        loraEntity.setNegativePrompt(request.getNegativePrompt());
+        loraEntity.setSeedNumber(request.getSeedNumber());
+        loraEntity.setNotes(request.getNotes());
+        loraEntity.setFavorite(false);
+        loraEntity.setFilePath(null);
+
+        String filePath = null;
+
+        if (previewImage != null && !previewImage.isEmpty()) {
+            filePath = savePreviewImage(previewImage);
+        }
+
+        loraEntity.setFilePath(filePath);
 
         LoraEntity savedLora = loraRepository.save(loraEntity);
         return new LoraResponse(savedLora);
@@ -143,6 +183,23 @@ public class LoraService {
 
     public List<LoraCategory> getCategories() {
         return Arrays.asList(LoraCategory.values());
+    }
+
+    public String savePreviewImage(MultipartFile previewImage) {
+        try {
+            Files.createDirectories(Paths.get(uploadPath));
+
+            String originalFileName = previewImage.getOriginalFilename();
+            String safeFileName = UUID.randomUUID() + "_" + originalFileName;
+
+            Path destinationPath = Paths.get(uploadPath, safeFileName);
+
+            previewImage.transferTo(destinationPath.toFile());
+            return "/uploads/lora/" + safeFileName;
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save preview image", e);
+        }
     }
 }
 
