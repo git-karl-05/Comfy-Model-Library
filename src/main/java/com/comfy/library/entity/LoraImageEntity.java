@@ -9,8 +9,8 @@ public class LoraImageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String imagePath;
+    private String filePath;
 
     @ManyToOne
-    private LoraEntity lora;
+    private LoraEntity lora_id;
 }
