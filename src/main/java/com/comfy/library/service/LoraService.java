@@ -1,6 +1,7 @@
 package com.comfy.library.service;
 
 import com.comfy.library.dto.CreateLoraRequest;
+import com.comfy.library.dto.ImportSummaryResponse;
 import com.comfy.library.dto.LoraResponse;
 import com.comfy.library.dto.UpdateLoraRequest;
 import com.comfy.library.entity.LoraCategory;
@@ -9,6 +10,7 @@ import com.comfy.library.repository.LoraRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,9 +29,11 @@ public class LoraService {
     private String uploadPath;
 
     private final LoraRepository loraRepository;
+    private final ObjectMapper objectMapper;
 
-    public LoraService(LoraRepository loraRepository) {
+    public LoraService(LoraRepository loraRepository, ObjectMapper objectMapper) {
         this.loraRepository = loraRepository;
+        this.objectMapper = objectMapper;
     }
 
     public LoraResponse saveLora(CreateLoraRequest request) {
@@ -200,6 +204,46 @@ public class LoraService {
         } catch (IOException e) {
             throw new RuntimeException("Failed to save preview image", e);
         }
+    }
+
+    private enum ImportResult {
+        IMPORTED,
+        SKIPPED
+    }
+
+    public ImportSummaryResponse importLorasFromFolder(String folderPath) {
+        int scanned = 0;
+        int imported = 0;
+        int skipped = 0;
+        int failed = 0;
+
+        try {
+            List<Path> metadataFiles = Files.walk(Paths.get(folderPath))
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.toString().endsWith(".metadata.json"))
+                    .toList();
+
+            scanned = metadataFiles.size();
+
+            for (Path metadataFile : metadataFiles) {
+                try {
+                    ImportResult result = importSingleMetadataFiles(metadataFile);
+
+                    if (result == ImportResult.IMPORTED) {
+                        imported++;
+                    } else if (result == ImportResult.SKIPPED) {
+                        skipped++;
+                    }
+                } catch (Exception e) {
+                    failed++;
+                    System.out.println("Failed to import: " + metadataFile);
+                    e.printStackTrace();
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Filed to scan folder: " + folderPath, e);
+        }
+        return new ImportSummaryResponse(scanned, imported, skipped, failed);
     }
 }
 

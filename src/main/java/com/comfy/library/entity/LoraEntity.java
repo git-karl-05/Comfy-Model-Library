@@ -30,6 +30,10 @@ public class LoraEntity {
     private boolean favorite;
     private String filePath;
 
+    private String modelFilePath;
+    private String sha256;
+    private String baseModel;
+
     public LoraEntity() {}
 
     public Long getId() {
@@ -158,5 +162,29 @@ public class LoraEntity {
 
     public void setCreatedDate(LocalDateTime createdDate) {
         this.createdDate = createdDate;
+    }
+
+    public String getModelFilePath() {
+        return modelFilePath;
+    }
+
+    public void setModelFilePath(String modelFilePath) {
+        this.modelFilePath = modelFilePath;
+    }
+
+    public String getSha256() {
+        return sha256;
+    }
+
+    public void setSha256(String sha256) {
+        this.sha256 = sha256;
+    }
+
+    public String getBaseModel() {
+        return baseModel;
+    }
+
+    public void setBaseModel(String baseModel) {
+        this.baseModel = baseModel;
     }
 }

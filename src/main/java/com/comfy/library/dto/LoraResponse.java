@@ -24,6 +24,10 @@ public class LoraResponse {
     private LocalDateTime createdDate;
     private LocalDateTime lastUpdated;
 
+    private String modelFilePath;
+    private String sha256;
+    private String baseModel;
+
     public LoraResponse() {
     }
 
@@ -44,6 +48,9 @@ public class LoraResponse {
         this.filePath = loraEntity.getFilePath();
         this.createdDate = loraEntity.getCreatedDate();
         this.lastUpdated = loraEntity.getLastUpdated();
+        this.modelFilePath = loraEntity.getModelFilePath();
+        this.sha256 = loraEntity.getSha256();
+        this.baseModel = loraEntity.getBaseModel();
     }
 
     public Long getId() {
@@ -172,5 +179,29 @@ public class LoraResponse {
 
     public void setCreatedDate(LocalDateTime createdDate) {
         this.createdDate = createdDate;
+    }
+
+    public String getModelFilePath() {
+        return modelFilePath;
+    }
+
+    public void setModelFilePath(String modelFilePath) {
+        this.modelFilePath = modelFilePath;
+    }
+
+    public String getSha256() {
+        return sha256;
+    }
+
+    public void setSha256(String sha256) {
+        this.sha256 = sha256;
+    }
+
+    public String getBaseModel() {
+        return baseModel;
+    }
+
+    public void setBaseModel(String baseModel) {
+        this.baseModel = baseModel;
     }
 }

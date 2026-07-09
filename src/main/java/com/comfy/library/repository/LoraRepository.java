@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface LoraRepository extends JpaRepository<LoraEntity, Long> {
@@ -19,4 +20,8 @@ public interface LoraRepository extends JpaRepository<LoraEntity, Long> {
     List<LoraEntity> findByFavoriteTrue();
 
     List<LoraEntity> findAllByOrderByGroupNameAsc();
+
+    Optional<LoraEntity> findBySha256(String sha256);
+
+    boolean existsBySha256(String sha256);
 }
