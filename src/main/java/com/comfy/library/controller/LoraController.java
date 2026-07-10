@@ -1,8 +1,6 @@
 package com.comfy.library.controller;
 
-import com.comfy.library.dto.CreateLoraRequest;
-import com.comfy.library.dto.LoraResponse;
-import com.comfy.library.dto.UpdateLoraRequest;
+import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.repository.LoraRepository;
 import com.comfy.library.service.LoraService;
@@ -89,5 +87,10 @@ public class LoraController {
     @GetMapping("/categories")
     public List<LoraCategory> getCategories() {
         return loraService.getCategories();
+    }
+
+    @PostMapping("/import-folder")
+    public ImportSummaryResponse importFolder(@RequestBody ImportFolderRequest request) {
+        return loraService.importLorasFromFolder(request.getFolderPath());
     }
 }

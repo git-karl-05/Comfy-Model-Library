@@ -10,6 +10,7 @@ import com.comfy.library.repository.LoraRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -227,7 +228,7 @@ public class LoraService {
 
             for (Path metadataFile : metadataFiles) {
                 try {
-                    ImportResult result = importSingleMetadataFiles(metadataFile);
+                    ImportResult result = importSingleMetadataFile(metadataFile);
 
                     if (result == ImportResult.IMPORTED) {
                         imported++;
@@ -245,5 +246,255 @@ public class LoraService {
         }
         return new ImportSummaryResponse(scanned, imported, skipped, failed);
     }
+
+    private ImportResult importSingleMetadataFile(Path metadataFile) throws IOException {
+        JsonNode root = objectMapper.readTree(metadataFile.toFile());
+
+        String sha256 = getText(root, "sha256");
+
+        if (sha256 != null && loraRepository.existsBySha256(sha256)) {
+            return ImportResult.SKIPPED;
+        }
+
+        LoraEntity entity = new LoraEntity();
+
+        entity.setLoraName(resolveLoraName(root));
+        entity.setVersion(getText(root.path("civitai"), "name"));
+        entity.setCreator(null);
+        entity.setUrl(resolveUrl(root));
+        entity.setCreatedDate(LocalDateTime.now());
+        entity.setLastUpdated(LocalDateTime.now());
+        entity.setCategory(resolveCategory(root));
+        entity.setSubCategory(resolveSubCategory(root));
+        entity.setGroupName(resolveGroupName(root));
+        entity.setPositivePrompt(resolvePositivePrompt(root));
+        entity.setNegativePrompt(resolveNegativePrompt(root));
+        entity.setSeedNumber(resolveSeedNumber(root));
+        entity.setNotes(resolveNotes(root));
+        entity.setFavorite(false);
+
+        entity.setFilePath(resolvePreviewPath(root));
+        entity.setModelFilePath(getText(root, "file_path"));
+        entity.setSha256(sha256);
+        entity.setBaseModel(getText(root, "base_model"));
+
+        loraRepository.save(entity);
+
+        return ImportResult.IMPORTED;
+    }
+
+    private String getText(JsonNode node, String fieldName) {
+        JsonNode value = node.get(fieldName);
+
+        if (value == null || value.isNull()) {
+            return null;
+        }
+
+        String text = value.asText();
+
+        return text.isBlank() ? null : text;
+    }
+
+    private String resolveLoraName(JsonNode root) {
+        String modelName = getText(root, "model_name");
+
+        if (modelName != null) {
+            return modelName;
+        }
+
+        String fileName = getText(root, "file_name");
+
+        if (fileName != null) {
+            return fileName;
+        }
+
+        return "Untitled LoRA";
+    }
+
+    private String resolveUrl(JsonNode root) {
+        JsonNode civitai = root.path("civitai");
+
+        String downloadUrl = getText(civitai, "downloadUrl");
+
+        if (downloadUrl != null) {
+            return downloadUrl;
+        }
+
+        JsonNode files = civitai.path("files");
+
+        if (files.isArray() && files.size() > 0) {
+            return getText(files.get(0), "downloadUrl");
+        }
+
+        return null;
+    }
+
+    private LoraCategory resolveCategory(JsonNode root) {
+        String filePath = getText(root, "file_path");
+
+        if (filePath == null) {
+            return LoraCategory.CONCEPT;
+        }
+
+        String normalized = filePath.toLowerCase();
+
+        if (normalized.contains("/character/") || normalized.contains("\\character\\")) {
+            return LoraCategory.CHARACTER;
+        }
+
+        if (normalized.contains("/style/") || normalized.contains("\\style\\")) {
+            return LoraCategory.STYLE;
+        }
+
+        if (normalized.contains("/outfit/") || normalized.contains("\\outfit\\")) {
+            return LoraCategory.OUTFIT;
+        }
+
+        if (normalized.contains("/pose/") || normalized.contains("\\pose\\")) {
+            return LoraCategory.POSES;
+        }
+
+        if (normalized.contains("/background/") || normalized.contains("\\background\\")) {
+            return LoraCategory.BACKGROUND;
+        }
+
+        if (normalized.contains("/slider/") || normalized.contains("\\slider\\")) {
+            return LoraCategory.SLIDER;
+        }
+
+        if (normalized.contains("/enhancer/") || normalized.contains("\\enhancer\\")) {
+            return LoraCategory.ENHANCER;
+        }
+
+        return LoraCategory.CONCEPT;
+    }
+
+    private String resolveSubCategory(JsonNode root) {
+        String filePath = getText(root, "file_path");
+
+        if (filePath == null) {
+            return null;
+        }
+
+        Path path = Paths.get(filePath);
+
+        Path parent = path.getParent();
+
+        if (parent == null) {
+            return null;
+        }
+
+        return parent.getFileName().toString();
+    }
+
+    private String resolveGroupName(JsonNode root) {
+        String baseModel = getText(root, "base_model");
+
+        if (baseModel != null) {
+            return baseModel;
+        }
+
+        return "Imported";
+    }
+
+    private String resolvePositivePrompt(JsonNode root) {
+        JsonNode images = root.path("civitai").path("images");
+
+        if (images.isArray() && images.size() > 0) {
+            String prompt = getText(images.get(0).path("meta"), "prompt");
+
+            if (prompt != null) {
+                return prompt;
+            }
+        }
+
+        JsonNode trainedWords = root.path("civitai").path("trainedWords");
+
+        if (trainedWords.isArray() && trainedWords.size() > 0) {
+            return trainedWords.get(0).asText();
+        }
+
+        return null;
+    }
+
+    private String resolveNegativePrompt(JsonNode root) {
+        JsonNode images = root.path("civitai").path("images");
+
+        if (images.isArray() && images.size() > 0) {
+            return getText(images.get(0).path("meta"), "negativePrompt");
+        }
+
+        return null;
+    }
+
+    private Long resolveSeedNumber(JsonNode root) {
+        JsonNode images = root.path("civitai").path("images");
+
+        if (images.isArray() && images.size() > 0) {
+            JsonNode seed = images.get(0).path("meta").get("seed");
+
+            if (seed != null && seed.canConvertToLong()) {
+                return seed.asLong();
+            }
+        }
+
+        return null;
+    }
+
+
+
+    private String resolveNotes(JsonNode root) {
+        StringBuilder notes = new StringBuilder();
+
+        String baseModel = getText(root, "base_model");
+
+        if (baseModel != null) {
+            notes.append("Base model: ").append(baseModel).append("\n");
+        }
+
+        JsonNode trainedWords = root.path("civitai").path("trainedWords");
+
+        if (trainedWords.isArray() && trainedWords.size() > 0) {
+            notes.append("Trained words: ");
+
+            for (JsonNode word : trainedWords) {
+                notes.append(word.asText()).append(" ");
+            }
+
+            notes.append("\n");
+        }
+
+        String modelFilePath = getText(root, "file_path");
+
+        if (modelFilePath != null) {
+            notes.append("Model file path: ").append(modelFilePath).append("\n");
+        }
+
+        String description = getText(root.path("civitai"), "description");
+
+        if (description != null) {
+            notes.append("Description: ").append(description);
+        }
+
+        return notes.isEmpty() ? null : notes.toString();
+    }
+
+    private String resolvePreviewPath(JsonNode root) {
+        String previewUrl = getText(root, "preview_url");
+
+        if (previewUrl != null) {
+            return previewUrl;
+        }
+
+        JsonNode images = root.path("civitai").path("images");
+
+        if (images.isArray() && images.size() > 0) {
+            return getText(images.get(0), "url");
+        }
+
+        return null;
+    }
+
+
 }
 
