@@ -480,16 +480,20 @@ public class LoraService {
     }
 
     private String resolvePreviewPath(JsonNode root) {
+        JsonNode images = root.path("civitai").path("images");
+
+        if (images.isArray() && !images.isEmpty()) {
+            String civitaiImageUrl = getText(images.get(0), "url");
+
+            if (civitaiImageUrl != null) {
+                return civitaiImageUrl;
+            }
+        }
+
         String previewUrl = getText(root, "preview_url");
 
         if (previewUrl != null) {
             return previewUrl;
-        }
-
-        JsonNode images = root.path("civitai").path("images");
-
-        if (images.isArray() && images.size() > 0) {
-            return getText(images.get(0), "url");
         }
 
         return null;
