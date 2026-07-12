@@ -97,10 +97,19 @@
         align-items: center;
         gap: 10px;
 
-        background-color: var(--background);
         padding: 12px 0;
 
+        background-color: var(--background);
         border-bottom: 1px solid var(--border);
+    }
+
+    .toolbar-title {
+        text-align: center;
+
+        color: var(--text-primary);
+
+        font-size: 0.95rem;
+        font-weight: 700;
     }
 
     .toolbar-right-actions {
@@ -109,18 +118,10 @@
         gap: 8px;
     }
 
-    .toolbar-title {
-        text-align: center;
-
-        font-size: 0.92rem;
-        font-weight: 650;
-
-        color: var(--text-primary);
-    }
-
     .options-button,
     .search-icon-button,
-    .top-add-button {
+    .toolbar-action-button,
+    .search-close-button {
         width: 44px;
         height: 44px;
 
@@ -130,34 +131,166 @@
         background-color: var(--surface);
         color: var(--text-primary);
 
-        font-size: 1.15rem;
-
         cursor: pointer;
+    }
+
+    .options-button,
+    .search-icon-button {
+        font-size: 1.1rem;
+    }
+
+    .toolbar-action-button {
+        font-size: 1.8rem;
+        line-height: 1;
     }
 
     .options-button:hover,
     .search-icon-button:hover,
-    .top-add-button:hover {
+    .toolbar-action-button:hover,
+    .search-close-button:hover {
         background-color: var(--surface-light);
     }
 
-    .top-add-button {
-        font-size: 1.45rem;
-        line-height: 1;
+
+    .action-menu-overlay {
+        position: fixed;
+        inset: 0;
+
+        z-index: 1000;
+
+        background-color: rgba(0, 0, 0, 0.18);
     }
 
-
-    .search-overlay {
+    .action-menu-popover {
         position: absolute;
-        inset: 8px 0;
+
+        top: 68px;
+        right: 16px;
+
+        width: min(260px, calc(100vw - 32px));
+
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        padding: 10px;
+
+        border: 1px solid var(--border);
+        border-radius: 16px;
+
+        background-color: var(--surface);
+
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+    }
+
+    .compact-action-button {
+        width: 100%;
 
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
 
-        background-color: var(--background);
+        padding: 11px 12px;
 
-        z-index: 5;
+        border: none;
+        border-radius: 12px;
+
+        background-color: transparent;
+        color: var(--text-primary);
+
+        text-align: left;
+        font-size: 0.95rem;
+
+        cursor: pointer;
+    }
+
+    .compact-action-button:hover {
+        background-color: var(--surface-light);
+    }
+
+    .compact-action-icon {
+        width: 32px;
+        height: 32px;
+
+        flex: 0 0 32px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 10px;
+
+        background-color: var(--surface-light);
+
+        font-size: 1.05rem;
+    }
+
+
+    .import-folder-form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        margin-top: 6px;
+        padding-top: 12px;
+
+        border-top: 1px solid var(--border);
+    }
+
+    .import-folder-form label {
+        color: var(--text-secondary);
+
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .import-folder-form input {
+        width: 100%;
+
+        padding: 11px 12px;
+
+        border: 1px solid var(--border);
+        border-radius: 10px;
+
+        background-color: var(--surface-light);
+        color: var(--text-primary);
+
+        font-size: 0.85rem;
+    }
+
+    .import-folder-form input:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    .import-folder-form .submit-button {
+        margin-top: 0;
+        padding: 11px;
+    }
+
+
+    .go-top-button {
+        position: fixed;
+
+        right: 20px;
+        bottom: 24px;
+
+        z-index: 900;
+
+        width: 46px;
+        height: 46px;
+
+        border: 1px solid var(--border);
+        border-radius: 50%;
+
+        background-color: rgba(30, 30, 30, 0.94);
+        color: var(--text-primary);
+
+        font-size: 1.2rem;
+
+        cursor: pointer;
+
+        box-shadow: var(--shadow);
     }
 
     /* =========================

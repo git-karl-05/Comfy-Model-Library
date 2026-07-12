@@ -22,12 +22,12 @@
             <h1 class="toolbar-title">LoRA Library</h1>
 
             <div class="toolbar-right-actions">
-                <button id="openSearchButton" class="search-icon-button" aria-label="Open search">
+                <button id="searchIconButton" class="search-icon-button" aria-label="Open search">
                     🔍
                 </button>
 
-                <button id="openAddModalButton" class="top-add-button" aria-label="Add LoRA">
-                    +
+                <button id="openActionMenuButton" class="toolbar-action-button" type="button" aria-label="Open LoRA actions">
+                    ⋮
                 </button>
             </div>
 
@@ -111,6 +111,81 @@
         </section>
 
     </div>
+
+    <div id="actionMenuOverlay" class="action-menu-overlay hidden">
+
+        <section
+                id="actionMenuPopover"
+                class="action-menu-popover"
+                role="dialog"
+                aria-label="LoRA actions">
+
+            <button
+                    id="addLoraActionButton"
+                    class="compact-action-button"
+                    type="button">
+
+            <span class="compact-action-icon" aria-hidden="true">
+                ＋
+            </span>
+
+                <span>Add LoRA</span>
+
+            </button>
+
+            <button
+                    id="showImportFolderButton"
+                    class="compact-action-button"
+                    type="button">
+
+            <span class="compact-action-icon folder-icon" aria-hidden="true">
+                📁
+            </span>
+
+                <span>Import LoRA</span>
+
+            </button>
+
+            <form id="importFolderForm" class="import-folder-form hidden">
+
+                <label for="importFolderPath">
+                    LoRA folder path
+                </label>
+
+                <input
+                        type="text"
+                        id="importFolderPath"
+                        placeholder="C:/Users/.../ComfyUI/models/loras"
+                        required
+                >
+
+                <button
+                        id="importFolderSubmitButton"
+                        class="submit-button"
+                        type="submit">
+                    Scan and Import
+                </button>
+
+            </form>
+
+            <div
+                    id="importResult"
+                    class="import-result hidden"
+                    aria-live="polite">
+            </div>
+
+        </section>
+
+    </div>
+
+    <button
+            id="goTopButton"
+            class="go-top-button hidden"
+            type="button"
+            aria-label="Go to top"
+            title="Go to top">
+        ↑
+    </button>
 
 </main>
 

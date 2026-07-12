@@ -5,10 +5,11 @@ document.addEventListener("DOMContentLoaded", () => {
     setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
-    setupAddButton();
     setupCategoryFilter();
     setupLoraDetailsModal();
     setupSearchOverlay();
+    setupActionMenu();
+    setupImportFolderForm();
     setupMenu();
 });
 
@@ -131,25 +132,116 @@ function setupSearch() {
 }
 
 function setupSearchOverlay() {
+    const searchButton = document.getElementById("searchIconButton");
+    const closeButton = document.getElementById("closeSearchButton");
     const searchOverlay = document.getElementById("searchOverlay");
-    const openSearchButton = document.getElementById("openSearchButton");
-    const closeSearchButton = document.getElementById("closeSearchButton");
     const searchInput = document.getElementById("searchInput");
 
-    if (!searchOverlay || !openSearchButton || !closeSearchButton || !searchInput) {
+    if (!searchButton || !closeButton || !searchOverlay || !searchInput) {
         return;
     }
 
-    openSearchButton.addEventListener("click", () => {
+    searchButton.addEventListener("click", () => {
         searchOverlay.classList.remove("hidden");
         searchInput.focus();
     });
 
-    closeSearchButton.addEventListener("click", async () => {
-        searchInput.value = "";
+    closeButton.addEventListener("click", async () => {
         searchOverlay.classList.add("hidden");
-        await refreshCurrentView();
+        searchInput.value = "";
+
+        await fetchAllLoras();
     });
+}
+
+function setupActionMenu() {
+    const openButton = document.getElementById("openActionMenuButton");
+    const overlay = document.getElementById("actionMenuOverlay");
+    const popover = document.getElementById("actionMenuPopover");
+    const addButton = document.getElementById("addLoraActionButton");
+    const importButton = document.getElementById("showImportFolderButton");
+    const importForm = document.getElementById("importFolderForm");
+    const importResult = document.getElementById("importResult");
+
+    if (
+        !openButton ||
+        !overlay ||
+        !popover ||
+        !addButton ||
+        !importButton ||
+        !importForm
+    ) {
+        return;
+    }
+
+    openButton.addEventListener("click", event => {
+        event.stopPropagation();
+        overlay.classList.toggle("hidden");
+    });
+
+    popover.addEventListener("click", event => {
+        event.stopPropagation();
+    });
+
+    overlay.addEventListener("click", closeActionMenu);
+
+    addButton.addEventListener("click", () => {
+        window.location.href = "/html/add-lora.html";
+    });
+
+    importButton.addEventListener("click", () => {
+        importForm.classList.toggle("hidden");
+
+        if (importResult) {
+            importResult.classList.add("hidden");
+            importResult.innerHTML = "";
+        }
+
+        if (!importForm.classList.contains("hidden")) {
+            document.getElementById("importFolderPath")?.focus();
+        }
+    });
+}
+
+function closeActionMenu() {
+    const overlay = document.getElementById("actionMenuOverlay");
+    const importForm = document.getElementById("importFolderForm");
+    const importResult = document.getElementById("importResult");
+
+    overlay?.classList.add("hidden");
+    importForm?.classList.add("hidden");
+
+    if (importResult) {
+        importResult.classList.add("hidden");
+        importResult.innerHTML = "";
+    }
+}
+
+function setupGoToTopButton() {
+    const goTopButton = document.getElementById("goTopButton");
+
+    if (!goTopButton) {
+        return;
+    }
+
+    function updateGoTopVisibility() {
+        if (window.scrollY > 500) {
+            goTopButton.classList.remove("hidden");
+        } else {
+            goTopButton.classList.add("hidden");
+        }
+    }
+
+    window.addEventListener("scroll", updateGoTopVisibility);
+
+    goTopButton.addEventListener("click", () => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+    });
+
+    updateGoTopVisibility();
 }
 
 async function refreshCurrentView() {
@@ -249,20 +341,6 @@ async function fetchFavoriteLoras() {
     }
 }
 
-function setupGoToTopButton() {
-    const goTopButton = document.getElementById("goTopButton");
-
-    if (!goTopButton) {
-        return;
-    }
-
-    goTopButton.addEventListener("click", () => {
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    });
-}
 
 function setupLayoutButtons() {
     const singleButton = document.getElementById("singleColumnButton");
@@ -290,18 +368,6 @@ function setupLayoutButtons() {
     });
 }
 
-function setupAddButton() {
-    const addButton = document.getElementById("openAddModalButton");
-
-    if (!addButton) {
-        return;
-    }
-
-    addButton.addEventListener("click", () => {
-        window.location.href = "/html/add-lora.html";
-    });
-}
-
 function setupLoraDetailsModal() {
     const closeButton = document.getElementById("closeLoraDetailsButton");
     const modalOverlay = document.getElementById("loraDetailsModal");
@@ -324,7 +390,7 @@ function setupLoraDetailsModal() {
             const loraId = editButton.dataset.loraId;
 
             if (loraId) {
-                window.location.href = `/html.add-lora-html?id=${loraId}`;
+                window.location.href = `/html/add-lora.html?id=${loraId}`;
             }
         });
     }
@@ -410,6 +476,12 @@ function populateLoraDetailsModal(lora) {
         urlLink.href = "#";
         urlLink.classList.add("hidden");
     }
+
+    const editButton = document.getElementById("editLoraButton");
+
+    if (editButton) {
+        editButton.dataset.loraId = lora.id;
+    }
 }
 
 function setupMenu() {
@@ -435,4 +507,110 @@ function setupMenu() {
     optionsButton.addEventListener("click", openMenu);
     closeMenuButton.addEventListener("click", closeMenu);
     menuBackdrop.addEventListener("click", closeMenu);
+}
+
+function setupImportFolderForm() {
+    const importForm = document.getElementById("importFolderForm");
+    const folderPathInput = document.getElementById("importFolderPath");
+    const submitButton = document.getElementById("importFolderSubmitButton");
+    const importResult = document.getElementById("importResult");
+
+    if (!importForm || !folderPathInput || !submitButton || !importResult) {
+        return;
+    }
+
+    importForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const folderPath = folderPathInput.value.trim();
+
+        if (folderPath === "") {
+            displayImportError("Enter a LoRA folder path.");
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Importing...";
+
+        importResult.classList.add("hidden");
+        importResult.innerHTML = "";
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/import-folder`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    folderPath: folderPath
+                })
+            });
+
+            if (!response.ok) {
+                const errorMessage = await response.text();
+
+                throw new Error(
+                    errorMessage || `Import failed with status ${response.status}`
+                );
+            }
+
+            const summary = await response.json();
+
+            displayImportSummary(summary);
+
+            await refreshCurrentView();
+
+        } catch (error) {
+            console.error("Folder import error:", error);
+
+            displayImportError(
+                "Unable to import the folder. Verify the path and check the backend logs."
+            );
+
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = "Scan and Import";
+        }
+    });
+}
+
+function displayImportSummary(summary) {
+    const importResult = document.getElementById("importResult");
+
+    if (!importResult) {
+        return;
+    }
+
+    importResult.classList.remove("hidden", "import-result-error");
+    importResult.classList.add("import-result-success");
+
+    importResult.innerHTML = `
+        <h3>Import complete</h3>
+
+        <div class="import-summary-grid">
+            <span>Scanned</span>
+            <strong>${summary.scannedFiles ?? 0}</strong>
+
+            <span>Imported</span>
+            <strong>${summary.importedCount ?? 0}</strong>
+
+            <span>Skipped</span>
+            <strong>${summary.skippedCount ?? 0}</strong>
+
+            <span>Failed</span>
+            <strong>${summary.failedCount ?? 0}</strong>
+        </div>
+    `;
+}
+
+function displayImportError(message) {
+    const importResult = document.getElementById("importResult");
+
+    if (!importResult) {
+        return;
+    }
+
+    importResult.classList.remove("hidden", "import-result-success");
+    importResult.classList.add("import-result-error");
+    importResult.textContent = message;
 }
