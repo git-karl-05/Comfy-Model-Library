@@ -627,7 +627,7 @@
     }
 
     .hidden {
-        display: none;
+        display: none !important;
     }
 
     /* =========================
@@ -1224,4 +1224,231 @@
     .secondary-link:hover {
         background-color: var(--surface-light);
         color: var(--text-primary);
+    }
+
+    /* =========================
+   INLINE LORA EDITING
+========================= */
+
+    /* =========================
+   INLINE LORA EDITING
+========================= */
+
+    .details-header-view {
+        width: 100%;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .details-header-edit {
+        width: 100%;
+    }
+
+    .details-header-edit h2 {
+        font-size: 1.3rem;
+    }
+
+    .details-title-container {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .details-edit-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+
+        padding: 16px;
+
+        border: 1px solid var(--border);
+        border-radius: 18px;
+
+        background-color: var(--surface);
+    }
+
+    .details-edit-grid label {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+
+        min-width: 0;
+
+        color: var(--text-secondary);
+
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .details-edit-full-width {
+        grid-column: 1 / -1;
+    }
+
+    .details-edit-input,
+    .details-edit-textarea {
+        width: 100%;
+
+        border: 1px solid var(--border);
+        border-radius: 12px;
+
+        background-color: var(--surface-light);
+        color: var(--text-primary);
+
+        font-size: 0.9rem;
+    }
+
+    .details-edit-input {
+        min-height: 44px;
+        padding: 10px 12px;
+    }
+
+    .details-edit-textarea {
+        min-height: 140px;
+        padding: 14px;
+
+        resize: vertical;
+
+        font-family:
+                ui-monospace,
+                SFMono-Regular,
+                Menlo,
+                Monaco,
+                Consolas,
+                monospace;
+
+        line-height: 1.5;
+    }
+
+    .details-edit-input:focus,
+    .details-edit-textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+    }
+
+    /* =========================
+       STICKY EDIT ACTION BAR
+    ========================= */
+
+    .details-edit-action-bar {
+        position: sticky;
+        bottom: 0;
+
+        z-index: 20;
+
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+
+        margin: 6px -20px -20px;
+        padding:
+                14px
+                20px
+                calc(14px + env(safe-area-inset-bottom));
+
+        border-top: 1px solid var(--border);
+
+        background-color: rgba(18, 18, 18, 0.96);
+
+        box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.35);
+
+        backdrop-filter: blur(12px);
+    }
+
+    .details-save-button,
+    .details-cancel-button {
+        min-height: 46px;
+
+        padding: 0 16px;
+
+        border-radius: 12px;
+
+        font-size: 0.9rem;
+        font-weight: 700;
+
+        cursor: pointer;
+    }
+
+    .details-save-button {
+        border: none;
+
+        background-color: var(--primary);
+        color: white;
+    }
+
+    .details-save-button:hover {
+        background-color: var(--primary-hover);
+    }
+
+    .details-save-button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+    }
+
+    .details-cancel-button {
+        border: 1px solid var(--border);
+
+        background-color: var(--surface);
+        color: var(--text-secondary);
+    }
+
+    .details-cancel-button:hover {
+        background-color: var(--surface-light);
+        color: var(--text-primary);
+    }
+
+    /* =========================
+       EDIT STATUS MESSAGE
+    ========================= */
+
+    .details-edit-message {
+        padding: 12px;
+
+        border: 1px solid var(--border);
+        border-radius: 12px;
+
+        font-size: 0.85rem;
+    }
+
+    .details-edit-message-error {
+        border-color: rgba(255, 82, 82, 0.5);
+
+        background-color: rgba(255, 82, 82, 0.12);
+        color: #ffaaaa;
+    }
+
+    .details-edit-message-success {
+        border-color: rgba(60, 160, 90, 0.5);
+
+        background-color: rgba(60, 160, 90, 0.12);
+        color: #a6e5b8;
+    }
+
+    .details-inline-url {
+        min-width: 0;
+        max-width: 65%;
+
+        color: var(--primary-hover);
+
+        text-align: right;
+        text-decoration: none;
+
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .details-inline-url:hover {
+        text-decoration: underline;
+    }
+
+    @media (min-width: 768px) {
+        .details-edit-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    .hidden {
+        display: none !important;
     }

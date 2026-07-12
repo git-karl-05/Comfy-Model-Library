@@ -1,5 +1,8 @@
 const API_BASE_URL = "/api/loras";
 
+let currentLora = null;
+let isEditingLora = false;
+
 document.addEventListener("DOMContentLoaded", () => {
     fetchAllLoras();
     setupLayoutButtons();
@@ -372,28 +375,141 @@ function setupLoraDetailsModal() {
     const closeButton = document.getElementById("closeLoraDetailsButton");
     const modalOverlay = document.getElementById("loraDetailsModal");
     const editButton = document.getElementById("editLoraButton");
+    const cancelButton = document.getElementById("cancelLoraEditButton");
+    const saveButton = document.getElementById("saveLoraEditButton");
 
-    if (!closeButton || !modalOverlay) {
+    if (!closeButton || !modalOverlay || !editButton || !cancelButton || !saveButton) {
         return;
     }
 
-    closeButton.addEventListener("click", closeLoraDetailsModal);
+    closeButton.addEventListener("click", () => {
+        closeLoraDetailsModal();
+    });
 
-    modalOverlay.addEventListener("click", (event) => {
+    modalOverlay.addEventListener("click", event => {
         if (event.target === modalOverlay) {
             closeLoraDetailsModal();
         }
     });
 
-    if (editButton) {
-        editButton.addEventListener("click", () => {
-            const loraId = editButton.dataset.loraId;
+    editButton.addEventListener("click", () => {
+        enterLoraEditMode();
+    });
 
-            if (loraId) {
-                window.location.href = `/html/add-lora.html?id=${loraId}`;
-            }
-        });
+    cancelButton.addEventListener("click", () => {
+        cancelLoraEdit();
+    });
+
+    saveButton.addEventListener("click", async () => {
+        await saveLoraEdit();
+    });
+}
+
+async function saveLoraEdit() {
+    if (!currentLora?.id) {
+        displayEditMessage(
+            "Unable to determine which LoRA is being edited.",
+            true
+        );
+        return;
     }
+
+    const requestBody = buildLoraUpdateRequest();
+    const validationError = validateLoraUpdate(requestBody);
+
+    if (validationError) {
+        displayEditMessage(validationError, true);
+        return;
+    }
+
+    const saveButton =
+        document.getElementById("saveLoraEditButton");
+
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+    }
+
+    try {
+        const response = await fetch(
+            `${API_BASE_URL}/${currentLora.id}`,
+            {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestBody)
+            }
+        );
+
+        if (!response.ok) {
+            const responseText = await response.text();
+
+            throw new Error(
+                responseText ||
+                `Update failed with status ${response.status}`
+            );
+        }
+
+        currentLora = await response.json();
+
+        populateLoraDetailsModal(currentLora);
+        exitLoraEditMode();
+
+        await refreshCurrentView();
+
+    } catch (error) {
+        console.error("LoRA update error:", error);
+
+        displayEditMessage(
+            "Unable to save the LoRA. Check the backend logs.",
+            true
+        );
+
+    } finally {
+        if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.textContent = "Save";
+        }
+    }
+}
+
+function displayEditMessage(message, isError = false) {
+    const messageElement =
+        document.getElementById("detailsEditMessage");
+
+    if (!messageElement) {
+        return;
+    }
+
+    messageElement.textContent = message;
+    messageElement.classList.remove(
+        "hidden",
+        "details-edit-message-error",
+        "details-edit-message-success"
+    );
+
+    messageElement.classList.add(
+        isError
+            ? "details-edit-message-error"
+            : "details-edit-message-success"
+    );
+}
+
+function clearEditMessage() {
+    const messageElement =
+        document.getElementById("detailsEditMessage");
+
+    if (!messageElement) {
+        return;
+    }
+
+    messageElement.textContent = "";
+    messageElement.classList.add("hidden");
+    messageElement.classList.remove(
+        "details-edit-message-error",
+        "details-edit-message-success"
+    );
 }
 
 async function openLoraDetailsModal(loraId) {
@@ -404,11 +520,14 @@ async function openLoraDetailsModal(loraId) {
             throw new Error("Failed to load LoRA details");
         }
 
-        const lora = await response.json();
+        currentLora = await response.json();
 
-        populateLoraDetailsModal(lora);
+        populateLoraDetailsModal(currentLora);
+        exitLoraEditMode();
 
-        document.getElementById("loraDetailsModal").classList.remove("hidden");
+        document
+            .getElementById("loraDetailsModal")
+            .classList.remove("hidden");
 
     } catch (error) {
         console.error("Error loading LoRA details:", error);
@@ -417,7 +536,16 @@ async function openLoraDetailsModal(loraId) {
 }
 
 function closeLoraDetailsModal() {
-    document.getElementById("loraDetailsModal").classList.add("hidden");
+    const modal = document.getElementById("loraDetailsModal");
+
+    if (modal) {
+        modal.classList.add("hidden");
+    }
+
+    isEditingLora = false;
+    currentLora = null;
+
+    clearEditMessage();
 }
 
 function populateLoraDetailsModal(lora) {
@@ -451,7 +579,17 @@ function populateLoraDetailsModal(lora) {
     document.getElementById("detailsNotes").textContent =
         lora.notes || "No notes saved.";
 
-    const imageContainer = document.getElementById("detailsImageContainer");
+    populateDetailsImage(lora);
+    populateDetailsUrl(lora);
+}
+
+function populateDetailsImage(lora) {
+    const imageContainer =
+        document.getElementById("detailsImageContainer");
+
+    if (!imageContainer) {
+        return;
+    }
 
     if (lora.filePath) {
         imageContainer.innerHTML = `
@@ -463,24 +601,164 @@ function populateLoraDetailsModal(lora) {
         `;
     } else {
         imageContainer.innerHTML = `
-            <div class="lora-card-placeholder">No Image</div>
+            <div class="lora-card-placeholder">
+                No Image
+            </div>
         `;
     }
+}
 
+function populateDetailsUrl(lora) {
     const urlLink = document.getElementById("detailsUrl");
+
+    if (!urlLink) {
+        return;
+    }
 
     if (lora.url) {
         urlLink.href = lora.url;
+        urlLink.textContent = lora.url;
+        urlLink.title = lora.url;
         urlLink.classList.remove("hidden");
     } else {
         urlLink.href = "#";
-        urlLink.classList.add("hidden");
+        urlLink.textContent = "N/A";
+        urlLink.removeAttribute("title");
+        urlLink.classList.remove("hidden");
+    }
+}
+
+function enterLoraEditMode() {
+    if (!currentLora) {
+        return;
     }
 
-    const editButton = document.getElementById("editLoraButton");
+    isEditingLora = true;
 
-    if (editButton) {
-        editButton.dataset.loraId = lora.id;
+    populateLoraEditFields(currentLora);
+    setLoraEditVisibility(true);
+
+    const nameInput = document.getElementById("editLoraName");
+
+    if (nameInput) {
+        nameInput.focus();
+    }
+}
+
+function setLoraEditVisibility(editing) {
+    toggleHidden("detailsHeaderView", editing);
+    toggleHidden("detailsHeaderEdit", !editing);
+
+    toggleHidden("detailsInfoView", editing);
+    toggleHidden("detailsInfoEdit", !editing);
+
+    toggleHidden("detailsPositivePrompt", editing);
+    toggleHidden("detailsNegativePrompt", editing);
+    toggleHidden("detailsNotes", editing);
+
+    toggleHidden("editPositivePrompt", !editing);
+    toggleHidden("editNegativePrompt", !editing);
+    toggleHidden("editNotes", !editing);
+
+    toggleHidden("detailsEditActionBar", !editing);
+
+    const urlLink = document.getElementById("detailsUrl");
+
+    if (urlLink) {
+        const shouldHideUrl = editing || !currentLora?.url;
+        urlLink.classList.toggle("hidden", shouldHideUrl);
+    }
+}
+
+function toggleHidden(elementId, shouldHide) {
+    const element = document.getElementById(elementId);
+
+    if (!element) {
+        return;
+    }
+
+    element.classList.toggle("hidden", shouldHide);
+}
+
+function cancelLoraEdit() {
+    if (!currentLora) {
+        return;
+    }
+
+    populateLoraEditFields(currentLora);
+    exitLoraEditMode();
+}
+
+function exitLoraEditMode() {
+    isEditingLora = false;
+    setLoraEditVisibility(false);
+    clearEditMessage();
+}
+
+function buildLoraUpdateRequest() {
+    const seedValue =
+        document.getElementById("editSeedNumber")?.value.trim() || "";
+
+    return {
+        loraName: getModalInputValue("editLoraName"),
+        version: getModalInputValue("editVersion"),
+        creator: getModalInputValue("editCreator"),
+        url: getModalInputValue("editUrl"),
+        category: getModalInputValue("editCategory"),
+        subCategory: getModalInputValue("editSubCategory"),
+        groupName: getModalInputValue("editGroupName"),
+        positivePrompt: getModalInputValue("editPositivePrompt"),
+        negativePrompt: getModalInputValue("editNegativePrompt"),
+        seedNumber: seedValue === "" ? null : Number(seedValue),
+        notes: getModalInputValue("editNotes"),
+        favorite: currentLora?.favorite ?? false
+    };
+}
+
+function getModalInputValue(elementId) {
+    const element = document.getElementById(elementId);
+
+    return element ? element.value.trim() : "";
+}
+
+function populateLoraEditFields(lora) {
+    setInputValue("editLoraName", lora.loraName);
+    setInputValue("editCreator", lora.creator);
+    setInputValue("editVersion", lora.version);
+    setInputValue("editCategory", lora.category);
+    setInputValue("editSubCategory", lora.subCategory);
+    setInputValue("editGroupName", lora.groupName);
+    setInputValue("editSeedNumber", lora.seedNumber);
+    setInputValue("editUrl", lora.url);
+    setInputValue("editPositivePrompt", lora.positivePrompt);
+    setInputValue("editNegativePrompt", lora.negativePrompt);
+    setInputValue("editNotes", lora.notes);
+}
+
+function validateLoraUpdate(requestBody) {
+    if (!requestBody.loraName) {
+        return "LoRA name is required.";
+    }
+
+    if (!requestBody.category) {
+        return "Category is required.";
+    }
+
+    if (
+        requestBody.seedNumber !== null &&
+        Number.isNaN(requestBody.seedNumber)
+    ) {
+        return "Seed must be a valid number.";
+    }
+
+    return null;
+}
+
+function setInputValue(elementId, value) {
+    const element = document.getElementById(elementId);
+
+    if (element) {
+        element.value = value ?? "";
     }
 }
 
