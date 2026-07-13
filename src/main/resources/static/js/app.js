@@ -703,7 +703,6 @@ function buildLoraUpdateRequest() {
         loraName: getModalInputValue("editLoraName"),
         version: getModalInputValue("editVersion"),
         creator: getModalInputValue("editCreator"),
-        url: getModalInputValue("editUrl"),
         category: getModalInputValue("editCategory"),
         subCategory: getModalInputValue("editSubCategory"),
         groupName: getModalInputValue("editGroupName"),
@@ -729,7 +728,6 @@ function populateLoraEditFields(lora) {
     setInputValue("editSubCategory", lora.subCategory);
     setInputValue("editGroupName", lora.groupName);
     setInputValue("editSeedNumber", lora.seedNumber);
-    setInputValue("editUrl", lora.url);
     setInputValue("editPositivePrompt", lora.positivePrompt);
     setInputValue("editNegativePrompt", lora.negativePrompt);
     setInputValue("editNotes", lora.notes);

@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+
     <title>Add LoRA</title>
 
     <link rel="stylesheet" href="/css/styles.css">
@@ -11,129 +16,250 @@
 
 <body>
 
-<main class="app-container">
+<main class="add-lora-page">
 
-    <div class="content-container">
+    <div class="add-lora-container">
 
-        <section class="top-toolbar">
+        <!-- =========================
+             PAGE HEADER
+        ========================== -->
 
-            <button
-                    type="button"
-                    id="backButton"
-                    class="options-button"
-                    aria-label="Go Back">
+        <header class="add-lora-header">
+
+            <a
+                    href="/html/index.html"
+                    class="page-back-button"
+                    aria-label="Return to LoRA Library"
+                    title="Return to LoRA Library">
                 ←
-            </button>
+            </a>
 
-            <h1 class="toolbar-title">Add LoRA</h1>
+            <h1>Add LoRA</h1>
 
-            <button
-                    type="button"
-                    id="closeAddLoraButton"
-                    class="top-add-button"
-                    aria-label="Cancel">
+            <a
+                    href="/html/index.html"
+                    class="page-close-button"
+                    aria-label="Cancel and return to LoRA Library"
+                    title="Cancel">
                 ×
-            </button>
+            </a>
 
-        </section>
+        </header>
 
-        <section class="form-page-intro">
-            <p>Add a pose, style, character, prompt asset, or model reference.</p>
-        </section>
+        <!-- =========================
+             ADD LORA FORM
+        ========================== -->
 
-        <form id="addLoraForm" class="lora-form form-card">
+        <form id="addLoraForm" class="add-lora-form">
 
-            <label>
-                LoRA Name
-                <input type="text" id="loraName" required>
-            </label>
+            <!-- =========================
+                 IMAGE PREVIEW
+            ========================== -->
 
-            <label>
-                Version
-                <input type="text" id="version">
-            </label>
+            <section class="add-image-section">
 
-            <label>
-                Creator
-                <input type="text" id="creator">
-            </label>
+                <label
+                        id="addImagePreviewContainer"
+                        class="details-image-container add-image-preview"
+                        for="previewImage">
 
-            <label>
-                URL
-                <input type="url" id="url">
-            </label>
-            <label>
-                Preview Image
-                <input type="file" id="previewImage" name = "previewImage" accept="image/*">
-            </label>
+                    <div class="lora-card-placeholder">
+                        Click to choose a preview image
+                    </div>
 
-            <label>
-                Category
-                <select id="category" required>
-                    <option value="">Loading categories...</option>
-                </select>
-            </label>
+                    <button
+                            type="button"
+                            id="removePreviewImageButton"
+                            class="remove-preview-image-button hidden"
+                            aria-label="Remove preview image"
+                            title="Remove preview image">
+                        ×
+                    </button>
 
-            <label>
-                Subcategory
-                <input type="text" id="subCategory">
-            </label>
+                </label>
 
-            <label>
-                Group Name
-                <input type="text" id="groupName">
-            </label>
+                <input
+                        type="file"
+                        id="previewImage"
+                        name="previewImage"
+                        class="hidden-file-input"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                >
 
-            <label>
-                Positive Prompt
-                <textarea id="positivePrompt" rows="5"></textarea>
-            </label>
 
-            <label>
-                Negative Prompt
-                <textarea id="negativePrompt" rows="5"></textarea>
-            </label>
 
-            <label>
-                Seed Number
-                <input type="number" id="seedNumber">
-            </label>
+            </section>
 
-            <label>
-                Notes
-                <textarea id="notes" rows="5"></textarea>
-            </label>
+            <!-- =========================
+                 BASIC DETAILS
+            ========================== -->
 
-            <button type="submit" class="submit-button">
-                Save LoRA
-            </button>
+            <section class="details-edit-grid add-lora-details-grid">
+
+                <label class="details-edit-full-width">
+                    LoRA Name
+
+                    <input
+                            type="text"
+                            id="loraName"
+                            name="loraName"
+                            class="details-edit-input"
+                            required
+                    >
+                </label>
+
+                <label class="details-edit-full-width">
+                    Creator
+
+                    <input
+                            type="text"
+                            id="creator"
+                            name="creator"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Version
+
+                    <input
+                            type="text"
+                            id="version"
+                            name="version"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Category
+
+                    <select
+                            id="category"
+                            name="category"
+                            class="details-edit-input"
+                            required>
+
+                        <option value="">
+                            Select category
+                        </option>
+
+                    </select>
+                </label>
+
+                <label>
+                    Subcategory
+
+                    <input
+                            type="text"
+                            id="subCategory"
+                            name="subCategory"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Group
+
+                    <input
+                            type="text"
+                            id="groupName"
+                            name="groupName"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Seed
+
+                    <input
+                            type="number"
+                            id="seedNumber"
+                            name="seedNumber"
+                            class="details-edit-input"
+                    >
+                </label>
+
+            </section>
+
+            <!-- =========================
+                 POSITIVE PROMPT
+            ========================== -->
+
+            <section class="details-prompt-section">
+                <h2>Positive Prompt</h2>
+
+                <textarea
+                        id="positivePrompt"
+                        name="positivePrompt"
+                        class="details-edit-textarea"
+                        rows="8"
+                        placeholder="Enter the positive prompt or trigger words..."></textarea>
+            </section>
+
+            <!-- =========================
+                 NEGATIVE PROMPT
+            ========================== -->
+
+            <section class="details-prompt-section">
+                <h2>Negative Prompt</h2>
+
+                <textarea
+                        id="negativePrompt"
+                        name="negativePrompt"
+                        class="details-edit-textarea"
+                        rows="8"
+                        placeholder="Enter the negative prompt..."></textarea>
+            </section>
+
+            <!-- =========================
+                 NOTES
+            ========================== -->
+
+            <section class="details-prompt-section">
+                <h2>Notes</h2>
+
+                <textarea
+                        id="notes"
+                        name="notes"
+                        class="details-edit-textarea"
+                        rows="6"
+                        placeholder="Add notes about this LoRA..."></textarea>
+            </section>
+
+            <!-- Status message -->
+
+            <p
+                    id="addLoraMessage"
+                    class="details-edit-message hidden"
+                    aria-live="polite">
+            </p>
+
+            <!-- =========================
+                 STICKY ACTION BAR
+            ========================== -->
+
+            <div class="add-lora-action-bar">
+
+                <a
+                        href="/html/index.html"
+                        class="details-cancel-button add-cancel-button">
+                    Cancel
+                </a>
+
+                <button
+                        type="submit"
+                        id="saveLoraButton"
+                        class="details-save-button">
+                    Save LoRA
+                </button>
+
+            </div>
 
         </form>
 
     </div>
 
 </main>
-
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-
-        const backButton = document.getElementById("backButton");
-        const closeButton = document.getElementById("closeAddLoraButton");
-
-        if (backButton) {
-            backButton.addEventListener("click", () => {
-                history.back();
-            });
-        }
-
-        if (closeButton) {
-            closeButton.addEventListener("click", () => {
-                window.location.href = "/html/index.html";
-            });
-        }
-
-    });
-</script>
 
 </body>
 </html>
