@@ -154,23 +154,53 @@ function setupMenu() {
     const closeMenuButton = document.getElementById("closeMenuButton");
     const menuBackdrop = document.getElementById("menuBackdrop");
 
-    if (!optionsButton || !sideMenu || !closeMenuButton || !menuBackdrop) {
+    if (
+        !optionsButton ||
+        !sideMenu ||
+        !closeMenuButton ||
+        !menuBackdrop
+    ) {
         return;
     }
 
     const openMenu = () => {
         sideMenu.classList.remove("hidden");
         menuBackdrop.classList.remove("hidden");
+
+        sideMenu.setAttribute("aria-hidden", "false");
+        menuBackdrop.setAttribute("aria-hidden", "false");
+        optionsButton.setAttribute("aria-expanded", "true");
+
+        document.body.classList.add("menu-open");
+
+        closeMenuButton.focus();
     };
 
     const closeMenu = () => {
         sideMenu.classList.add("hidden");
         menuBackdrop.classList.add("hidden");
+
+        sideMenu.setAttribute("aria-hidden", "true");
+        menuBackdrop.setAttribute("aria-hidden", "true");
+        optionsButton.setAttribute("aria-expanded", "false");
+
+        document.body.classList.remove("menu-open");
+
+        optionsButton.focus();
     };
 
     optionsButton.addEventListener("click", openMenu);
     closeMenuButton.addEventListener("click", closeMenu);
     menuBackdrop.addEventListener("click", closeMenu);
+
+    document.addEventListener("keydown", event => {
+        if (
+            event.key === "Escape" &&
+            !sideMenu.classList.contains("hidden")
+        ) {
+            closeMenu();
+        }
+    });
 }
 
 function clearImagePreview() {
