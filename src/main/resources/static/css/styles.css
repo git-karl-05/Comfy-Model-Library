@@ -506,21 +506,168 @@
     }
 
     /* =========================
-       MODAL
+       MODAL OVERLAY
     ========================= */
 
     .modal-overlay {
         position: fixed;
-
         inset: 0;
+
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+
+        padding-top: env(safe-area-inset-top, 0);
 
         background-color: rgba(0, 0, 0, 0.7);
 
-        display: flex;
-        justify-content: center;
-        align-items: flex-end;
-
         z-index: 1000;
+    }
+
+    /* =========================
+       LORA DETAILS MODAL SHELL
+    ========================= */
+
+    .lora-details-sheet {
+        width: 100%;
+        max-width: 700px;
+        max-height: 92dvh;
+
+        display: flex;
+        flex-direction: column;
+
+        overflow: hidden;
+
+        border: 1px solid var(--border);
+        border-bottom: none;
+        border-top-left-radius: 24px;
+        border-top-right-radius: 24px;
+
+        background-color: var(--background);
+
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.65);
+
+        animation: slideUp 0.2s ease;
+    }
+
+    /* =========================
+       MODAL SCROLL AREA
+    ========================= */
+
+    .lora-details-scroll-area {
+        min-height: 0;
+
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        gap: 18px;
+
+        overflow-y: auto;
+        overscroll-behavior: contain;
+
+        padding: 20px;
+
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* =========================
+       SHARED FORM ACTION BAR
+    ========================= */
+
+    .shared-form-action-bar {
+        z-index: 50;
+
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+
+        padding:
+                14px
+                20px
+                calc(14px + env(safe-area-inset-bottom, 0px));
+
+        border-top: 1px solid var(--border);
+
+        background-color: var(--background);
+
+        box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    /*
+     * The Edit footer is part of the modal shell.
+     * It does not scroll and requires no negative margins.
+     */
+    .edit-form-action-bar {
+        position: relative;
+        flex: 0 0 auto;
+
+        width: 100%;
+    }
+
+    /*
+     * The Add footer remains sticky because the Add page uses normal
+     * document scrolling.
+     */
+    .add-lora-action-bar {
+        position: sticky;
+        bottom: 0;
+
+        margin-right: -20px;
+        margin-left: -20px;
+    }
+
+    /* =========================
+       SHARED ACTION BUTTONS
+    ========================= */
+
+    .details-save-button,
+    .details-cancel-button {
+        min-height: 48px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        padding: 0 16px;
+
+        border-radius: 12px;
+
+        font-size: 0.9rem;
+        font-weight: 700;
+
+        cursor: pointer;
+    }
+
+    .details-save-button {
+        border: none;
+
+        background-color: var(--primary);
+        color: white;
+    }
+
+    .details-save-button:hover {
+        background-color: var(--primary-hover);
+    }
+
+    .details-save-button:disabled {
+        cursor: wait;
+        opacity: 0.65;
+    }
+
+    .details-cancel-button {
+        border: 1px solid var(--border);
+
+        background-color: var(--surface);
+        color: var(--text-secondary);
+    }
+
+    .details-cancel-button:hover {
+        background-color: var(--surface-light);
+        color: var(--text-primary);
+    }
+
+    .add-cancel-button {
+        text-decoration: none;
     }
 
     .hidden {
@@ -531,22 +678,6 @@
        BOTTOM SHEET
     ========================= */
 
-    .bottom-sheet {
-        width: 100%;
-        max-width: 700px;
-        max-height: 92vh;
-
-        overflow-y: auto;
-
-        background-color: var(--surface);
-
-        border-top-left-radius: 24px;
-        border-top-right-radius: 24px;
-
-        padding: 20px;
-
-        animation: slideUp 0.2s ease;
-    }
 
     @keyframes slideUp {
         from {
@@ -747,18 +878,7 @@
        LORA DETAILS MODAL
     ========================= */
 
-    .lora-details-sheet {
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
 
-        max-width: 700px;
-
-        background-color: var(--background);
-
-        border: 1px solid var(--border);
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.65);
-    }
 
     .details-subtitle {
         margin-top: 4px;
@@ -938,21 +1058,42 @@
     ========================= */
 
     @media (min-width: 768px) {
+        .modal-overlay {
+            align-items: center;
 
-        .app-container {
-            max-width: 900px;
-            margin: 0 auto;
+            padding:
+                    24px
+                    24px
+                    calc(24px + env(safe-area-inset-bottom, 0px));
         }
 
-        .bottom-sheet {
-            max-width: 700px;
+        .lora-details-sheet {
+            max-height: calc(100dvh - 48px);
+
+            border-bottom: 1px solid var(--border);
             border-radius: 24px;
         }
 
-        .modal-overlay {
-            align-items: center;
+        .add-lora-page {
+            padding: 24px;
         }
 
+        .add-lora-container {
+            border: 1px solid var(--border);
+            border-radius: 24px;
+
+            background-color: var(--background);
+
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        }
+
+        .add-lora-action-bar {
+            margin-right: -20px;
+            margin-left: -20px;
+
+            border-bottom-right-radius: 24px;
+            border-bottom-left-radius: 24px;
+        }
     }
 
     /* =========================
@@ -1531,46 +1672,8 @@
         font-weight: 700;
     }
 
-    /* =========================
-       SHARED STICKY ACTION BARS
-    ========================= */
 
-    .details-edit-action-bar,
-    .add-lora-action-bar {
-        position: sticky;
-        bottom: 0;
 
-        z-index: 100;
-
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-
-        width: auto;
-
-        padding:
-                14px
-                20px
-                calc(14px + env(safe-area-inset-bottom, 0px));
-
-        border-top: 1px solid var(--border);
-
-        background: var(--background);
-
-        box-shadow: 0 -8px 20px rgba(0, 0, 0, 0.45);
-
-        isolation: isolate;
-    }
-
-    /* Cancel the modal's 18px flex gap and 20px sheet padding. */
-    .details-edit-action-bar {
-        margin: -18px -20px -20px;
-    }
-
-    /* Cancel the Add container's 20px horizontal padding. */
-    .add-lora-action-bar {
-        margin: 0 -20px;
-    }
 
     /* =========================
        SAVE AND CANCEL BUTTONS

@@ -193,223 +193,231 @@
 </main>
 
 <div id="loraDetailsModal" class="modal-overlay hidden">
-    <section class="bottom-sheet lora-details-sheet">
 
-        <div class="sheet-header">
+    <section class="lora-details-sheet">
 
-            <!-- View-mode header -->
-            <div id="detailsHeaderView" class="details-header-view">
+        <!-- Everything in this container scrolls -->
+        <div class="lora-details-scroll-area">
 
-                <div class="details-title-container">
-                    <h2 id="detailsLoraName">LoRA Name</h2>
+            <div class="sheet-header">
 
-                    <p id="detailsCreator" class="details-subtitle">
-                        by Creator
-                    </p>
+                <!-- View-mode header -->
+                <div id="detailsHeaderView" class="details-header-view">
+
+                    <div class="details-title-container">
+                        <h2 id="detailsLoraName">LoRA Name</h2>
+
+                        <p id="detailsCreator" class="details-subtitle">
+                            by Creator
+                        </p>
+                    </div>
+
+                    <div class="details-actions">
+                        <button
+                                id="editLoraButton"
+                                class="icon-button"
+                                type="button"
+                                aria-label="Edit LoRA"
+                                title="Edit LoRA">
+                            ✏
+                        </button>
+
+                        <button
+                                id="closeLoraDetailsButton"
+                                class="close-button"
+                                type="button"
+                                aria-label="Close LoRA details">
+                            ×
+                        </button>
+                    </div>
+
                 </div>
 
-                <div class="details-actions">
-                    <button
-                            id="editLoraButton"
-                            class="icon-button"
-                            type="button"
-                            aria-label="Edit LoRA"
-                            title="Edit LoRA">
-                        ✏
-                    </button>
-
-                    <button
-                            id="closeLoraDetailsButton"
-                            class="close-button"
-                            type="button"
-                            aria-label="Close LoRA details">
-                        ×
-                    </button>
+                <!-- Edit-mode header -->
+                <div id="detailsHeaderEdit" class="details-header-edit hidden">
+                    <h2>Edit LoRA Details</h2>
                 </div>
 
             </div>
 
-            <!-- Edit-mode header -->
-            <div id="detailsHeaderEdit" class="details-header-edit hidden">
-                <h2>Edit LoRA Details</h2>
+            <!-- Image remains read-only -->
+            <div id="detailsImageContainer" class="details-image-container">
+                <div class="lora-card-placeholder">
+                    No Image
+                </div>
             </div>
+
+            <!-- View-mode details -->
+            <section id="detailsInfoView" class="details-info">
+
+                <p>
+                    <strong>Version:</strong>
+                    <span id="detailsVersion">N/A</span>
+                </p>
+
+                <p>
+                    <strong>Category:</strong>
+                    <span id="detailsCategory">N/A</span>
+                </p>
+
+                <p>
+                    <strong>Subcategory:</strong>
+                    <span id="detailsSubCategory">N/A</span>
+                </p>
+
+                <p>
+                    <strong>Group:</strong>
+                    <span id="detailsGroupName">N/A</span>
+                </p>
+
+                <p>
+                    <strong>Seed:</strong>
+                    <span id="detailsSeedNumber">N/A</span>
+                </p>
+
+            </section>
+
+            <!-- Edit-mode details -->
+            <section id="detailsInfoEdit" class="details-edit-grid hidden">
+
+                <label class="details-edit-full-width">
+                    LoRA Name
+
+                    <input
+                            type="text"
+                            id="editLoraName"
+                            class="details-edit-input"
+                            required
+                    >
+                </label>
+
+                <label class="details-edit-full-width">
+                    Creator
+
+                    <input
+                            type="text"
+                            id="editCreator"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Version
+
+                    <input
+                            type="text"
+                            id="editVersion"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Category
+
+                    <select
+                            id="editCategory"
+                            class="details-edit-input"
+                            required>
+
+                        <option value="">Select category</option>
+                        <option value="BACKGROUND">Background</option>
+                        <option value="CHARACTER">Character</option>
+                        <option value="CONCEPT">Concept</option>
+                        <option value="ENHANCER">Enhancer</option>
+                        <option value="OUTFIT">Outfit</option>
+                        <option value="POSES">Poses</option>
+                        <option value="SLIDER">Slider</option>
+                        <option value="STYLE">Style</option>
+
+                    </select>
+                </label>
+
+                <label>
+                    Subcategory
+
+                    <input
+                            type="text"
+                            id="editSubCategory"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Group
+
+                    <input
+                            type="text"
+                            id="editGroupName"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Seed
+
+                    <input
+                            type="number"
+                            id="editSeedNumber"
+                            class="details-edit-input"
+                    >
+                </label>
+
+            </section>
+
+            <!-- Positive prompt -->
+            <section class="details-prompt-section">
+                <h3>Positive Prompt</h3>
+
+                <pre
+                        id="detailsPositivePrompt"
+                        class="details-prompt-box"></pre>
+
+                <textarea
+                        id="editPositivePrompt"
+                        class="details-edit-textarea hidden"
+                        rows="8"></textarea>
+            </section>
+
+            <!-- Negative prompt -->
+            <section class="details-prompt-section">
+                <h3>Negative Prompt</h3>
+
+                <pre
+                        id="detailsNegativePrompt"
+                        class="details-prompt-box"></pre>
+
+                <textarea
+                        id="editNegativePrompt"
+                        class="details-edit-textarea hidden"
+                        rows="8"></textarea>
+            </section>
+
+            <!-- Notes -->
+            <section class="details-prompt-section">
+                <h3>Notes</h3>
+
+                <pre
+                        id="detailsNotes"
+                        class="details-prompt-box"></pre>
+
+                <textarea
+                        id="editNotes"
+                        class="details-edit-textarea hidden"
+                        rows="6"></textarea>
+            </section>
+
+            <p
+                    id="detailsEditMessage"
+                    class="details-edit-message hidden"
+                    aria-live="polite">
+            </p>
 
         </div>
 
-        <!-- Image remains read-only -->
-        <div id="detailsImageContainer" class="details-image-container">
-            <div class="lora-card-placeholder">
-                No Image
-            </div>
-        </div>
-
-        <!-- View-mode details -->
-        <section id="detailsInfoView" class="details-info">
-
-            <p>
-                <strong>Version:</strong>
-                <span id="detailsVersion">N/A</span>
-            </p>
-
-            <p>
-                <strong>Category:</strong>
-                <span id="detailsCategory">N/A</span>
-            </p>
-
-            <p>
-                <strong>Subcategory:</strong>
-                <span id="detailsSubCategory">N/A</span>
-            </p>
-
-            <p>
-                <strong>Group:</strong>
-                <span id="detailsGroupName">N/A</span>
-            </p>
-
-            <p>
-                <strong>Seed:</strong>
-                <span id="detailsSeedNumber">N/A</span>
-            </p>
-
-        </section>
-
-        <!-- Edit-mode details -->
-        <section id="detailsInfoEdit" class="details-edit-grid hidden">
-
-            <label class="details-edit-full-width">
-                LoRA Name
-
-                <input
-                        type="text"
-                        id="editLoraName"
-                        class="details-edit-input"
-                        required
-                >
-            </label>
-
-            <label class="details-edit-full-width">
-                Creator
-
-                <input
-                        type="text"
-                        id="editCreator"
-                        class="details-edit-input"
-                >
-            </label>
-
-            <label>
-                Version
-
-                <input
-                        type="text"
-                        id="editVersion"
-                        class="details-edit-input"
-                >
-            </label>
-
-            <label>
-                Category
-
-                <select
-                        id="editCategory"
-                        class="details-edit-input"
-                        required>
-
-                    <option value="">Select category</option>
-                    <option value="BACKGROUND">Background</option>
-                    <option value="CHARACTER">Character</option>
-                    <option value="CONCEPT">Concept</option>
-                    <option value="ENHANCER">Enhancer</option>
-                    <option value="OUTFIT">Outfit</option>
-                    <option value="POSES">Poses</option>
-                    <option value="SLIDER">Slider</option>
-                    <option value="STYLE">Style</option>
-                </select>
-            </label>
-
-            <label>
-                Subcategory
-
-                <input
-                        type="text"
-                        id="editSubCategory"
-                        class="details-edit-input"
-                >
-            </label>
-
-            <label>
-                Group
-
-                <input
-                        type="text"
-                        id="editGroupName"
-                        class="details-edit-input"
-                >
-            </label>
-
-            <label>
-                Seed
-
-                <input
-                        type="number"
-                        id="editSeedNumber"
-                        class="details-edit-input"
-                >
-            </label>
-
-
-        </section>
-
-        <!-- Positive prompt -->
-        <section class="details-prompt-section">
-            <h3>Positive Prompt</h3>
-
-            <pre
-                    id="detailsPositivePrompt"
-                    class="details-prompt-box"></pre>
-
-            <textarea
-                    id="editPositivePrompt"
-                    class="details-edit-textarea hidden"
-                    rows="8"></textarea>
-        </section>
-
-        <!-- Negative prompt -->
-        <section class="details-prompt-section">
-            <h3>Negative Prompt</h3>
-
-            <pre
-                    id="detailsNegativePrompt"
-                    class="details-prompt-box"></pre>
-
-            <textarea
-                    id="editNegativePrompt"
-                    class="details-edit-textarea hidden"
-                    rows="8"></textarea>
-        </section>
-
-        <!-- Notes -->
-        <section class="details-prompt-section">
-            <h3>Notes</h3>
-
-            <pre
-                    id="detailsNotes"
-                    class="details-prompt-box"></pre>
-
-            <textarea
-                    id="editNotes"
-                    class="details-edit-textarea hidden"
-                    rows="6"></textarea>
-        </section>
-
-
-        <p
-                id="detailsEditMessage"
-                class="details-edit-message hidden">
-        </p>
-
-        <!-- Sticky edit actions -->
-        <div id="detailsEditActionBar" class="details-edit-action-bar hidden">
+        <!-- This footer does not scroll -->
+        <div
+                id="detailsEditActionBar"
+                class="shared-form-action-bar edit-form-action-bar hidden">
 
             <button
                     id="cancelLoraEditButton"
@@ -428,6 +436,7 @@
         </div>
 
     </section>
+
 </div>
 </body>
 </html>
