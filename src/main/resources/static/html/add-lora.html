@@ -24,15 +24,18 @@
              PAGE HEADER
         ========================== -->
 
+
         <header class="add-lora-header">
 
-            <a
-                    href="/html/index.html"
-                    class="page-back-button"
-                    aria-label="Return to LoRA Library"
-                    title="Return to LoRA Library">
-                ←
-            </a>
+            <button
+                    type="button"
+                    id="optionsButton"
+                    class="options-button"
+                    aria-label="Open navigation menu"
+                    aria-controls="sideMenu"
+                    aria-expanded="false">
+                ☰
+            </button>
 
             <h1>Add LoRA</h1>
 
@@ -45,6 +48,45 @@
             </a>
 
         </header>
+
+        <div
+                id="menuBackdrop"
+                class="menu-backdrop hidden"
+                aria-hidden="true">
+        </div>
+
+        <nav
+                id="sideMenu"
+                class="side-menu hidden"
+                aria-label="Main navigation"
+                aria-hidden="true">
+
+            <div class="side-menu-header">
+                <h2>Menu</h2>
+
+                <button
+                        type="button"
+                        id="closeMenuButton"
+                        class="menu-close-button"
+                        aria-label="Close navigation menu">
+                    ×
+                </button>
+            </div>
+
+            <a href="/html/index.html" class="side-menu-link">
+                LoRA Library
+            </a>
+
+            <a href="/html/add-lora.html" class="side-menu-link active">
+                Add LoRA
+            </a>
+
+            <a href="/html/character-gallery.html" class="side-menu-link">
+                Character Gallery
+            </a>
+
+        </nav>
+
 
         <!-- =========================
              ADD LORA FORM

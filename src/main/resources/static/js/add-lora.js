@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadCategories();
     setupImagePreview();
     setupAddLoraForm();
+    setupMenu();
 });
 
 /* =========================
@@ -145,6 +146,31 @@ function showImagePreview(imageFile) {
 
     removeButton.classList.remove("hidden");
     previewContainer.classList.add("has-image");
+}
+
+function setupMenu() {
+    const optionsButton = document.getElementById("optionsButton");
+    const sideMenu = document.getElementById("sideMenu");
+    const closeMenuButton = document.getElementById("closeMenuButton");
+    const menuBackdrop = document.getElementById("menuBackdrop");
+
+    if (!optionsButton || !sideMenu || !closeMenuButton || !menuBackdrop) {
+        return;
+    }
+
+    const openMenu = () => {
+        sideMenu.classList.remove("hidden");
+        menuBackdrop.classList.remove("hidden");
+    };
+
+    const closeMenu = () => {
+        sideMenu.classList.add("hidden");
+        menuBackdrop.classList.add("hidden");
+    };
+
+    optionsButton.addEventListener("click", openMenu);
+    closeMenuButton.addEventListener("click", closeMenu);
+    menuBackdrop.addEventListener("click", closeMenu);
 }
 
 function clearImagePreview() {
