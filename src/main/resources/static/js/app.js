@@ -890,3 +890,99 @@ function displayImportError(message) {
     importResult.classList.add("import-result-error");
     importResult.textContent = message;
 }
+
+document.addEventListener("click", async event => {
+    const copyButton = event.target.closest(".copy-field-button");
+
+    if (!copyButton) {
+        return;
+    }
+
+    const targetId = copyButton.dataset.copyTarget;
+    const targetElement = document.getElementById(targetId);
+
+    if (!targetElement) {
+        console.error(`Copy target not found: ${targetId}`);
+        return;
+    }
+
+    const textToCopy = targetElement.textContent.trim();
+
+    if (!textToCopy || textToCopy === "Not provided") {
+        showCopyButtonStatus(copyButton, "Nothing to copy");
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(textToCopy);
+        showCopyButtonStatus(copyButton, "Copied");
+    } catch (error) {
+        console.error("Clipboard copy failed:", error);
+
+        const copied = copyUsingFallback(textToCopy);
+
+        showCopyButtonStatus(
+            copyButton,
+            copied ? "Copied" : "Copy failed"
+        );
+    }
+});
+
+function showCopyButtonStatus(button, message) {
+    const originalText =
+        button.dataset.originalText || button.textContent;
+
+    button.dataset.originalText = originalText;
+    button.textContent = message;
+    button.disabled = true;
+
+    window.setTimeout(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+    }, 1200);
+}
+
+function copyUsingFallback(text) {
+    const temporaryTextArea = document.createElement("textarea");
+
+    temporaryTextArea.value = text;
+    temporaryTextArea.setAttribute("readonly", "");
+    temporaryTextArea.style.position = "fixed";
+    temporaryTextArea.style.opacity = "0";
+
+    document.body.appendChild(temporaryTextArea);
+
+    temporaryTextArea.select();
+    temporaryTextArea.setSelectionRange(
+        0,
+        temporaryTextArea.value.length
+    );
+
+    let copied = false;
+
+    try {
+        copied = document.execCommand("copy");
+    } catch (error) {
+        console.error("Fallback copy failed:", error);
+    }
+
+    temporaryTextArea.remove();
+
+    return copied;
+}
+
+function setCopyableField(elementId, buttonSelector, value) {
+    const element = document.getElementById(elementId);
+    const button = document.querySelector(buttonSelector);
+
+    const hasValue =
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !== "";
+
+    element.textContent = hasValue
+        ? String(value)
+        : "Not provided";
+
+    button.disabled = !hasValue;
+}

@@ -369,47 +369,109 @@
             </section>
 
             <!-- Positive prompt -->
-            <section class="details-prompt-section">
-                <h3>Positive Prompt</h3>
+            <div class="details-field">
 
-                <pre
+                <div class="details-field-header">
+                    <span class="details-field-label">Positive Prompt</span>
+
+                    <button
+                            type="button"
+                            class="copy-field-button"
+                            data-copy-target="detailsPositivePrompt"
+                            aria-label="Copy positive prompt"
+                            title="Copy positive prompt"
+                    >
+                        Copy
+                    </button>
+                </div>
+
+                <div
                         id="detailsPositivePrompt"
-                        class="details-prompt-box"></pre>
+                        class="details-field-value details-long-text"
+                ></div>
 
-                <textarea
-                        id="editPositivePrompt"
-                        class="details-edit-textarea hidden"
-                        rows="8"></textarea>
-            </section>
+            </div>
 
-            <!-- Negative prompt -->
-            <section class="details-prompt-section">
-                <h3>Negative Prompt</h3>
+            <div class="details-field">
 
-                <pre
-                        id="detailsNegativePrompt"
-                        class="details-prompt-box"></pre>
+                <div class="details-field-header">
+                    <span class="details-field-label">Seed Number</span>
 
-                <textarea
-                        id="editNegativePrompt"
-                        class="details-edit-textarea hidden"
-                        rows="8"></textarea>
-            </section>
+                    <button
+                            type="button"
+                            class="copy-field-button"
+                            data-copy-target="detailsSeedNumber"
+                            aria-label="Copy seed number"
+                            title="Copy seed number"
+                    >
+                        Copy
+                    </button>
+                </div>
 
-            <!-- Notes -->
-            <section class="details-prompt-section">
-                <h3>Notes</h3>
 
-                <pre
-                        id="detailsNotes"
-                        class="details-prompt-box"></pre>
+                <!-- Folded additional details -->
+                <details class="details-collapsible">
 
-                <textarea
-                        id="editNotes"
-                        class="details-edit-textarea hidden"
-                        rows="6"></textarea>
-            </section>
+                    <summary class="details-collapsible-summary">
+                        <span class="details-collapsible-icon" aria-hidden="true"></span>
+                        <span>Additional details</span>
+                    </summary>
 
+                    <div class="details-collapsible-content">
+
+                        <!-- Negative Prompt -->
+                        <div class="details-field">
+
+                            <div class="details-field-header">
+                <span class="details-field-label">
+                    Negative Prompt
+                </span>
+
+                                <button
+                                        type="button"
+                                        class="copy-field-button"
+                                        data-copy-target="detailsNegativePrompt"
+                                        aria-label="Copy negative prompt"
+                                        title="Copy negative prompt"
+                                >
+                                    Copy
+                                </button>
+                            </div>
+
+                            <div
+                                    id="detailsNegativePrompt"
+                                    class="details-field-value details-long-text"
+                            ></div>
+
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="details-field">
+
+                            <div class="details-field-header">
+                                <span class="details-field-label">Notes</span>
+
+                                <button
+                                        type="button"
+                                        class="copy-field-button"
+                                        data-copy-target="detailsNotes"
+                                        aria-label="Copy notes"
+                                        title="Copy notes"
+                                >
+                                    Copy
+                                </button>
+                            </div>
+
+                            <div
+                                    id="detailsNotes"
+                                    class="details-field-value details-long-text"
+                            ></div>
+
+                        </div>
+
+                    </div>
+
+                </details>
             <p
                     id="detailsEditMessage"
                     class="details-edit-message hidden"
@@ -418,7 +480,6 @@
 
         </div>
 
-        <!-- This footer does not scroll -->
         <div
                 id="detailsEditActionBar"
                 class="shared-form-action-bar edit-form-action-bar hidden">

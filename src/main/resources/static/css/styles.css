@@ -1759,3 +1759,106 @@
     .hidden {
         display: none !important;
     }
+
+    /* =========================
+       COPY FIELDS
+    ========================= */
+
+    .details-field-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .details-field-label {
+        font-weight: 600;
+    }
+
+    .copy-field-button {
+        flex-shrink: 0;
+        padding: 5px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 7px;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition:
+                background-color 0.15s ease,
+                border-color 0.15s ease,
+                opacity 0.15s ease;
+    }
+
+    .copy-field-button:hover {
+        background: var(--surface-hover);
+    }
+
+    .copy-field-button:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+
+    .copy-field-button:disabled {
+        cursor: default;
+        opacity: 0.7;
+    }
+
+
+
+    .details-collapsible {
+        margin-top: 16px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    /* Remove the browser's default triangle */
+    .details-collapsible-summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 10px 12px;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .details-collapsible-summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .details-collapsible-summary:hover {
+        color: var(--text-primary);
+        background: var(--surface-hover);
+    }
+
+    .details-collapsible-summary:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: -2px;
+    }
+
+    /* Downward-pointing triangle */
+    .details-collapsible-icon {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 7px solid currentColor;
+        transition: transform 0.2s ease;
+    }
+
+    /* Point upward when expanded */
+    .details-collapsible[open] .details-collapsible-icon {
+        transform: rotate(180deg);
+    }
+
+    .details-collapsible-content {
+        display: grid;
+        gap: 20px;
+        padding: 8px 0 4px;
+    }
