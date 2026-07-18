@@ -567,17 +567,33 @@ function populateLoraDetailsModal(lora) {
     document.getElementById("detailsGroupName").textContent =
         lora.groupName || "N/A";
 
-    document.getElementById("detailsSeedNumber").textContent =
-        lora.seedNumber ?? "N/A";
+    setCopyableField(
+        "detailsPositivePrompt",
+        "detailsPositivePrompt",
+        lora.positivePrompt,
+        "No positive prompt saved."
+    );
 
-    document.getElementById("detailsPositivePrompt").textContent =
-        lora.positivePrompt || "No positive prompt saved.";
+    setCopyableField(
+        "detailsSeedNumber",
+        "detailsSeedNumber",
+        lora.seedNumber,
+        "N/A"
+    );
 
-    document.getElementById("detailsNegativePrompt").textContent =
-        lora.negativePrompt || "No negative prompt saved.";
+    setCopyableField(
+        "detailsNegativePrompt",
+        "detailsNegativePrompt",
+        lora.negativePrompt,
+        "No negative prompt saved."
+    );
 
-    document.getElementById("detailsNotes").textContent =
-        lora.notes || "No notes saved.";
+    setCopyableField(
+        "detailsNotes",
+        "detailsNotes",
+        lora.notes,
+        "No notes saved."
+    );
 
     populateDetailsImage(lora);
     populateDetailsUrl(lora);
@@ -652,21 +668,21 @@ function setLoraEditVisibility(editing) {
     toggleHidden("detailsInfoView", editing);
     toggleHidden("detailsInfoEdit", !editing);
 
-    toggleHidden("detailsPositivePrompt", editing);
-    toggleHidden("detailsNegativePrompt", editing);
-    toggleHidden("detailsNotes", editing);
-
-    toggleHidden("editPositivePrompt", !editing);
-    toggleHidden("editNegativePrompt", !editing);
-    toggleHidden("editNotes", !editing);
+    toggleHidden("detailsPromptView", editing);
+    toggleHidden("detailsPromptEdit", !editing);
 
     toggleHidden("detailsEditActionBar", !editing);
 
     const urlLink = document.getElementById("detailsUrl");
 
     if (urlLink) {
-        const shouldHideUrl = editing || !currentLora?.url;
-        urlLink.classList.toggle("hidden", shouldHideUrl);
+        const shouldHideUrl =
+            editing || !currentLora?.url;
+
+        urlLink.classList.toggle(
+            "hidden",
+            shouldHideUrl
+        );
     }
 }
 
@@ -985,4 +1001,81 @@ function setCopyableField(elementId, buttonSelector, value) {
         : "Not provided";
 
     button.disabled = !hasValue;
+}
+
+const additionalDetails =
+    document.getElementById("additionalLoraDetails");
+
+if (additionalDetails) {
+    additionalDetails.open = false;
+}
+
+const hasNegativePrompt =
+    typeof lora.negativePrompt === "string" &&
+    lora.negativePrompt.trim() !== "";
+
+const hasNotes =
+    typeof lora.notes === "string" &&
+    lora.notes.trim() !== "";
+
+if (additionalDetails) {
+    additionalDetails.hidden =
+        !hasNegativePrompt && !hasNotes;
+
+    additionalDetails.open = false;
+}
+
+function setCopyableField(
+    targetId,
+    buttonTarget,
+    value,
+    emptyMessage
+) {
+    const target = document.getElementById(targetId);
+
+    const button = document.querySelector(
+        `[data-copy-target="${buttonTarget}"]`
+    );
+
+    if (!target) {
+        return;
+    }
+
+    const hasValue =
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !== "";
+
+    target.textContent =
+        hasValue
+            ? String(value)
+            : emptyMessage;
+
+    if (button) {
+        button.disabled = !hasValue;
+    }
+}
+
+function showCopyButtonStatus(button, message) {
+    if (!button.dataset.originalText) {
+        button.dataset.originalText =
+            button.textContent.trim();
+    }
+
+    window.clearTimeout(
+        Number(button.dataset.resetTimer)
+    );
+
+    button.textContent = message;
+    button.disabled = true;
+
+    const timer = window.setTimeout(() => {
+        button.textContent =
+            button.dataset.originalText;
+
+        button.disabled = false;
+        delete button.dataset.resetTimer;
+    }, 1200);
+
+    button.dataset.resetTimer = String(timer);
 }

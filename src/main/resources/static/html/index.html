@@ -274,10 +274,7 @@
                     <span id="detailsGroupName">N/A</span>
                 </p>
 
-                <p>
-                    <strong>Seed:</strong>
-                    <span id="detailsSeedNumber">N/A</span>
-                </p>
+
 
             </section>
 
@@ -369,52 +366,80 @@
             </section>
 
             <!-- Positive prompt -->
-            <div class="details-field">
+            <!-- View-mode prompt fields -->
+            <section id="detailsPromptView" class="details-prompt-view">
 
-                <div class="details-field-header">
-                    <span class="details-field-label">Positive Prompt</span>
+                <!-- Positive Prompt -->
+                <div class="details-field">
 
-                    <button
-                            type="button"
-                            class="copy-field-button"
-                            data-copy-target="detailsPositivePrompt"
-                            aria-label="Copy positive prompt"
-                            title="Copy positive prompt"
+                    <div class="details-field-header">
+            <span class="details-field-label">
+                Positive Prompt
+            </span>
+
+                        <button
+                                type="button"
+                                class="copy-field-button"
+                                data-copy-target="detailsPositivePrompt"
+                                aria-label="Copy positive prompt"
+                                title="Copy positive prompt"
+                        >
+                            Copy
+                        </button>
+                    </div>
+
+                    <div
+                            id="detailsPositivePrompt"
+                            class="details-field-value details-long-text"
                     >
-                        Copy
-                    </button>
+                        No positive prompt saved.
+                    </div>
+
                 </div>
 
-                <div
-                        id="detailsPositivePrompt"
-                        class="details-field-value details-long-text"
-                ></div>
+                <!-- Seed Number -->
+                <div class="details-field details-seed-field">
 
-            </div>
+                    <div class="details-field-header">
+            <span class="details-field-label">
+                Seed Number
+            </span>
 
-            <div class="details-field">
+                        <button
+                                type="button"
+                                class="copy-field-button"
+                                data-copy-target="detailsSeedNumber"
+                                aria-label="Copy seed number"
+                                title="Copy seed number"
+                        >
+                            Copy
+                        </button>
+                    </div>
 
-                <div class="details-field-header">
-                    <span class="details-field-label">Seed Number</span>
-
-                    <button
-                            type="button"
-                            class="copy-field-button"
-                            data-copy-target="detailsSeedNumber"
-                            aria-label="Copy seed number"
-                            title="Copy seed number"
+                    <div
+                            id="detailsSeedNumber"
+                            class="details-field-value details-seed-value"
                     >
-                        Copy
-                    </button>
-                </div>
+                        N/A
+                    </div>
 
+                </div>
 
                 <!-- Folded additional details -->
-                <details class="details-collapsible">
+                <details
+                        id="additionalLoraDetails"
+                        class="details-collapsible"
+                >
 
                     <summary class="details-collapsible-summary">
-                        <span class="details-collapsible-icon" aria-hidden="true"></span>
+
+            <span
+                    class="details-collapsible-icon"
+                    aria-hidden="true">
+            </span>
+
                         <span>Additional details</span>
+
                     </summary>
 
                     <div class="details-collapsible-content">
@@ -423,9 +448,10 @@
                         <div class="details-field">
 
                             <div class="details-field-header">
-                <span class="details-field-label">
-                    Negative Prompt
-                </span>
+
+                    <span class="details-field-label">
+                        Negative Prompt
+                    </span>
 
                                 <button
                                         type="button"
@@ -436,12 +462,15 @@
                                 >
                                     Copy
                                 </button>
+
                             </div>
 
                             <div
                                     id="detailsNegativePrompt"
                                     class="details-field-value details-long-text"
-                            ></div>
+                            >
+                                No negative prompt saved.
+                            </div>
 
                         </div>
 
@@ -449,7 +478,10 @@
                         <div class="details-field">
 
                             <div class="details-field-header">
-                                <span class="details-field-label">Notes</span>
+
+                    <span class="details-field-label">
+                        Notes
+                    </span>
 
                                 <button
                                         type="button"
@@ -460,23 +492,69 @@
                                 >
                                     Copy
                                 </button>
+
                             </div>
 
                             <div
                                     id="detailsNotes"
                                     class="details-field-value details-long-text"
-                            ></div>
+                            >
+                                No notes saved.
+                            </div>
 
                         </div>
 
                     </div>
 
                 </details>
+
+            </section>
+
+            <!-- Edit-mode prompt fields -->
+            <section
+                    id="detailsPromptEdit"
+                    class="details-edit-prompts hidden"
+            >
+
+                <label>
+                    Positive Prompt
+
+                    <textarea
+                            id="editPositivePrompt"
+                            class="details-edit-textarea"
+                            rows="8"
+                    ></textarea>
+                </label>
+
+                <label>
+                    Negative Prompt
+
+                    <textarea
+                            id="editNegativePrompt"
+                            class="details-edit-textarea"
+                            rows="8"
+                    ></textarea>
+                </label>
+
+                <label>
+                    Notes
+
+                    <textarea
+                            id="editNotes"
+                            class="details-edit-textarea"
+                            rows="6"
+                    ></textarea>
+                </label>
+
+            </section>
+
             <p
                     id="detailsEditMessage"
                     class="details-edit-message hidden"
-                    aria-live="polite">
+                    aria-live="polite"
+            >
             </p>
+
 
         </div>
 
