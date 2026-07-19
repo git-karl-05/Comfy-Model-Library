@@ -1,4 +1,6 @@
-**Project status:** Early development. Features, architecture, and APIs may change.
+  **Project status:** Early development. Features, architecture, and APIs may change.
+
+
 
 ## Planned Features
 
@@ -29,4 +31,3 @@
 - Preserve workflow versions
 - Associate generated images with the workflows that created them
 
-### Model and Asset Management
