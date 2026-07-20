@@ -70,7 +70,7 @@ function createLoraCard(lora) {
                 muted
                 loop
                 playsinline
-                preload="metadata"
+                preload="auto"
             ></video>
           `
             : `
@@ -101,6 +101,15 @@ function createLoraCard(lora) {
             <h2>${lora.loraName ?? "Untitled LoRA"}</h2>
         </div>
     `;
+
+    const previewVideo =
+        card.querySelector("video.lora-card-image");
+
+
+    if (previewVideo) {
+        observeGalleryVideo(previewVideo);
+
+    }
 
     card.addEventListener("click", () => {
         openLoraDetailsModal(lora.id);
@@ -614,6 +623,21 @@ function populateLoraDetailsModal(lora) {
         "No notes saved."
     );
 
+    const hasNegativePrompt =
+        typeof lora.negativePrompt === "string" &&
+        lora.negativePrompt.trim() !== "";
+
+    const hasNotes =
+        typeof lora.notes === "string" &&
+        lora.notes.trim() !== "";
+
+    if (additionalDetails) {
+        additionalDetails.hidden =
+            !hasNegativePrompt && !hasNotes;
+
+        additionalDetails.open = false;
+    }
+
     populateDetailsImage(lora);
     populateDetailsUrl(lora);
 }
@@ -651,12 +675,13 @@ function populateDetailsImage(lora) {
         `;
 
         const video = imageContainer.querySelector("video");
+
         if (video) {
             video.play().catch(error => {
-                console.debug()
-                    "Video autoplay prevented: ",
-                        error
-
+                console.debug(
+                    "Video autoplay prevented:",
+                    error
+                );
             });
         }
 
@@ -992,20 +1017,6 @@ document.addEventListener("click", async event => {
     }
 });
 
-function showCopyButtonStatus(button, message) {
-    const originalText =
-        button.dataset.originalText || button.textContent;
-
-    button.dataset.originalText = originalText;
-    button.textContent = message;
-    button.disabled = true;
-
-    window.setTimeout(() => {
-        button.textContent = originalText;
-        button.disabled = false;
-    }, 1200);
-}
-
 function copyUsingFallback(text) {
     const temporaryTextArea = document.createElement("textarea");
 
@@ -1035,22 +1046,6 @@ function copyUsingFallback(text) {
     return copied;
 }
 
-function setCopyableField(elementId, buttonSelector, value) {
-    const element = document.getElementById(elementId);
-    const button = document.querySelector(buttonSelector);
-
-    const hasValue =
-        value !== null &&
-        value !== undefined &&
-        String(value).trim() !== "";
-
-    element.textContent = hasValue
-        ? String(value)
-        : "Not provided";
-
-    button.disabled = !hasValue;
-}
-
 const additionalDetails =
     document.getElementById("additionalLoraDetails");
 
@@ -1058,20 +1053,7 @@ if (additionalDetails) {
     additionalDetails.open = false;
 }
 
-const hasNegativePrompt =
-    typeof lora.negativePrompt === "string" &&
-    lora.negativePrompt.trim() !== "";
 
-const hasNotes =
-    typeof lora.notes === "string" &&
-    lora.notes.trim() !== "";
-
-if (additionalDetails) {
-    additionalDetails.hidden =
-        !hasNegativePrompt && !hasNotes;
-
-    additionalDetails.open = false;
-}
 
 function setCopyableField(
     targetId,
@@ -1137,4 +1119,50 @@ function isVideoPreview(filePath) {
         .toLowerCase()
         .split("?")[0]
         .endsWith(".mp4");
+}
+
+const galleryVideoObserver = new IntersectionObserver(
+    entries => {
+        entries.forEach(entry => {
+            const video = entry.target;
+
+            if (entry.isIntersecting) {
+                pauseOtherGalleryVideos(video);
+
+                video.play().catch(error => {
+                    console.debug("Visible gallery video could not autoplay:",error);
+                });
+            } else {
+                video.pause();
+                if (video.readyState >= 1) {
+                    video.currentTime = 0;
+                }
+            }
+        });
+    },
+    {
+        threshold: 0.65
+    }
+);
+
+function observeGalleryVideo(video) {
+    galleryVideoObserver.observe(video);
+}
+
+function pauseOtherGalleryVideos(activeVideo) {
+    document
+        .querySelectorAll("video.lora-card-image")
+        .forEach(video => {
+            if (video != activeVideo) {
+                resetGalleryVideo(video);
+            }
+        });
+}
+
+function resetGalleryVideo(video) {
+    video.pause();
+
+    if (video.readyState >= 1) {
+        video.currentTime = 0;
+    }
 }
