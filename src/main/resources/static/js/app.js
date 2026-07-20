@@ -618,21 +618,39 @@ function populateDetailsImage(lora) {
         return;
     }
 
-    if (lora.filePath) {
-        imageContainer.innerHTML = `
-            <img
-                src="${lora.filePath}"
-                alt="${lora.loraName || "LoRA Preview"}"
-                class="details-image"
-            >
-        `;
-    } else {
+    if (!lora.filePath) {
         imageContainer.innerHTML = `
             <div class="lora-card-placeholder">
-                No Image
+                No Preview
             </div>
         `;
+        return;
     }
+
+    if (isVideoPreview(lora.filePath)) {
+        imageContainer.innerHTML = `
+            <video
+                src="${lora.filePath}"
+                class="details-image"
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+            >
+                Your browser cannot play this video preview.
+            </video>
+        `;
+        return;
+    }
+
+    imageContainer.innerHTML = `
+        <img
+            src="${lora.filePath}"
+            alt="${lora.loraName || "LoRA Preview"}"
+            class="details-image"
+        >
+    `;
 }
 
 function populateDetailsUrl(lora) {
