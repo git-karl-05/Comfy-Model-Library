@@ -62,7 +62,18 @@ function createLoraCard(lora) {
     card.className = "lora-card";
 
     const imageHtml = lora.filePath
-        ? `
+        ? isVideoPreview(lora.filePath)
+            ? `
+            <video
+                class="lora-card-image"
+                src="${lora.filePath}"
+                muted
+                loop
+                playsinline
+                preload="metadata"
+            ></video>
+          `
+            : `
             <img
                 class="lora-card-image"
                 src="${lora.filePath}"
@@ -70,10 +81,10 @@ function createLoraCard(lora) {
             >
           `
         : `
-            <div class="lora-card-placeholder">
-                No Image
-            </div>
-          `;
+        <div class="lora-card-placeholder">
+            No Image
+        </div>
+      `;
 
     card.innerHTML = `
         ${imageHtml}
@@ -1078,4 +1089,15 @@ function showCopyButtonStatus(button, message) {
     }, 1200);
 
     button.dataset.resetTimer = String(timer);
+}
+
+function isVideoPreview(filePath) {
+    if (!filePath) {
+        return false;
+    }
+
+    return filePath
+        .toLowerCase()
+        .split("?")[0]
+        .endsWith(".mp4");
 }
