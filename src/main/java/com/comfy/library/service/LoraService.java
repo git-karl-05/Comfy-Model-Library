@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -398,23 +399,34 @@ public class LoraService {
     }
 
     private String resolvePositivePrompt(JsonNode root) {
-        JsonNode images = root.path("civitai").path("images");
+        JsonNode trainedWords =
+                root.path("civitai").path("trainedWords");
 
-        if (images.isArray() && images.size() > 0) {
-            String prompt = getText(images.get(0).path("meta"), "prompt");
+        if (!trainedWords.isArray() || trainedWords.isEmpty()) {
+            return null;
+        }
 
-            if (prompt != null) {
-                return prompt;
+        List<String> trainedWordGroups = new ArrayList<>();
+
+        for (JsonNode wordNode : trainedWords) {
+            if (!wordNode.isTextual()) {
+                continue;
+            }
+
+            String value = wordNode
+                    .asText()
+                    .trim()
+                    .replaceAll("^,+|,+$", "")
+                    .trim();
+
+            if (!value.isEmpty()) {
+                trainedWordGroups.add(value);
             }
         }
 
-        JsonNode trainedWords = root.path("civitai").path("trainedWords");
-
-        if (trainedWords.isArray() && trainedWords.size() > 0) {
-            return trainedWords.get(0).asText();
-        }
-
-        return null;
+        return trainedWordGroups.isEmpty()
+                ? null
+                : String.join(", ", trainedWordGroups);
     }
 
     private String resolveNegativePrompt(JsonNode root) {
