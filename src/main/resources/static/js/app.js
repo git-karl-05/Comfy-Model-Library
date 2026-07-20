@@ -107,9 +107,11 @@ function createLoraCard(lora) {
 
 
     if (previewVideo) {
-        observeGalleryVideo(previewVideo);
+        setupGalleryVideoPreview(card, previewVideo);
 
     }
+
+
 
     card.addEventListener("click", () => {
         openLoraDetailsModal(lora.id);
@@ -1124,28 +1126,45 @@ function isVideoPreview(filePath) {
 const galleryVideoObserver = new IntersectionObserver(
     entries => {
         entries.forEach(entry => {
+            if (!window.matchMedia("(hover: none)").matches) {
+                return;
+            }
+
             const video = entry.target;
 
             if (entry.isIntersecting) {
-                pauseOtherGalleryVideos(video);
-
-                video.play().catch(error => {
-                    console.debug("Visible gallery video could not autoplay:",error);
-                });
+                playGalleryVideo(video);
             } else {
-                video.pause();
-                if (video.readyState >= 1) {
-                    video.currentTime = 0;
-                }
+                resetGalleryVideo(video);
             }
         });
     },
     {
-        threshold: 0.65
+        threshold: 0.7
     }
 );
 
-function observeGalleryVideo(video) {
+function playGalleryVideo(video) {
+    pauseOtherGalleryVideos(video);
+
+    video.play().catch(error => {
+        console.debug("Gallery preview playback prevented:", error);
+    });
+}
+
+function setupGalleryVideoPreview(card, video) {
+    card.addEventListener("pointerenter", event => {
+        if (event.pointerType === "mouse") {
+            playGalleryVideo(video);
+        }
+    });
+
+    card.addEventListener("pointerleave", event => {
+        if (event.pointerType === "mouse") {
+            resetGalleryVideo(video);
+        }
+    });
+
     galleryVideoObserver.observe(video);
 }
 
@@ -1153,7 +1172,7 @@ function pauseOtherGalleryVideos(activeVideo) {
     document
         .querySelectorAll("video.lora-card-image")
         .forEach(video => {
-            if (video != activeVideo) {
+            if (video !== activeVideo) {
                 resetGalleryVideo(video);
             }
         });
@@ -1166,3 +1185,6 @@ function resetGalleryVideo(video) {
         video.currentTime = 0;
     }
 }
+
+
+
