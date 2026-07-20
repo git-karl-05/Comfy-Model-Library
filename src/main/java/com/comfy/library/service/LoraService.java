@@ -480,21 +480,25 @@ public class LoraService {
     }
 
     private String resolvePreviewPath(JsonNode root) {
-        JsonNode images = root.path("civitai").path("images");
+        JsonNode previews = root.path("civitai").path("images");
 
-        if (images.isArray() && !images.isEmpty()) {
-            String civitaiImageUrl = getText(images.get(0), "url");
+        if (previews.isArray() && !previews.isEmpty()) {
+            String previeweUrl = getText(previews.get(0), "url");
 
-            if (civitaiImageUrl != null) {
-                return civitaiImageUrl;
+            if (previeweUrl != null) {
+                System.out.println("Resolved preview URL: " + previeweUrl);
+                return previeweUrl;
             }
         }
 
         String previewUrl = getText(root, "preview_url");
 
         if (previewUrl != null) {
+            System.out.println("Resolved fallback preview URL: " + previewUrl);
             return previewUrl;
         }
+
+        System.out.println("No preview URL found in metadata");
 
         return null;
     }

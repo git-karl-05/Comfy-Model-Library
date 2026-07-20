@@ -62,7 +62,18 @@ function createLoraCard(lora) {
     card.className = "lora-card";
 
     const imageHtml = lora.filePath
-        ? `
+        ? isVideoPreview(lora.filePath)
+            ? `
+            <video
+                class="lora-card-image"
+                src="${lora.filePath}"
+                muted
+                loop
+                playsinline
+                preload="auto"
+            ></video>
+          `
+            : `
             <img
                 class="lora-card-image"
                 src="${lora.filePath}"
@@ -70,10 +81,10 @@ function createLoraCard(lora) {
             >
           `
         : `
-            <div class="lora-card-placeholder">
-                No Image
-            </div>
-          `;
+        <div class="lora-card-placeholder">
+            No Image
+        </div>
+      `;
 
     card.innerHTML = `
         ${imageHtml}
@@ -90,6 +101,17 @@ function createLoraCard(lora) {
             <h2>${lora.loraName ?? "Untitled LoRA"}</h2>
         </div>
     `;
+
+    const previewVideo =
+        card.querySelector("video.lora-card-image");
+
+
+    if (previewVideo) {
+        setupGalleryVideoPreview(card, previewVideo);
+
+    }
+
+
 
     card.addEventListener("click", () => {
         openLoraDetailsModal(lora.id);
@@ -537,6 +559,7 @@ async function openLoraDetailsModal(loraId) {
 
 function closeLoraDetailsModal() {
     const modal = document.getElementById("loraDetailsModal");
+    const video = document.querySelector("#detailsImageContainer video");
 
     if (modal) {
         modal.classList.add("hidden");
@@ -546,6 +569,13 @@ function closeLoraDetailsModal() {
     currentLora = null;
 
     clearEditMessage();
+
+    if (video) {
+        video.pause();
+        video.currentTime = 0;
+    }
+
+
 }
 
 function populateLoraDetailsModal(lora) {
@@ -595,6 +625,21 @@ function populateLoraDetailsModal(lora) {
         "No notes saved."
     );
 
+    const hasNegativePrompt =
+        typeof lora.negativePrompt === "string" &&
+        lora.negativePrompt.trim() !== "";
+
+    const hasNotes =
+        typeof lora.notes === "string" &&
+        lora.notes.trim() !== "";
+
+    if (additionalDetails) {
+        additionalDetails.hidden =
+            !hasNegativePrompt && !hasNotes;
+
+        additionalDetails.open = false;
+    }
+
     populateDetailsImage(lora);
     populateDetailsUrl(lora);
 }
@@ -607,21 +652,51 @@ function populateDetailsImage(lora) {
         return;
     }
 
-    if (lora.filePath) {
-        imageContainer.innerHTML = `
-            <img
-                src="${lora.filePath}"
-                alt="${lora.loraName || "LoRA Preview"}"
-                class="details-image"
-            >
-        `;
-    } else {
+    if (!lora.filePath) {
         imageContainer.innerHTML = `
             <div class="lora-card-placeholder">
-                No Image
+                No Preview
             </div>
         `;
+        return;
     }
+
+    if (isVideoPreview(lora.filePath)) {
+        imageContainer.innerHTML = `
+            <video
+                src="${lora.filePath}"
+                class="details-image"
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+            >
+                Your browser cannot play this video preview.
+            </video>
+        `;
+
+        const video = imageContainer.querySelector("video");
+
+        if (video) {
+            video.play().catch(error => {
+                console.debug(
+                    "Video autoplay prevented:",
+                    error
+                );
+            });
+        }
+
+        return;
+    }
+
+    imageContainer.innerHTML = `
+        <img
+            src="${lora.filePath}"
+            alt="${lora.loraName || "LoRA Preview"}"
+            class="details-image"
+        >
+    `;
 }
 
 function populateDetailsUrl(lora) {
@@ -944,20 +1019,6 @@ document.addEventListener("click", async event => {
     }
 });
 
-function showCopyButtonStatus(button, message) {
-    const originalText =
-        button.dataset.originalText || button.textContent;
-
-    button.dataset.originalText = originalText;
-    button.textContent = message;
-    button.disabled = true;
-
-    window.setTimeout(() => {
-        button.textContent = originalText;
-        button.disabled = false;
-    }, 1200);
-}
-
 function copyUsingFallback(text) {
     const temporaryTextArea = document.createElement("textarea");
 
@@ -987,22 +1048,6 @@ function copyUsingFallback(text) {
     return copied;
 }
 
-function setCopyableField(elementId, buttonSelector, value) {
-    const element = document.getElementById(elementId);
-    const button = document.querySelector(buttonSelector);
-
-    const hasValue =
-        value !== null &&
-        value !== undefined &&
-        String(value).trim() !== "";
-
-    element.textContent = hasValue
-        ? String(value)
-        : "Not provided";
-
-    button.disabled = !hasValue;
-}
-
 const additionalDetails =
     document.getElementById("additionalLoraDetails");
 
@@ -1010,20 +1055,7 @@ if (additionalDetails) {
     additionalDetails.open = false;
 }
 
-const hasNegativePrompt =
-    typeof lora.negativePrompt === "string" &&
-    lora.negativePrompt.trim() !== "";
 
-const hasNotes =
-    typeof lora.notes === "string" &&
-    lora.notes.trim() !== "";
-
-if (additionalDetails) {
-    additionalDetails.hidden =
-        !hasNegativePrompt && !hasNotes;
-
-    additionalDetails.open = false;
-}
 
 function setCopyableField(
     targetId,
@@ -1079,3 +1111,80 @@ function showCopyButtonStatus(button, message) {
 
     button.dataset.resetTimer = String(timer);
 }
+
+function isVideoPreview(filePath) {
+    if (!filePath) {
+        return false;
+    }
+
+    return filePath
+        .toLowerCase()
+        .split("?")[0]
+        .endsWith(".mp4");
+}
+
+const galleryVideoObserver = new IntersectionObserver(
+    entries => {
+        entries.forEach(entry => {
+            if (!window.matchMedia("(hover: none)").matches) {
+                return;
+            }
+
+            const video = entry.target;
+
+            if (entry.isIntersecting) {
+                playGalleryVideo(video);
+            } else {
+                resetGalleryVideo(video);
+            }
+        });
+    },
+    {
+        threshold: 0.7
+    }
+);
+
+function playGalleryVideo(video) {
+    pauseOtherGalleryVideos(video);
+
+    video.play().catch(error => {
+        console.debug("Gallery preview playback prevented:", error);
+    });
+}
+
+function setupGalleryVideoPreview(card, video) {
+    card.addEventListener("pointerenter", event => {
+        if (event.pointerType === "mouse") {
+            playGalleryVideo(video);
+        }
+    });
+
+    card.addEventListener("pointerleave", event => {
+        if (event.pointerType === "mouse") {
+            resetGalleryVideo(video);
+        }
+    });
+
+    galleryVideoObserver.observe(video);
+}
+
+function pauseOtherGalleryVideos(activeVideo) {
+    document
+        .querySelectorAll("video.lora-card-image")
+        .forEach(video => {
+            if (video !== activeVideo) {
+                resetGalleryVideo(video);
+            }
+        });
+}
+
+function resetGalleryVideo(video) {
+    video.pause();
+
+    if (video.readyState >= 1) {
+        video.currentTime = 0;
+    }
+}
+
+
+

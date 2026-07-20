@@ -901,15 +901,19 @@
         background-color: var(--surface);
     }
 
-    .details-image-container img {
+    .details-image-container img,
+    .details-image-container video {
         width: 100%;
         height: auto;
         max-height: 560px;
 
-        object-fit: contain;
         display: block;
-
+        object-fit: contain;
         border-radius: 20px;
+    }
+
+    .details-image-container video {
+        background-color: #000;
     }
 
     .details-info {
