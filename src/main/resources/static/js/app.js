@@ -548,6 +548,7 @@ async function openLoraDetailsModal(loraId) {
 
 function closeLoraDetailsModal() {
     const modal = document.getElementById("loraDetailsModal");
+    const video = document.querySelector("#detailsImageContainer video");
 
     if (modal) {
         modal.classList.add("hidden");
@@ -557,6 +558,13 @@ function closeLoraDetailsModal() {
     currentLora = null;
 
     clearEditMessage();
+
+    if (video) {
+        video.pause();
+        video.currentTime = 0;
+    }
+
+
 }
 
 function populateLoraDetailsModal(lora) {
@@ -641,6 +649,17 @@ function populateDetailsImage(lora) {
                 Your browser cannot play this video preview.
             </video>
         `;
+
+        const video = imageContainer.querySelector("video");
+        if (video) {
+            video.play().catch(error => {
+                console.debug()
+                    "Video autoplay prevented: ",
+                        error
+
+            });
+        }
+
         return;
     }
 
