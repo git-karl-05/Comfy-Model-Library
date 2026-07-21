@@ -28,7 +28,7 @@ public class LoraResponse {
     private String sha256;
     private String baseModel;
 
-    public LoraResponse() {
+    public LoraResponse(Long id, String loraName, String version, String creator, String url, LocalDateTime createdDate, LocalDateTime lastUpdated, LoraCategory category, String subCategory, String groupName, String positivePrompt, String negativePrompt, Long seedNumber, String notes, boolean favorite, String filePath, String modelFilePath, String sha256, String baseModel) {
     }
 
     public LoraResponse(LoraEntity loraEntity) {

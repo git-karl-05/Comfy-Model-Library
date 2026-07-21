@@ -4,6 +4,7 @@ import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.repository.LoraRepository;
 import com.comfy.library.service.LoraService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -40,8 +41,12 @@ public class LoraController {
     }
 
     @GetMapping
-    public ResponseEntity<List<LoraResponse>> getAllLoras() {
-        return ResponseEntity.ok(loraService.getAllLoras());
+    public ResponseEntity<Page<LoraResponse>> getLoras(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "16") int size
+    ) {
+        Page<LoraResponse> response = loraService.getLoras(page,size);
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{loraId}")
@@ -93,4 +98,6 @@ public class LoraController {
     public ImportSummaryResponse importFolder(@RequestBody ImportFolderRequest request) {
         return loraService.importLorasFromFolder(request.getFolderPath());
     }
+
+
 }

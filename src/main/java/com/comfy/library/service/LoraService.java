@@ -1,13 +1,14 @@
 package com.comfy.library.service;
 
-import com.comfy.library.dto.CreateLoraRequest;
-import com.comfy.library.dto.ImportSummaryResponse;
-import com.comfy.library.dto.LoraResponse;
-import com.comfy.library.dto.UpdateLoraRequest;
+import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.JsonNode;
@@ -23,9 +24,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class LoraService {
+
+    private static final int DEFAULT_PAGE_SIZE = 16;
+    private static final int MAX_PAGE_SIZE = 32;
 
     @Value("${lora.upload.path}")
     private String uploadPath;
@@ -214,6 +219,8 @@ public class LoraService {
     }
 
     public ImportSummaryResponse importLorasFromFolder(String folderPath) {
+        printLorasMissingMetadata(folderPath);
+
         int scanned = 0;
         int imported = 0;
         int skipped = 0;
@@ -243,7 +250,7 @@ public class LoraService {
                 }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Filed to scan folder: " + folderPath, e);
+            throw new RuntimeException("Failed to scan folder: " + folderPath, e);
         }
         return new ImportSummaryResponse(scanned, imported, skipped, failed);
     }
@@ -515,6 +522,130 @@ public class LoraService {
         return null;
     }
 
+    private boolean isSafetensorsFile(Path file) {
+        String fileName = file
+                .getFileName()
+                .toString()
+                .toLowerCase();
+
+        return fileName.endsWith(".safetensors");
+    }
+
+    private boolean isMetadataFileMissing(Path modelFile) {
+        Path expectedMetadataFile = resolveMetadataPath(modelFile);
+
+        return Files.notExists(expectedMetadataFile);
+    }
+
+
+
+    private String removeSafetensorsExtension(String fileName) {
+        String extension = ".safetensors";
+
+        if (!fileName.toLowerCase().endsWith(extension)) {
+            throw new IllegalArgumentException("Not a safetensors file: " + fileName);
+        }
+        return fileName.substring(0, fileName.length() - extension.length());
+    }
+
+    private Path resolveMetadataPath(Path modelFile) {
+        String modelFileName = modelFile
+                .getFileName()
+                .toString();
+
+        String baseName = removeSafetensorsExtension(modelFileName);
+
+        String metadataFileName = baseName + ".metadata.json";
+
+        return modelFile
+                .getParent()
+                .resolve(metadataFileName);
+    }
+
+    private List<Path> findLorasMissingMetadata(String folderPath) {
+        Path rootFolder = Paths.get(folderPath);
+
+        if (!Files.exists(rootFolder)) {
+            throw new IllegalArgumentException("Folder does not exist: " + folderPath);
+        }
+
+        if (!Files.isDirectory(rootFolder)) {
+            throw new IllegalArgumentException("Path is not a folder: " + folderPath);
+        }
+
+        try (Stream<Path> paths = Files.walk(rootFolder)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .filter(this::isSafetensorsFile)
+                    .filter(this::isMetadataFileMissing)
+                    .toList();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to scan folder for LoRA files: " + folderPath);
+        }
+    }
+
+    private void printLorasMissingMetadata(String folderPath) {
+        List<Path> missingMetadataFiles = findLorasMissingMetadata(folderPath);
+
+        System.out.println("LoRAs missing metadata: " + missingMetadataFiles.size());
+
+        missingMetadataFiles.forEach(modelFile -> {
+            System.out.println("Model: " + modelFile);
+
+            System.out.println("Expected JSON: " + resolveMetadataPath(modelFile));
+        });
+    }
+
+    private int normalizePageNumber(int page) {
+        return Math.max(page, 0);
+    }
+
+    private int normalizePageSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
+    }
+
+    private Pageable createPageable(int page, int size) {
+        int normalizedPage = normalizePageNumber(page);
+        int normalizedSize = normalizePageSize(size);
+
+        return PageRequest.of(normalizedPage, normalizedSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+    }
+
+    public Page<LoraResponse> getLoras(int page, int size) {
+        Pageable pageable = createPageable(page, size);
+
+        Page<LoraEntity> entityPage = loraRepository.findAll(pageable);
+
+        return entityPage.map(this::mapToResponse);
+    }
+
+    private LoraResponse mapToResponse(LoraEntity entity) {
+        return new LoraResponse(
+                entity.getId(),
+                entity.getLoraName(),
+                entity.getVersion(),
+                entity.getCreator(),
+                entity.getUrl(),
+                entity.getCreatedDate(),
+                entity.getLastUpdated(),
+                entity.getCategory(),
+                entity.getSubCategory(),
+                entity.getGroupName(),
+                entity.getPositivePrompt(),
+                entity.getNegativePrompt(),
+                entity.getSeedNumber(),
+                entity.getNotes(),
+                entity.isFavorite(),
+                entity.getFilePath(),
+                entity.getModelFilePath(),
+                entity.getSha256(),
+                entity.getBaseModel()
+        );
+    }
 
 }
 
