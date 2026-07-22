@@ -29,8 +29,8 @@ import java.util.stream.Stream;
 @Service
 public class LoraService {
 
-    private static final int DEFAULT_PAGE_SIZE = 16;
-    private static final int MAX_PAGE_SIZE = 32;
+    private static final int DEFAULT_PAGE_SIZE = 12;
+    private static final int MAX_PAGE_SIZE = 36;
 
     @Value("${lora.upload.path}")
     private String uploadPath;
@@ -620,31 +620,7 @@ public class LoraService {
 
         Page<LoraEntity> entityPage = loraRepository.findAll(pageable);
 
-        return entityPage.map(this::mapToResponse);
-    }
-
-    private LoraResponse mapToResponse(LoraEntity entity) {
-        return new LoraResponse(
-                entity.getId(),
-                entity.getLoraName(),
-                entity.getVersion(),
-                entity.getCreator(),
-                entity.getUrl(),
-                entity.getCreatedDate(),
-                entity.getLastUpdated(),
-                entity.getCategory(),
-                entity.getSubCategory(),
-                entity.getGroupName(),
-                entity.getPositivePrompt(),
-                entity.getNegativePrompt(),
-                entity.getSeedNumber(),
-                entity.getNotes(),
-                entity.isFavorite(),
-                entity.getFilePath(),
-                entity.getModelFilePath(),
-                entity.getSha256(),
-                entity.getBaseModel()
-        );
+        return entityPage.map(LoraResponse::new);
     }
 
 }

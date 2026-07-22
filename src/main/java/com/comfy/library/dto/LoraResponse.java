@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 
 public class LoraResponse {
     private Long id;
-
     private String loraName;
     private String version;
     private String creator;
@@ -27,9 +26,6 @@ public class LoraResponse {
     private String modelFilePath;
     private String sha256;
     private String baseModel;
-
-    public LoraResponse(Long id, String loraName, String version, String creator, String url, LocalDateTime createdDate, LocalDateTime lastUpdated, LoraCategory category, String subCategory, String groupName, String positivePrompt, String negativePrompt, Long seedNumber, String notes, boolean favorite, String filePath, String modelFilePath, String sha256, String baseModel) {
-    }
 
     public LoraResponse(LoraEntity loraEntity) {
         this.id = loraEntity.getId();

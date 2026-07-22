@@ -43,7 +43,7 @@ public class LoraController {
     @GetMapping
     public ResponseEntity<Page<LoraResponse>> getLoras(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "16") int size
+            @RequestParam(defaultValue = "12") int size
     ) {
         Page<LoraResponse> response = loraService.getLoras(page,size);
         return ResponseEntity.ok(response);

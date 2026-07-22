@@ -3,8 +3,15 @@ const API_BASE_URL = "/api/loras";
 let currentLora = null;
 let isEditingLora = false;
 
+const DEFAULT_PAGE_SIZE = 12;
+
+let currentPage = 0;
+let pageSize = DEFAULT_PAGE_SIZE;
+let totalPages = 0;
+let totalElements = 0;
+
 document.addEventListener("DOMContentLoaded", () => {
-    fetchAllLoras();
+    fetchAllLoras(0);
     setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
@@ -16,25 +23,29 @@ document.addEventListener("DOMContentLoaded", () => {
     setupMenu();
 });
 
-async function fetchAllLoras() {
+async function fetchAllLoras(page) {
     try {
-        const response = await fetch(API_BASE_URL);
+        const url = buildLoraPageUrl(page, pageSize);
+        const response = await fetch(url);
 
         if (!response.ok) {
             throw new Error("Failed to fetch LoRAs");
         }
 
-        const loras = await response.json();
-        displayLoras(loras);
+        const pageResponse = await response.json();
+
+        validateLoraPageResponse(pageResponse);
+        updatePaginationState(pageResponse);
+
+        if (pageResponse.content.length === 0) {
+            displayEmptyGalleryMessage();
+            return;
+        }
+
+        renderLoraPage(pageResponse.content);
 
     } catch (error) {
-        console.error("Error loading LoRAs:", error);
-
-        document.getElementById("loraList").innerHTML = `
-            <p class="empty-message">
-                Unable to load LoRAs. Check that your backend endpoint is correct.
-            </p>
-        `;
+        displayGalleryError(error);
     }
 }
 
@@ -175,7 +186,8 @@ function setupSearchOverlay() {
         searchOverlay.classList.add("hidden");
         searchInput.value = "";
 
-        await fetchAllLoras();
+        currentPage = 0;
+        await fetchAllLoras(0);
     });
 }
 
@@ -291,7 +303,7 @@ async function refreshCurrentView() {
         return;
     }
 
-    await fetchAllLoras();
+    await fetchAllLoras(currentPage);
 }
 
 async function searchLoras(keyword) {
@@ -1186,5 +1198,80 @@ function resetGalleryVideo(video) {
     }
 }
 
+function buildLoraPageUrl(page, size) {
+    const queryParameters = new URLSearchParams({
+        page: page.toString(),
+        size: size.toString()
+    });
 
+    return `${API_BASE_URL}?${queryParameters.toString()}`;
+}
 
+function validateLoraPageResponse(pageResponse) {
+    if (!pageResponse || typeof pageResponse !== "object") {
+        throw new Error("The LoRA API returned an invalid response.");
+    }
+
+    if (!Array.isArray(pageResponse.content)) {
+        throw new Error("The LoRA API response does not contain a content array.");
+    }
+}
+
+function updatePaginationState(pageResponse) {
+    currentPage = pageResponse.number ?? 0;
+    pageSize = pageResponse.size ?? DEFAULT_PAGE_SIZE;
+    totalPages = pageResponse.totalPages ?? 0;
+    totalElements = pageResponse.totalElements ?? 0;
+}
+
+function getLoraGallery() {
+    const gallery = document.getElementById("loraList");
+
+    if (!gallery) {
+        throw new Error("The LoRA gallery element with ID 'loraList' was not found.");
+    }
+
+    return gallery;
+}
+
+function clearLoraGallery() {
+    const gallery = getLoraGallery();
+    gallery.replaceChildren();
+}
+
+function renderLoraPage(loras) {
+    const gallery = getLoraGallery();
+
+    clearLoraGallery();
+
+    loras.forEach(lora => {
+        const card = createLoraCard(lora);
+        gallery.appendChild(card);
+    })
+}
+
+function displayEmptyGalleryMessage() {
+    const gallery = getLoraGallery();
+
+    const message = document.createElement("p");
+    message.className = "empty-message";
+    message.textContent = "No LoRAs found.";
+
+    gallery.replaceChildren(message);
+}
+
+function displayGalleryError(error) {
+    console.error("Error loading paginated LoRAs:", error);
+
+    const gallery = document.getElementById("loraList");
+
+    if (!gallery) {
+        return;
+    }
+
+    const message = document.createElement("p");
+    message.className = "empty-message";
+    message.textContent = "Unable to load LoRAs. Check the browser console and backend logs.";
+
+    gallery.replaceChildren(message);
+}
