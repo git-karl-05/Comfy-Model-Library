@@ -10,6 +10,12 @@ let pageSize = DEFAULT_PAGE_SIZE;
 let totalPages = 0;
 let totalElements = 0;
 
+let searchDebounceTimer = null;
+let lastSearchKeyword = "";
+
+const SEARCH_DEBOUNCE_DELAY = 400;
+const MINIMUM_SEARCH_LENGTH = 2;
+
 document.addEventListener("DOMContentLoaded", () => {
     fetchAllLoras(0);
     setupLayoutButtons();
@@ -157,6 +163,77 @@ async function toggleFavorite(loraId) {
     }
 }
 
+// function setupSearch() {
+//     const searchInput = document.getElementById("searchInput");
+//
+//     if (!searchInput) {
+//         return;
+//     }
+//
+//     searchInput.addEventListener("input", async () => {
+//         await refreshCurrentView();
+//     });
+// }
+
+function clearSearchDebounceTimer() {
+    if (searchDebounceTimer === null) {
+        return;
+    }
+
+    window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+}
+
+async function performSearchFromInput() {
+    const searchInput =
+        document.getElementById("searchInput");
+
+    if (!searchInput) {
+        return;
+    }
+
+    const keyword = searchInput.value.trim();
+
+    if (keyword === "") {
+        lastSearchKeyword = "";
+        currentPage = 0;
+
+        await refreshCurrentView();
+        return;
+    }
+
+    if (keyword.length < MINIMUM_SEARCH_LENGTH) {
+        return;
+    }
+
+    if (keyword === lastSearchKeyword) {
+        return;
+    }
+
+    lastSearchKeyword = keyword;
+    currentPage = 0;
+
+    await refreshCurrentView();
+}
+
+async function clearSearch() {
+    const searchInput = document.getElementById("searchInput");
+    const searchOverlay = document.getElementById("searchOverlay");
+
+    if (searchInput) {
+        searchInput.value = "";
+    }
+
+    if (searchOverlay) {
+        searchOverlay.classList.add("hidden");
+    }
+
+    lastSearchKeyword = "";
+    currentPage = 0;
+
+    await refreshCurrentView();
+}
+
 function setupSearch() {
     const searchInput = document.getElementById("searchInput");
 
@@ -164,32 +241,69 @@ function setupSearch() {
         return;
     }
 
-    searchInput.addEventListener("input", async () => {
-        await refreshCurrentView();
+    searchInput.addEventListener("input", () => {
+        clearSearchDebounceTimer();
+
+        searchDebounceTimer = window.setTimeout(
+            async () => {
+                await performSearchFromInput();
+            },
+            SEARCH_DEBOUNCE_DELAY
+        );
+    });
+
+    searchInput.addEventListener("keydown", async event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+
+            clearSearchDebounceTimer();
+            await performSearchFromInput();
+            return;
+        }
+
+        if (event.key === "Escape") {
+            event.preventDefault();
+
+            clearSearchDebounceTimer();
+            await clearSearch();
+        }
     });
 }
 
 function setupSearchOverlay() {
-    const searchButton = document.getElementById("searchIconButton");
-    const closeButton = document.getElementById("closeSearchButton");
-    const searchOverlay = document.getElementById("searchOverlay");
-    const searchInput = document.getElementById("searchInput");
+    const searchButton =
+        document.getElementById("searchIconButton");
 
-    if (!searchButton || !closeButton || !searchOverlay || !searchInput) {
+    const closeButton =
+        document.getElementById("closeSearchButton");
+
+    const searchOverlay =
+        document.getElementById("searchOverlay");
+
+    const searchInput =
+        document.getElementById("searchInput");
+
+    if (
+        !searchButton ||
+        !closeButton ||
+        !searchOverlay ||
+        !searchInput
+    ) {
         return;
     }
 
     searchButton.addEventListener("click", () => {
         searchOverlay.classList.remove("hidden");
         searchInput.focus();
+
+        if (searchInput.value.trim() === "") {
+            lastSearchKeyword = "";
+        }
     });
 
     closeButton.addEventListener("click", async () => {
-        searchOverlay.classList.add("hidden");
-        searchInput.value = "";
-
-        currentPage = 0;
-        await fetchAllLoras(0);
+        clearSearchDebounceTimer();
+        await clearSearch();
     });
 }
 
@@ -337,13 +451,17 @@ async function searchLoras(keyword) {
 }
 
 function setupCategoryFilter() {
-    const categoryFilter = document.getElementById("categoryFilter");
+    const categoryFilter =
+        document.getElementById("categoryFilter");
 
     if (!categoryFilter) {
         return;
     }
 
     categoryFilter.addEventListener("change", async () => {
+        currentPage = 0;
+        lastSearchKeyword = "";
+
         await refreshCurrentView();
     });
 }
