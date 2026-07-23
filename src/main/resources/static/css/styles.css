@@ -29,6 +29,8 @@
         --favorite: #ffd54f;
 
         --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+        --gallery-spacing: 14px;
     }
 
     /* =========================
@@ -80,7 +82,7 @@
     ========================= */
 
     .app-container {
-        padding: 0 16px 100px 16px;
+        padding: 0 16px 24px;
     }
 
     /* =========================
@@ -371,7 +373,7 @@
     .lora-list {
         margin-top: 20px;
         display: grid;
-        gap: 14px;
+        gap: var(--gallery-spacing);
     }
 
     .lora-list.single-column {
@@ -560,7 +562,7 @@
         display: flex;
         flex: 1 1 auto;
         flex-direction: column;
-        gap: 18px;
+        gap: 14px;
 
         overflow-y: auto;
         overscroll-behavior: contain;
@@ -2026,7 +2028,9 @@
         gap: 1rem;
 
         width: 100%;
-        margin: 2rem auto;
+
+        margin-top: var(--gallery-spacing);
+        margin-bottom: 0;
         padding: 0 1rem;
     }
 
@@ -2034,18 +2038,18 @@
         min-width: 7rem;
         padding: 0.7rem 1rem;
 
-        border: 1px solid #cccccc;
+        border: 1px solid var(--border);
         border-radius: 0.6rem;
 
-        background: #ffffff;
-        color: #222222;
+        background-color: var(--surface);
+        color: var(--text-primary);
 
         font: inherit;
         cursor: pointer;
     }
 
     .pagination-button:hover:not(:disabled) {
-        background: #f2f2f2;
+        background-color: var(--surface-light);
     }
 
     .pagination-button:disabled {

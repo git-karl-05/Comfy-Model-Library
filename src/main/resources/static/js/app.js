@@ -1455,15 +1455,41 @@ function updatePaginationControls() {
 }
 
 function scrollToLoraGallery() {
-    const gallery = document.getElementById("loraList");
+    const galleryControls =
+        document.querySelector(".gallery-controls");
 
-    if (!gallery) {
+    if (!galleryControls) {
         return;
     }
-    const galleryTop = gallery.getBoundingClientRect().top + window.scrollY - 150;
+
+    const desiredScrollTop =
+        galleryControls.getBoundingClientRect().top +
+        window.scrollY -
+        20;
+
+    const safeScrollTop =
+        clampScrollPosition(desiredScrollTop);
 
     window.scrollTo({
-        top: 0,
+        top: safeScrollTop,
         behavior: "smooth"
     });
+}
+
+function getMaximumScrollTop() {
+    return Math.max(
+        0,
+        document.documentElement.scrollHeight -
+        window.innerHeight
+    );
+}
+
+function clampScrollPosition(scrollPosition) {
+    const maximumScrollTop =
+        getMaximumScrollTop();
+
+    return Math.min(
+        Math.max(scrollPosition, 0),
+        maximumScrollTop
+    );
 }
