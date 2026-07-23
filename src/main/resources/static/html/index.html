@@ -114,6 +114,36 @@
             <!-- LoRA cards will be loaded here by JavaScript -->
         </section>
 
+        <section
+                id = "paginationControls"
+                class = "pagination-controls hidden"
+                aria-label="Gallery pagination"
+        >
+            <button
+                    id = "previousPageButton"
+                    class="pagination-button"
+                    type="button"
+            >
+                Previous
+            </button>
+
+            <span
+                    id="pageIndicator"
+                    class = "page-indicator"
+                    aria-live="polite"
+            >
+            Page 1 of 1
+            </span>
+
+            <button
+                    id = "nextPageButton"
+                    class = "pagination-button"
+                    type="button"
+            >
+                Next
+            </button>
+        </section>
+
     </div>
 
     <div id="actionMenuOverlay" class="action-menu-overlay hidden">
@@ -267,7 +297,7 @@
                 </p>
 
                 <p>
-                    <strong>Group:</strong>
+                    <strong>Base Model:</strong>
                     <span id="detailsGroupName">N/A</span>
                 </p>
 
@@ -362,7 +392,7 @@
 
             </section>
 
-            <!-- Positive prompt -->
+
             <!-- View-mode prompt fields -->
             <section id="detailsPromptView" class="details-prompt-view">
 
@@ -576,6 +606,7 @@
         </div>
 
     </section>
+
 
 </div>
 </body>

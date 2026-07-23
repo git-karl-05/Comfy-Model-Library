@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupActionMenu();
     setupImportFolderForm();
     setupMenu();
+    setupPaginationControls();
 });
 
 async function fetchAllLoras(page) {
@@ -36,6 +37,7 @@ async function fetchAllLoras(page) {
 
         validateLoraPageResponse(pageResponse);
         updatePaginationState(pageResponse);
+        updatePaginationControls();
 
         if (pageResponse.content.length === 0) {
             displayEmptyGalleryMessage();
@@ -1274,4 +1276,76 @@ function displayGalleryError(error) {
     message.textContent = "Unable to load LoRAs. Check the browser console and backend logs.";
 
     gallery.replaceChildren(message);
+}
+
+function setupPaginationControls(){
+    const previousButton = document.getElementById("previousPageButton");
+    const nextButton = document.getElementById("nextPageButton");
+
+    if (!previousButton || !nextButton) {
+        return;
+    }
+
+    previousButton.addEventListener("click", async () => {
+        if (currentPage <= 0) {
+            return;
+        }
+        await fetchAllLoras(currentPage - 1);
+        scrollToLoraGallery();
+    });
+
+    nextButton.addEventListener("click", async () => {
+        if (currentPage >= totalPages - 1) {
+            return;
+        }
+
+        await fetchAllLoras(currentPage + 1);
+        scrollToLoraGallery();
+    });
+}
+
+function updatePaginationControls() {
+    const controls = document.getElementById("paginationControls");
+    const previousButton = document.getElementById("previousPageButton");
+    const nextButton = document.getElementById("nextPageButton");
+    const pageIndicator = document.getElementById("pageIndicator");
+
+    if (!controls || !previousButton || !nextButton || !pageIndicator) {
+        return;
+    }
+
+    const hasMultiplePages = totalPages > 1;
+
+    controls.classList.toggle(
+        "hidden",
+        !hasMultiplePages
+    );
+
+    if (totalPages === 0) {
+        pageIndicator.textContent = "Page 0 of 0";
+    } else {
+        pageIndicator.textContent =
+            `Page ${currentPage + 1} of ${totalPages}`;
+    }
+
+    previousButton.disabled =
+        currentPage <= 0;
+
+    nextButton.disabled =
+        totalPages === 0 ||
+        currentPage >= totalPages - 1;
+}
+
+function scrollToLoraGallery() {
+    const gallery = document.getElementById("loraList");
+
+    if (!gallery) {
+        return;
+    }
+    const galleryTop = gallery.getBoundingClientRect().top + window.scrollY - 150;
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
 }

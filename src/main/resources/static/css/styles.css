@@ -2017,3 +2017,44 @@
         font-size: 0.8rem;
         font-weight: 600;
     }
+
+    /* Pagination */
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+
+        width: 100%;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .pagination-button {
+        min-width: 7rem;
+        padding: 0.7rem 1rem;
+
+        border: 1px solid #cccccc;
+        border-radius: 0.6rem;
+
+        background: #ffffff;
+        color: #222222;
+
+        font: inherit;
+        cursor: pointer;
+    }
+
+    .pagination-button:hover:not(:disabled) {
+        background: #f2f2f2;
+    }
+
+    .pagination-button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+    .page-indicator {
+        min-width: 7rem;
+        text-align: center;
+        font-weight: 600;
+    }
