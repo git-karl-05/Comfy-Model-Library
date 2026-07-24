@@ -10,6 +10,12 @@ let pageSize = DEFAULT_PAGE_SIZE;
 let totalPages = 0;
 let totalElements = 0;
 
+let currentSearchResults = [];
+let isSearchActive = false;
+
+let pageBeforeSearch = 0;
+let scrollPositionBeforeSearch = 0;
+
 let searchDebounceTimer = null;
 let lastSearchKeyword = "";
 
@@ -31,6 +37,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function fetchAllLoras(page) {
+    isSearchActive = false;
+    currentSearchResults = [];
+
     try {
         const url = buildLoraPageUrl(page, pageSize);
         const response = await fetch(url);
@@ -195,10 +204,6 @@ async function performSearchFromInput() {
     const keyword = searchInput.value.trim();
 
     if (keyword === "") {
-        lastSearchKeyword = "";
-        currentPage = 0;
-
-        await refreshCurrentView();
         return;
     }
 
@@ -206,19 +211,27 @@ async function performSearchFromInput() {
         return;
     }
 
-    if (keyword === lastSearchKeyword) {
+    if (
+        keyword === lastSearchKeyword &&
+        isSearchActive
+    ) {
         return;
     }
 
     lastSearchKeyword = keyword;
-    currentPage = 0;
 
-    await refreshCurrentView();
+    await searchLoras(keyword, 0);
 }
 
 async function clearSearch() {
-    const searchInput = document.getElementById("searchInput");
-    const searchOverlay = document.getElementById("searchOverlay");
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const searchOverlay =
+        document.getElementById("searchOverlay");
+
+    const categoryFilter =
+        document.getElementById("categoryFilter");
 
     if (searchInput) {
         searchInput.value = "";
@@ -228,10 +241,35 @@ async function clearSearch() {
         searchOverlay.classList.add("hidden");
     }
 
-    lastSearchKeyword = "";
-    currentPage = 0;
+    clearSearchDebounceTimer();
 
-    await refreshCurrentView();
+    lastSearchKeyword = "";
+    currentSearchResults = [];
+    isSearchActive = false;
+
+    const restoredPage = pageBeforeSearch;
+    const restoredScrollPosition =
+        scrollPositionBeforeSearch;
+
+    currentPage = restoredPage;
+
+    const selectedCategory =
+        categoryFilter?.value ?? "ALL";
+
+    if (selectedCategory === "FAVORITES") {
+        await fetchFavoriteLoras();
+    } else if (selectedCategory !== "ALL") {
+        await fetchLorasByCategory(selectedCategory);
+    } else {
+        await fetchAllLoras(restoredPage);
+    }
+
+    window.requestAnimationFrame(() => {
+        window.scrollTo({
+            top: restoredScrollPosition,
+            behavior: "auto"
+        });
+    });
 }
 
 function setupSearch() {
@@ -293,12 +331,13 @@ function setupSearchOverlay() {
     }
 
     searchButton.addEventListener("click", () => {
+        if (!isSearchActive) {
+            pageBeforeSearch = currentPage;
+            scrollPositionBeforeSearch = window.scrollY;
+        }
+
         searchOverlay.classList.remove("hidden");
         searchInput.focus();
-
-        if (searchInput.value.trim() === "") {
-            lastSearchKeyword = "";
-        }
     });
 
     closeButton.addEventListener("click", async () => {
@@ -397,32 +436,34 @@ function setupGoToTopButton() {
     updateGoTopVisibility();
 }
 
-async function refreshCurrentView() {
-    const searchInput = document.getElementById("searchInput");
-    const categoryFilter = document.getElementById("categoryFilter");
+function setupCategoryFilter() {
+    const categoryFilter =
+        document.getElementById("categoryFilter");
 
-    const keyword = searchInput ? searchInput.value.trim() : "";
-    const selectedCategory = categoryFilter ? categoryFilter.value : "ALL";
+    const searchInput =
+        document.getElementById("searchInput");
 
-    if (keyword !== "") {
-        await searchLoras(keyword);
+    if (!categoryFilter) {
         return;
     }
 
-    if (selectedCategory === "FAVORITES") {
-        await fetchFavoriteLoras();
-        return;
-    }
+    categoryFilter.addEventListener("change", async () => {
+        if (searchInput) {
+            searchInput.value = "";
+        }
 
-    if (selectedCategory !== "ALL") {
-        await fetchLorasByCategory(selectedCategory);
-        return;
-    }
+        lastSearchKeyword = "";
+        currentSearchResults = [];
+        isSearchActive = false;
 
-    await fetchAllLoras(currentPage);
+        currentPage = 0;
+        pageBeforeSearch = 0;
+
+        await refreshCurrentView();
+    });
 }
 
-async function searchLoras(keyword) {
+async function searchLoras(keyword, page = 0) {
     try {
         const response = await fetch(
             `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`
@@ -432,22 +473,45 @@ async function searchLoras(keyword) {
             throw new Error("Search failed");
         }
 
-        let loras = await response.json();
+        currentSearchResults = await response.json();
+        isSearchActive = true;
 
-        const categoryFilter = document.getElementById("categoryFilter");
-        const selectedCategory = categoryFilter ? categoryFilter.value : "ALL";
-
-        if (selectedCategory === "FAVORITES") {
-            loras = loras.filter(lora => lora.favorite);
-        } else if (selectedCategory !== "ALL") {
-            loras = loras.filter(lora => lora.category === selectedCategory);
-        }
-
-        displayLoras(loras);
+        renderSearchResultsPage(page);
 
     } catch (error) {
         console.error("Search error:", error);
+
+        currentSearchResults = [];
+        isSearchActive = false;
+
+        displayLoras([]);
+        updatePaginationControls();
     }
+}
+
+function renderSearchResultsPage(page) {
+    const resultCount = currentSearchResults.length;
+
+    totalElements = resultCount;
+    pageSize = DEFAULT_PAGE_SIZE;
+    totalPages = Math.ceil(resultCount / pageSize);
+
+    if (totalPages === 0) {
+        currentPage = 0;
+    } else {
+        currentPage = Math.min(
+            Math.max(page,0),
+            totalPages - 1
+        );
+    }
+
+    const startIndex = currentPage * pageSize;
+    const endIndex = startIndex + pageSize;
+
+    const pageResults = currentSearchResults.slice(startIndex, endIndex);
+
+    displayLoras(pageResults);
+    updatePaginationControls();
 }
 
 function setupCategoryFilter() {
@@ -467,6 +531,8 @@ function setupCategoryFilter() {
 }
 
 async function fetchLorasByCategory(category) {
+    isSearchActive = false;
+    currentSearchResults = [];
     try {
         const response = await fetch(`${API_BASE_URL}/category/${category}`);
 
@@ -483,6 +549,8 @@ async function fetchLorasByCategory(category) {
 }
 
 async function fetchFavoriteLoras() {
+    isSearchActive = false;
+    currentSearchResults = [];
     try {
         const response = await fetch(`${API_BASE_URL}/favorites`);
 
@@ -1008,6 +1076,8 @@ function setupMenu() {
     menuBackdrop.addEventListener("click", closeMenu);
 }
 
+
+
 function setupImportFolderForm() {
     const importForm = document.getElementById("importFolderForm");
     const folderPathInput = document.getElementById("importFolderPath");
@@ -1080,24 +1150,40 @@ function displayImportSummary(summary) {
         return;
     }
 
-    importResult.classList.remove("hidden", "import-result-error");
-    importResult.classList.add("import-result-success");
+    importResult.classList.remove(
+        "hidden",
+        "import-result-error"
+    );
+
+    importResult.classList.add(
+        "import-result-success"
+    );
 
     importResult.innerHTML = `
-        <h3>Import complete</h3>
+        <h3>Import Complete</h3>
 
-        <div class="import-summary-grid">
-            <span>Scanned</span>
-            <strong>${summary.scannedFiles ?? 0}</strong>
+        <div class="import-summary-list">
 
-            <span>Imported</span>
-            <strong>${summary.importedCount ?? 0}</strong>
+            <div class="import-summary-row">
+                <span>📂 Files Scanned</span>
+                <strong>${summary.scannedFiles ?? 0}</strong>
+            </div>
 
-            <span>Skipped</span>
-            <strong>${summary.skippedCount ?? 0}</strong>
+            <div class="import-summary-row">
+                <span>✅ Imported</span>
+                <strong>${summary.importedCount ?? 0}</strong>
+            </div>
 
-            <span>Failed</span>
-            <strong>${summary.failedCount ?? 0}</strong>
+            <div class="import-summary-row">
+                <span>⏭ Already Exists</span>
+                <strong>${summary.skippedCount ?? 0}</strong>
+            </div>
+
+            <div class="import-summary-row">
+                <span>❌ Failed</span>
+                <strong>${summary.failedCount ?? 0}</strong>
+            </div>
+
         </div>
     `;
 }
@@ -1111,7 +1197,7 @@ function displayImportError(message) {
 
     importResult.classList.remove("hidden", "import-result-success");
     importResult.classList.add("import-result-error");
-    importResult.textContent = message;
+    renderFolderImportResult(result);
 }
 
 document.addEventListener("click", async event => {
@@ -1396,9 +1482,12 @@ function displayGalleryError(error) {
     gallery.replaceChildren(message);
 }
 
-function setupPaginationControls(){
-    const previousButton = document.getElementById("previousPageButton");
-    const nextButton = document.getElementById("nextPageButton");
+function setupPaginationControls() {
+    const previousButton =
+        document.getElementById("previousPageButton");
+
+    const nextButton =
+        document.getElementById("nextPageButton");
 
     if (!previousButton || !nextButton) {
         return;
@@ -1408,7 +1497,15 @@ function setupPaginationControls(){
         if (currentPage <= 0) {
             return;
         }
-        await fetchAllLoras(currentPage - 1);
+
+        const previousPage = currentPage - 1;
+
+        if (isSearchActive) {
+            renderSearchResultsPage(previousPage);
+        } else {
+            await fetchAllLoras(previousPage);
+        }
+
         scrollToLoraGallery();
     });
 
@@ -1417,7 +1514,14 @@ function setupPaginationControls(){
             return;
         }
 
-        await fetchAllLoras(currentPage + 1);
+        const nextPage = currentPage + 1;
+
+        if (isSearchActive) {
+            renderSearchResultsPage(nextPage);
+        } else {
+            await fetchAllLoras(nextPage);
+        }
+
         scrollToLoraGallery();
     });
 }

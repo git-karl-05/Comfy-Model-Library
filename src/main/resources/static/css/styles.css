@@ -227,6 +227,36 @@
         font-size: 1.05rem;
     }
 
+    /* =========================
+   FOLDER IMPORT RESULT
+========================= */
+
+    .import-summary-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        margin-top: 12px;
+    }
+
+    .import-summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        padding: 10px 12px;
+
+        border: 1px solid var(--border);
+        border-radius: 10px;
+
+        background: var(--surface);
+    }
+
+    .import-summary-row strong {
+        color: var(--text-primary);
+        font-size: 1rem;
+    }
+
 
     .import-folder-form {
         display: flex;
@@ -269,7 +299,86 @@
         margin-top: 0;
         padding: 11px;
     }
+    /* =========================
+   FOLDER IMPORT RESULT
+========================= */
 
+    .import-result {
+        margin-top: 14px;
+        padding: 14px;
+
+        border: 1px solid var(--border);
+        border-radius: 14px;
+
+        background-color: var(--background);
+
+        box-shadow: var(--shadow);
+    }
+
+    .import-result h3 {
+        color: var(--text-primary);
+
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .import-summary-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        margin-top: 12px;
+    }
+
+    .import-summary-row {
+        width: 100%;
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+
+        padding: 10px 12px;
+
+        border: 1px solid var(--border);
+        border-radius: 10px;
+
+        background-color: var(--surface);
+    }
+
+    .import-summary-row span {
+        min-width: 0;
+
+        color: var(--text-secondary);
+
+        font-size: 0.82rem;
+        line-height: 1.3;
+    }
+
+    .import-summary-row strong {
+        flex: 0 0 auto;
+
+        color: var(--text-primary);
+
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    .import-result-success {
+        border-color: rgba(60, 160, 90, 0.45);
+    }
+
+    .import-result-error {
+        border-color: rgba(255, 82, 82, 0.5);
+
+        background-color: rgba(255, 82, 82, 0.1);
+        color: #ffaaaa;
+    }
+
+    .import-result-error p {
+        font-size: 0.82rem;
+        line-height: 1.4;
+    }
 
     .go-top-button {
         position: fixed;
