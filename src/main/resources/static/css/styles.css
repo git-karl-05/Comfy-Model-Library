@@ -31,6 +31,22 @@
         --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 
         --gallery-spacing: 14px;
+
+        --visible-viewport-height: 100dvh;
+    }
+
+
+    #loraDetailsModal {
+        height: var(--visible-viewport-height);
+        max-height: var(--visible-viewport-height);
+        overflow: hidden;
+    }
+
+    #loraDetailsModal .lora-details-scroll-area {
+        max-height: var(--visible-viewport-height);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
     }
 
     /* =========================

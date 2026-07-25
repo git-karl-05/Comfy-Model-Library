@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupGoToTopButton();
     setupCategoryFilter();
     setupLoraDetailsModal();
+    setupLoraDetailsViewportHandling();
     setupSearchOverlay();
     setupActionMenu();
     setupImportFolderForm();
@@ -767,26 +768,136 @@ function clearEditMessage() {
     );
 }
 
+function getLoraDetailsModal() {
+    return document.getElementById("loraDetailsModal");
+}
+
+function getLoraDetailsScrollContainer() {
+    return document.querySelector(
+        "#loraDetailsModal .lora-details-scroll-area"
+    );
+}
+
+function getVisibleViewportHeight() {
+    if (window.visualViewport) {
+        return window.visualViewport.height;
+    }
+
+    return window.innerHeight;
+}
+
+function updateLoraDetailsViewportHeight() {
+    const visibleHeight =
+        getVisibleViewportHeight();
+
+    document.documentElement.style.setProperty(
+        "--visible-viewport-height",
+        `${Math.round(visibleHeight)}px`
+    );
+}
+
+function isLoraDetailsModalOpen() {
+    const modal = getLoraDetailsModal();
+
+    return Boolean(
+        modal &&
+        !modal.classList.contains("hidden")
+    );
+}
+
+function handleLoraDetailsViewportChange() {
+    if (!isLoraDetailsModalOpen()) {
+        return;
+    }
+
+    updateLoraDetailsViewportHeight();
+}
+
+function resetLoraDetailsScrollPosition() {
+    const scrollContainer =
+        getLoraDetailsScrollContainer();
+
+    if (!scrollContainer) {
+        return;
+    }
+
+    scrollContainer.scrollTop = 0;
+
+    window.requestAnimationFrame(() => {
+        scrollContainer.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: "auto"
+        });
+    });
+}
+
+function setupLoraDetailsViewportHandling() {
+    updateLoraDetailsViewportHeight();
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener(
+            "resize",
+            handleLoraDetailsViewportChange
+        );
+    }
+
+    window.addEventListener(
+        "resize",
+        handleLoraDetailsViewportChange
+    );
+
+    window.addEventListener(
+        "orientationchange",
+        () => {
+            window.requestAnimationFrame(() => {
+                updateLoraDetailsViewportHeight();
+            });
+        }
+    );
+}
+
 async function openLoraDetailsModal(loraId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/${loraId}`);
+        const response = await fetch(
+            `${API_BASE_URL}/${loraId}`
+        );
 
         if (!response.ok) {
-            throw new Error("Failed to load LoRA details");
+            throw new Error(
+                "Failed to load LoRA details"
+            );
         }
 
         currentLora = await response.json();
 
+        const modal =
+            getLoraDetailsModal();
+
+        if (!modal) {
+            throw new Error(
+                "LoRA details modal was not found."
+            );
+        }
+
         populateLoraDetailsModal(currentLora);
         exitLoraEditMode();
 
-        document
-            .getElementById("loraDetailsModal")
-            .classList.remove("hidden");
+        updateLoraDetailsViewportHeight();
+
+        modal.classList.remove("hidden");
+
+        resetLoraDetailsScrollPosition();
 
     } catch (error) {
-        console.error("Error loading LoRA details:", error);
-        alert("Unable to load LoRA details.");
+        console.error(
+            "Error loading LoRA details:",
+            error
+        );
+
+        alert(
+            "Unable to load LoRA details."
+        );
     }
 }
 
@@ -962,10 +1073,13 @@ function enterLoraEditMode() {
     populateLoraEditFields(currentLora);
     setLoraEditVisibility(true);
 
-    const nameInput = document.getElementById("editLoraName");
+    const nameInput =
+        document.getElementById("editLoraName");
 
     if (nameInput) {
-        nameInput.focus();
+        nameInput.focus({
+            preventScroll: true
+        });
     }
 }
 
