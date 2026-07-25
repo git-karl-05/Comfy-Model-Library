@@ -436,6 +436,40 @@ function setupGoToTopButton() {
     updateGoTopVisibility();
 }
 
+async function refreshCurrentView() {
+    const searchInput =
+        document.getElementById("searchInput");
+
+    const categoryFilter =
+        document.getElementById("categoryFilter");
+
+    const keyword =
+        searchInput?.value.trim() ?? "";
+
+    const selectedCategory =
+        categoryFilter?.value ?? "ALL";
+
+    if (
+        isSearchActive &&
+        keyword.length >= MINIMUM_SEARCH_LENGTH
+    ) {
+        await searchLoras(keyword, currentPage);
+        return;
+    }
+
+    if (selectedCategory === "FAVORITES") {
+        await fetchFavoriteLoras();
+        return;
+    }
+
+    if (selectedCategory !== "ALL") {
+        await fetchLorasByCategory(selectedCategory);
+        return;
+    }
+
+    await fetchAllLoras(currentPage);
+}
+
 function setupCategoryFilter() {
     const categoryFilter =
         document.getElementById("categoryFilter");
@@ -512,22 +546,6 @@ function renderSearchResultsPage(page) {
 
     displayLoras(pageResults);
     updatePaginationControls();
-}
-
-function setupCategoryFilter() {
-    const categoryFilter =
-        document.getElementById("categoryFilter");
-
-    if (!categoryFilter) {
-        return;
-    }
-
-    categoryFilter.addEventListener("change", async () => {
-        currentPage = 0;
-        lastSearchKeyword = "";
-
-        await refreshCurrentView();
-    });
 }
 
 async function fetchLorasByCategory(category) {
@@ -637,7 +655,8 @@ async function saveLoraEdit() {
     }
 
     const requestBody = buildLoraUpdateRequest();
-    const validationError = validateLoraUpdate(requestBody);
+    const validationError =
+        validateLoraUpdate(requestBody);
 
     if (validationError) {
         displayEditMessage(validationError, true);
@@ -665,7 +684,8 @@ async function saveLoraEdit() {
         );
 
         if (!response.ok) {
-            const responseText = await response.text();
+            const responseText =
+                await response.text();
 
             throw new Error(
                 responseText ||
@@ -678,7 +698,9 @@ async function saveLoraEdit() {
         populateLoraDetailsModal(currentLora);
         exitLoraEditMode();
 
-        await refreshCurrentView();
+        displayEditMessage(
+            "LoRA updated successfully."
+        );
 
     } catch (error) {
         console.error("LoRA update error:", error);
@@ -688,11 +710,22 @@ async function saveLoraEdit() {
             true
         );
 
+        return;
+
     } finally {
         if (saveButton) {
             saveButton.disabled = false;
             saveButton.textContent = "Save";
         }
+    }
+
+    try {
+        await refreshCurrentView();
+    } catch (error) {
+        console.error(
+            "Gallery refresh error:",
+            error
+        );
     }
 }
 
@@ -1189,15 +1222,26 @@ function displayImportSummary(summary) {
 }
 
 function displayImportError(message) {
-    const importResult = document.getElementById("importResult");
+    const importResult =
+        document.getElementById("importResult");
 
     if (!importResult) {
         return;
     }
 
-    importResult.classList.remove("hidden", "import-result-success");
-    importResult.classList.add("import-result-error");
-    renderFolderImportResult(result);
+    importResult.classList.remove(
+        "hidden",
+        "import-result-success"
+    );
+
+    importResult.classList.add(
+        "import-result-error"
+    );
+
+    importResult.innerHTML = `
+        <h3>Import Failed</h3>
+        <p>${message}</p>
+    `;
 }
 
 document.addEventListener("click", async event => {
