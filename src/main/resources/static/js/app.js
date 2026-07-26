@@ -1720,7 +1720,7 @@ function setupPaginationControls() {
             await fetchAllLoras(previousPage);
         }
 
-        scrollToLoraGallery();
+        await scrollToLoraGalleryControls();
     });
 
     nextButton.addEventListener("click", async () => {
@@ -1736,7 +1736,7 @@ function setupPaginationControls() {
             await fetchAllLoras(nextPage);
         }
 
-        scrollToLoraGallery();
+        await scrollToLoraGalleryControls();
     });
 }
 
@@ -1772,25 +1772,31 @@ function updatePaginationControls() {
         currentPage >= totalPages - 1;
 }
 
-function scrollToLoraGallery() {
+async function scrollToLoraGalleryControls() {
     const galleryControls =
-        document.querySelector(".gallery-controls");
+        document.querySelector(
+            ".gallery-controls"
+        );
 
     if (!galleryControls) {
         return;
     }
 
-    const desiredScrollTop =
-        galleryControls.getBoundingClientRect().top +
-        window.scrollY -
-        20;
+    /*
+     * Wait until the newly rendered gallery has
+     * been applied to the page layout.
+     */
+    await new Promise(resolve => {
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(
+                resolve
+            );
+        });
+    });
 
-    const safeScrollTop =
-        clampScrollPosition(desiredScrollTop);
-
-    window.scrollTo({
-        top: safeScrollTop,
-        behavior: "smooth"
+    galleryControls.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
     });
 }
 
