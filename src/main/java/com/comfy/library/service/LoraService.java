@@ -311,7 +311,7 @@ public class LoraService {
         entity.setPositivePrompt(resolvePositivePrompt(root));
         entity.setNegativePrompt(resolveNegativePrompt(root));
         entity.setSeedNumber(resolveSeedNumber(root));
-        entity.setNotes(resolveNotes(root));
+        entity.setNotes(null);
         entity.setFavorite(false);
 
         entity.setFilePath(resolvePreviewPath(root));

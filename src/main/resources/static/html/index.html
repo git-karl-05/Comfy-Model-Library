@@ -230,12 +230,10 @@
 
     <section class="lora-details-sheet">
 
-        <!-- Everything in this container scrolls -->
         <div class="lora-details-scroll-area">
 
             <div class="sheet-header">
 
-                <!-- View-mode header -->
                 <div id="detailsHeaderView" class="details-header-view">
 
                     <div class="details-title-container">
@@ -267,19 +265,14 @@
 
                 </div>
 
-                <!-- Edit-mode header -->
-
-
             </div>
 
-            <!-- Image remains read-only -->
             <div id="detailsImageContainer" class="details-image-container">
                 <div class="lora-card-placeholder">
                     No Image
                 </div>
             </div>
 
-            <!-- View-mode details -->
             <section id="detailsInfoView" class="details-info">
 
                 <p>
@@ -301,116 +294,26 @@
                     <strong>Base Model:</strong>
                     <span id="detailsGroupName">N/A</span>
                 </p>
-
-
-
+                <p>
+                    <strong>Seed:</strong>
+                    <span id="detailsSeedNumber">N/A</span>
+                </p>
             </section>
 
-            <!-- Edit-mode details -->
-            <section id="detailsInfoEdit" class="details-edit-grid hidden">
-
-                <label class="details-edit-full-width">
-                    LoRA Name
-
-                    <input
-                            type="text"
-                            id="editLoraName"
-                            class="details-edit-input"
-                            required
-                    >
-                </label>
-
-                <label class="details-edit-full-width">
-                    Creator
-
-                    <input
-                            type="text"
-                            id="editCreator"
-                            class="details-edit-input"
-                    >
-                </label>
-
-                <label>
-                    Version
-
-                    <input
-                            type="text"
-                            id="editVersion"
-                            class="details-edit-input"
-                    >
-                </label>
-
-                <label>
-                    Category
-
-                    <select
-                            id="editCategory"
-                            class="details-edit-input"
-                            required>
-
-                        <option value="">Select category</option>
-                        <option value="BACKGROUND">Background</option>
-                        <option value="CHARACTER">Character</option>
-                        <option value="CONCEPT">Concept</option>
-                        <option value="ENHANCER">Enhancer</option>
-                        <option value="OUTFIT">Outfit</option>
-                        <option value="POSES">Poses</option>
-                        <option value="SLIDER">Slider</option>
-                        <option value="STYLE">Style</option>
-
-                    </select>
-                </label>
-
-                <label>
-                    Subcategory
-
-                    <input
-                            type="text"
-                            id="editSubCategory"
-                            class="details-edit-input"
-                    >
-                </label>
-
-                <label>
-                    Group
-
-                    <input
-                            type="text"
-                            id="editGroupName"
-                            class="details-edit-input"
-                    >
-                </label>
-
-                <label>
-                    Seed
-
-                    <input
-                            type="number"
-                            id="editSeedNumber"
-                            class="details-edit-input"
-                    >
-                </label>
-
-            </section>
-
-
-            <!-- View-mode prompt fields -->
             <section id="detailsPromptView" class="details-prompt-view">
 
-                <!-- Positive Prompt -->
                 <div class="details-field">
-
                     <div class="details-field-header">
-            <span class="details-field-label">
-                Positive Prompt
-            </span>
+                        <span class="details-field-label">
+                            Trained Words
+                        </span>
 
                         <button
                                 type="button"
                                 class="copy-field-button"
                                 data-copy-target="detailsPositivePrompt"
-                                aria-label="Copy positive prompt"
-                                title="Copy positive prompt"
+                                aria-label="Copy trained words"
+                                title="Copy trained words"
                         >
                             Copy
                         </button>
@@ -420,159 +323,40 @@
                             id="detailsPositivePrompt"
                             class="details-field-value details-long-text"
                     >
-                        No positive prompt saved.
+                        No trained words saved.
                     </div>
 
                 </div>
 
-                <!-- Seed Number -->
-                <div class="details-field details-seed-field">
+                <div class="details-field">
 
                     <div class="details-field-header">
-            <span class="details-field-label">
-                Seed Number
-            </span>
+
+                        <span class="details-field-label">
+                            Notes
+                        </span>
 
                         <button
                                 type="button"
                                 class="copy-field-button"
-                                data-copy-target="detailsSeedNumber"
-                                aria-label="Copy seed number"
-                                title="Copy seed number"
+                                data-copy-target="detailsNotes"
+                                aria-label="Copy notes"
+                                title="Copy notes"
                         >
                             Copy
                         </button>
+
                     </div>
 
                     <div
-                            id="detailsSeedNumber"
-                            class="details-field-value details-seed-value"
+                            id="detailsNotes"
+                            class="details-field-value details-long-text"
                     >
-                        N/A
+                        No notes saved.
                     </div>
 
                 </div>
 
-                <!-- Folded additional details -->
-                <details
-                        id="additionalLoraDetails"
-                        class="details-collapsible"
-                >
-
-                    <summary class="details-collapsible-summary">
-
-            <span
-                    class="details-collapsible-icon"
-                    aria-hidden="true">
-            </span>
-
-                        <span>Additional details</span>
-
-                    </summary>
-
-                    <div class="details-collapsible-content">
-
-                        <!-- Negative Prompt -->
-                        <div class="details-field">
-
-                            <div class="details-field-header">
-
-                    <span class="details-field-label">
-                        Negative Prompt
-                    </span>
-
-                                <button
-                                        type="button"
-                                        class="copy-field-button"
-                                        data-copy-target="detailsNegativePrompt"
-                                        aria-label="Copy negative prompt"
-                                        title="Copy negative prompt"
-                                >
-                                    Copy
-                                </button>
-
-                            </div>
-
-                            <div
-                                    id="detailsNegativePrompt"
-                                    class="details-field-value details-long-text"
-                            >
-                                No negative prompt saved.
-                            </div>
-
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="details-field">
-
-                            <div class="details-field-header">
-
-                    <span class="details-field-label">
-                        Notes
-                    </span>
-
-                                <button
-                                        type="button"
-                                        class="copy-field-button"
-                                        data-copy-target="detailsNotes"
-                                        aria-label="Copy notes"
-                                        title="Copy notes"
-                                >
-                                    Copy
-                                </button>
-
-                            </div>
-
-                            <div
-                                    id="detailsNotes"
-                                    class="details-field-value details-long-text"
-                            >
-                                No notes saved.
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </details>
-
-            </section>
-
-            <!-- Edit-mode prompt fields -->
-            <section
-                    id="detailsPromptEdit"
-                    class="details-edit-prompts hidden"
-            >
-
-                <label>
-                    Positive Prompt
-
-                    <textarea
-                            id="editPositivePrompt"
-                            class="details-edit-textarea"
-                            rows="8"
-                    ></textarea>
-                </label>
-
-                <label>
-                    Negative Prompt
-
-                    <textarea
-                            id="editNegativePrompt"
-                            class="details-edit-textarea"
-                            rows="8"
-                    ></textarea>
-                </label>
-
-                <label>
-                    Notes
-
-                    <textarea
-                            id="editNotes"
-                            class="details-edit-textarea"
-                            rows="6"
-                    ></textarea>
-                </label>
 
             </section>
 
@@ -586,25 +370,6 @@
 
         </div>
 
-        <div
-                id="detailsEditActionBar"
-                class="shared-form-action-bar edit-form-action-bar hidden">
-
-            <button
-                    id="cancelLoraEditButton"
-                    class="details-cancel-button"
-                    type="button">
-                Cancel
-            </button>
-
-            <button
-                    id="saveLoraEditButton"
-                    class="details-save-button"
-                    type="button">
-                Save
-            </button>
-
-        </div>
 
     </section>
 
