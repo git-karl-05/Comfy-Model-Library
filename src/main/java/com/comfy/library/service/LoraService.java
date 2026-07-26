@@ -4,6 +4,7 @@ import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraRepository;
+import org.hibernate.sql.Update;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -117,6 +118,38 @@ public class LoraService {
 
         LoraEntity savedLora = loraRepository.save(loraEntity);
         return new LoraResponse(savedLora);
+    }
+
+
+    public LoraResponse updateLoraWithPreviewById(Long loraId, UpdateLoraRequest request, MultipartFile preview) {
+        LoraEntity existingLora = loraRepository.findById(loraId)
+                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
+
+        updateEditFields(request, existingLora);
+
+        if (preview != null && !preview.isEmpty()) {
+            String newFilePath = savePreviewImage(preview);
+            existingLora.setFilePath(newFilePath);
+        }
+
+        LoraEntity savedLora = loraRepository.save(existingLora);
+        return new LoraResponse(savedLora);
+
+    }
+
+    private void updateEditFields(UpdateLoraRequest request, LoraEntity entity) {
+        entity.setLoraName(request.getLoraName());
+        entity.setVersion(request.getVersion());
+        entity.setCreator(request.getCreator());
+        entity.setUrl(request.getUrl());
+        entity.setLastUpdated(LocalDateTime.now());
+        entity.setCategory(request.getCategory());
+        entity.setSubCategory(request.getSubCategory());
+        entity.setGroupName(request.getGroupName());
+        entity.setPositivePrompt(request.getPositivePrompt());
+        entity.setNegativePrompt(request.getNegativePrompt());
+        entity.setSeedNumber(request.getSeedNumber());
+        entity.setNotes(request.getNotes());
     }
 
     public String deleteLoraById(Long loraId) {

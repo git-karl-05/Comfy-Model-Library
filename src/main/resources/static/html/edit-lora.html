@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+
+    <title>Edit LoRA</title>
+
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/edit-lora.js" defer></script>
+
+</head>
+
+<body>
+
+<main class="edit-lora-page">
+
+    <div class="edit-lora-container">
+
+        <!-- =========================
+             PAGE HEADER
+        ========================== -->
+
+        <header class="edit-lora-header">
+
+            <button
+                    type="button"
+                    id="optionsButton"
+                    class="options-button"
+                    aria-label="Open navigation menu"
+                    aria-controls="sideMenu"
+                    aria-expanded="false">
+                ☰
+            </button>
+
+            <h1>Edit LoRA</h1>
+
+            <button
+                    type="button"
+                    id="cancelEditHeaderButton"
+                    class="page-close-button"
+                    aria-label="Cancel editing and return"
+                    title="Cancel">
+                ×
+            </button>
+
+        </header>
+
+        <div
+                id="menuBackdrop"
+                class="menu-backdrop hidden"
+                aria-hidden="true">
+        </div>
+
+        <nav
+                id="sideMenu"
+                class="side-menu hidden"
+                aria-label="Main navigation"
+                aria-hidden="true">
+
+            <div class="side-menu-header">
+
+                <h2>Menu</h2>
+
+                <button
+                        type="button"
+                        id="closeMenuButton"
+                        class="menu-close-button"
+                        aria-label="Close navigation menu">
+                    ×
+                </button>
+
+            </div>
+
+            <a
+                    href="/html/index.html"
+                    class="side-menu-link">
+                LoRA Library
+            </a>
+
+            <a
+                    href="/html/add-lora.html"
+                    class="side-menu-link">
+                Add LoRA
+            </a>
+
+            <a
+                    href="/html/character-gallery.html"
+                    class="side-menu-link">
+                Character Gallery
+            </a>
+
+        </nav>
+
+        <!-- =========================
+             EDIT LORA FORM
+        ========================== -->
+
+        <form id="editLoraForm" class="edit-lora-form">
+
+            <!-- =========================
+                 IMAGE PREVIEW
+            ========================== -->
+
+            <section class="edit-image-section">
+
+                <label
+                        id="editImagePreviewContainer"
+                        class="details-image-container add-image-preview"
+                        for="editPreviewImage">
+
+                    <div class="lora-card-placeholder">
+                        Click to replace the preview image
+                    </div>
+
+                    <button
+                            type="button"
+                            id="removeEditPreviewButton"
+                            class="remove-preview-image-button hidden"
+                            aria-label="Remove selected replacement image"
+                            title="Remove selected replacement image">
+                        ×
+                    </button>
+
+                </label>
+
+                <input
+                        type="file"
+                        id="editPreviewImage"
+                        name="previewImage"
+                        class="hidden-file-input"
+                        accept="image/png,image/jpeg,image/webp,image/gif,video/mp4"
+                >
+
+            </section>
+
+            <!-- =========================
+                 BASIC DETAILS
+            ========================== -->
+
+            <section class="details-edit-grid edit-lora-details-grid">
+
+                <label class="details-edit-full-width">
+                    LoRA Name
+
+                    <input
+                            type="text"
+                            id="editLoraName"
+                            name="loraName"
+                            class="details-edit-input"
+                            required
+                    >
+                </label>
+
+                <label class="details-edit-full-width">
+                    Creator
+
+                    <input
+                            type="text"
+                            id="editCreator"
+                            name="creator"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Version
+
+                    <input
+                            type="text"
+                            id="editVersion"
+                            name="version"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Category
+
+                    <select
+                            id="editCategory"
+                            name="category"
+                            class="details-edit-input"
+                            required>
+
+                        <option value="">
+                            Select category
+                        </option>
+
+                    </select>
+                </label>
+
+                <label>
+                    Subcategory
+
+                    <input
+                            type="text"
+                            id="editSubCategory"
+                            name="subCategory"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Group
+
+                    <input
+                            type="text"
+                            id="editGroupName"
+                            name="groupName"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Seed
+
+                    <input
+                            type="number"
+                            id="editSeedNumber"
+                            name="seedNumber"
+                            class="details-edit-input"
+                    >
+                </label>
+
+            </section>
+
+            <!-- =========================
+                 POSITIVE PROMPT
+            ========================== -->
+
+            <section class="details-prompt-section">
+
+                <h2>Positive Prompt</h2>
+
+                <textarea
+                        id="editPositivePrompt"
+                        name="positivePrompt"
+                        class="details-edit-textarea"
+                        rows="8"
+                        placeholder="Enter the positive prompt or trigger words..."></textarea>
+
+            </section>
+
+            <!-- =========================
+                 NEGATIVE PROMPT
+            ========================== -->
+
+            <section class="details-prompt-section">
+
+                <h2>Negative Prompt</h2>
+
+                <textarea
+                        id="editNegativePrompt"
+                        name="negativePrompt"
+                        class="details-edit-textarea"
+                        rows="8"
+                        placeholder="Enter the negative prompt..."></textarea>
+
+            </section>
+
+            <!-- =========================
+                 NOTES
+            ========================== -->
+
+            <section class="details-prompt-section">
+
+                <h2>Notes</h2>
+
+                <textarea
+                        id="editNotes"
+                        name="notes"
+                        class="details-edit-textarea"
+                        rows="6"
+                        placeholder="Add notes about this LoRA..."></textarea>
+
+            </section>
+
+            <!-- Status message -->
+
+            <p
+                    id="editLoraMessage"
+                    class="details-edit-message hidden"
+                    aria-live="polite">
+            </p>
+
+            <!-- =========================
+                 STICKY ACTION BAR
+            ========================== -->
+
+            <div class="shared-form-action-bar edit-lora-action-bar">
+
+                <button
+                        type="button"
+                        id="cancelEditActionButton"
+                        class="details-cancel-button">
+                    Cancel
+                </button>
+
+                <button
+                        type="submit"
+                        id="saveEditButton"
+                        class="details-save-button">
+                    Save Changes
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</main>
+
+</body>
+
+</html>

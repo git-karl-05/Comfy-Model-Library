@@ -22,19 +22,27 @@ let lastSearchKeyword = "";
 const SEARCH_DEBOUNCE_DELAY = 400;
 const MINIMUM_SEARCH_LENGTH = 2;
 
-document.addEventListener("DOMContentLoaded", () => {
-    fetchAllLoras(0);
+document.addEventListener("DOMContentLoaded", async () => {
+    if (getRequestedLoraId()) {
+        document.body.classList.add(
+            "returning-to-modal"
+        );
+    }
     setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
     setupCategoryFilter();
     setupLoraDetailsModal();
-    setupLoraDetailsViewportHandling();
     setupSearchOverlay();
     setupActionMenu();
     setupImportFolderForm();
     setupMenu();
     setupPaginationControls();
+
+    await fetchAllLoras(0);
+
+    await reopenRequestedLoraModal();
+
 });
 
 async function fetchAllLoras(page) {
@@ -613,37 +621,47 @@ function setupLayoutButtons() {
 }
 
 function setupLoraDetailsModal() {
-    const closeButton = document.getElementById("closeLoraDetailsButton");
-    const modalOverlay = document.getElementById("loraDetailsModal");
-    const editButton = document.getElementById("editLoraButton");
-    const cancelButton = document.getElementById("cancelLoraEditButton");
-    const saveButton = document.getElementById("saveLoraEditButton");
+    const closeButton =
+        document.getElementById(
+            "closeLoraDetailsButton"
+        );
 
-    if (!closeButton || !modalOverlay || !editButton || !cancelButton || !saveButton) {
+    const modalOverlay =
+        document.getElementById(
+            "loraDetailsModal"
+        );
+
+    const editButton =
+        document.getElementById(
+            "editLoraButton"
+        );
+
+    if (
+        !closeButton ||
+        !modalOverlay ||
+        !editButton
+    ) {
         return;
     }
 
-    closeButton.addEventListener("click", () => {
-        closeLoraDetailsModal();
-    });
+    closeButton.addEventListener(
+        "click",
+        closeLoraDetailsModal
+    );
 
-    modalOverlay.addEventListener("click", event => {
-        if (event.target === modalOverlay) {
-            closeLoraDetailsModal();
+    modalOverlay.addEventListener(
+        "click",
+        event => {
+            if (event.target === modalOverlay) {
+                closeLoraDetailsModal();
+            }
         }
-    });
+    );
 
-    editButton.addEventListener("click", () => {
-        enterLoraEditMode();
-    });
-
-    cancelButton.addEventListener("click", () => {
-        cancelLoraEdit();
-    });
-
-    saveButton.addEventListener("click", async () => {
-        await saveLoraEdit();
-    });
+    editButton.addEventListener(
+        "click",
+        openEditLoraPage
+    );
 }
 
 async function saveLoraEdit() {
@@ -778,40 +796,7 @@ function getLoraDetailsScrollContainer() {
     );
 }
 
-function getVisibleViewportHeight() {
-    if (window.visualViewport) {
-        return window.visualViewport.height;
-    }
 
-    return window.innerHeight;
-}
-
-function updateLoraDetailsViewportHeight() {
-    const visibleHeight =
-        getVisibleViewportHeight();
-
-    document.documentElement.style.setProperty(
-        "--visible-viewport-height",
-        `${Math.round(visibleHeight)}px`
-    );
-}
-
-function isLoraDetailsModalOpen() {
-    const modal = getLoraDetailsModal();
-
-    return Boolean(
-        modal &&
-        !modal.classList.contains("hidden")
-    );
-}
-
-function handleLoraDetailsViewportChange() {
-    if (!isLoraDetailsModalOpen()) {
-        return;
-    }
-
-    updateLoraDetailsViewportHeight();
-}
 
 function resetLoraDetailsScrollPosition() {
     const scrollContainer =
@@ -832,30 +817,88 @@ function resetLoraDetailsScrollPosition() {
     });
 }
 
-function setupLoraDetailsViewportHandling() {
-    updateLoraDetailsViewportHeight();
+/* =========================
+   RETURNED LORA MODAL HELPERS
+========================= */
 
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener(
-            "resize",
-            handleLoraDetailsViewportChange
+function getRequestedLoraId() {
+    const queryParameters =
+        new URLSearchParams(
+            window.location.search
         );
+
+    const rawId =
+        queryParameters.get(
+            "openLora"
+        );
+
+    if (!rawId) {
+        return null;
     }
 
-    window.addEventListener(
-        "resize",
-        handleLoraDetailsViewportChange
+    const loraId =
+        Number(rawId);
+
+    if (
+        !Number.isInteger(loraId) ||
+        loraId <= 0
+    ) {
+        return null;
+    }
+
+    return loraId;
+}
+
+function removeOpenLoraParameter() {
+    const cleanedUrl =
+        new URL(
+            window.location.href
+        );
+
+    cleanedUrl.searchParams.delete(
+        "openLora"
     );
 
-    window.addEventListener(
-        "orientationchange",
-        () => {
-            window.requestAnimationFrame(() => {
-                updateLoraDetailsViewportHeight();
-            });
-        }
+    window.history.replaceState(
+        {},
+        "",
+        cleanedUrl
     );
 }
+
+async function reopenRequestedLoraModal() {
+
+    const loraId =
+        getRequestedLoraId();
+
+    if (!loraId) {
+        return;
+    }
+
+    try {
+
+        await openLoraDetailsModal(
+            loraId
+        );
+
+        removeOpenLoraParameter();
+
+    } catch (error) {
+
+        console.error(
+            "Unable to reopen LoRA modal:",
+            error
+        );
+
+    } finally {
+
+        document.body.classList.remove(
+            "returning-to-modal"
+        );
+
+    }
+}
+
 
 async function openLoraDetailsModal(loraId) {
     try {
@@ -881,9 +924,6 @@ async function openLoraDetailsModal(loraId) {
         }
 
         populateLoraDetailsModal(currentLora);
-        exitLoraEditMode();
-
-        updateLoraDetailsViewportHeight();
 
         modal.classList.remove("hidden");
 
@@ -1131,6 +1171,22 @@ function exitLoraEditMode() {
     isEditingLora = false;
     setLoraEditVisibility(false);
     clearEditMessage();
+}
+
+function buildEditLoraPageUrl(loraId) {
+    const queryParameters = new URLSearchParams({id: String(loraId)});
+
+    return `/html/edit-lora.html?${queryParameters.toString()}`;
+}
+
+function openEditLoraPage() {
+    if (!currentLora?.id) {
+        console.error("Cannot open edit page without a LoRA ID.");
+
+        return;
+    }
+
+    window.location.href = buildEditLoraPageUrl(currentLora.id);
 }
 
 function buildLoraUpdateRequest() {

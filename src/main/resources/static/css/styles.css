@@ -2187,3 +2187,162 @@
         text-align: center;
         font-weight: 600;
     }
+
+    /* =========================
+   EDIT LORA PAGE
+========================= */
+
+    .edit-lora-page {
+        min-height: 100vh;
+        padding: 0;
+    }
+
+    .edit-lora-container {
+        width: 100%;
+        max-width: 700px;
+
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    /* =========================
+       EDIT LORA HEADER
+    ========================= */
+
+    .edit-lora-header {
+        position: sticky;
+        top: 0;
+
+        z-index: 100;
+
+        display: grid;
+        grid-template-columns: 44px 1fr 44px;
+        align-items: center;
+        gap: 12px;
+
+        padding: 12px 0;
+
+        border-bottom: 1px solid var(--border);
+
+        background-color: var(--background);
+    }
+
+    .edit-lora-header h1 {
+        text-align: center;
+
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    /*
+     * The header close control is a button on the edit page,
+     * but it should look identical to the Add LoRA link.
+     */
+    .edit-lora-header .page-close-button {
+        padding: 0;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    /* =========================
+       EDIT LORA FORM
+    ========================= */
+
+    .edit-lora-form {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+
+        padding-top: 18px;
+    }
+
+    .edit-lora-details-grid {
+        width: 100%;
+    }
+
+    /* =========================
+       EDIT IMAGE SECTION
+    ========================= */
+
+    .edit-image-section {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .edit-image-preview {
+        min-height: 280px;
+        max-height: 560px;
+
+        overflow: hidden;
+    }
+
+    .edit-image-preview .lora-card-placeholder {
+        width: 100%;
+        min-height: 280px;
+
+        padding: 24px;
+
+        text-align: center;
+    }
+
+    .edit-image-preview img,
+    .edit-image-preview video {
+        width: 100%;
+        height: auto;
+        max-height: 560px;
+
+        display: block;
+        object-fit: contain;
+    }
+
+    /* =========================
+       EDIT PAGE PROMPTS
+    ========================= */
+
+    .edit-lora-form .details-prompt-section h2 {
+        color: var(--text-primary);
+
+        font-size: 0.95rem;
+        font-weight: 700;
+    }
+
+    /* =========================
+       EDIT ACTION BAR
+    ========================= */
+
+    .edit-lora-action-bar {
+        position: sticky;
+        bottom: 0;
+
+        margin-right: -20px;
+        margin-left: -20px;
+    }
+
+    /* =========================
+       EDIT PAGE DESKTOP
+    ========================= */
+
+    @media (min-width: 768px) {
+        .edit-lora-page {
+            padding: 24px;
+        }
+
+        .edit-lora-container {
+            border: 1px solid var(--border);
+            border-radius: 24px;
+
+            background-color: var(--background);
+
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        }
+
+        .edit-lora-action-bar {
+            border-bottom-right-radius: 24px;
+            border-bottom-left-radius: 24px;
+        }
+    }
+
+    body.returning-to-modal #loraList {
+        visibility: hidden;
+    }

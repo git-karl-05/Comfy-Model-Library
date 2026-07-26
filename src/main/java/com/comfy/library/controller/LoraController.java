@@ -49,9 +49,14 @@ public class LoraController {
         return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{loraId}")
-    public ResponseEntity<LoraResponse> updateLora(@RequestBody UpdateLoraRequest request, @PathVariable Long loraId) {
-        return ResponseEntity.ok(loraService.updateLoraById(request, loraId));
+    @PutMapping(value = "/{loraId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<LoraResponse> updateLoraWithPreview(
+            @PathVariable Long loraId,
+            @ModelAttribute UpdateLoraRequest request,
+            @RequestParam(required = false) MultipartFile preview
+
+    ) {
+        return ResponseEntity.ok(loraService.updateLoraWithPreviewById(loraId, request, preview));
     }
 
     @DeleteMapping("/{loraId}")
