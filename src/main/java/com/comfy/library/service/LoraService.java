@@ -275,7 +275,7 @@ public class LoraService {
 
         entity.setLoraName(resolveLoraName(root));
         entity.setVersion(normalizeVersion(getText(root.path("civitai"), "name")));
-        entity.setCreator(null);
+        entity.setCreator(resolveCreator(root));
         entity.setUrl(resolveUrl(root));
         entity.setCreatedDate(LocalDateTime.now());
         entity.setLastUpdated(LocalDateTime.now());
@@ -311,19 +311,39 @@ public class LoraService {
     }
 
     private String resolveLoraName(JsonNode root) {
-        String modelName = getText(root, "model_name");
-
-        if (modelName != null) {
-            return modelName;
-        }
-
         String fileName = getText(root, "file_name");
 
         if (fileName != null) {
             return fileName;
         }
 
+        String modelName = getText(root, "model_name");
+
+        if (modelName != null) {
+            return modelName;
+        }
+
         return "Untitled LoRA";
+    }
+
+    private String resolveCreator(JsonNode root) {
+        String fileName = getText(root, "file_name");
+
+        if (fileName == null || fileName.isBlank()) {
+            return "Unknown Creator";
+        }
+
+        String[] parts = fileName.split("(?i)\\s+by\\s+", 2);
+
+        if (parts.length < 2) {
+            return "Unknown Creator";
+        }
+
+        String creator = parts[1].trim();
+
+        return creator.isBlank()
+                ? "Unknown Creator"
+                : creator;
     }
 
     private String resolveUrl(JsonNode root) {

@@ -132,7 +132,7 @@ function createLoraCard(lora) {
 
         <div class="lora-card-header">
             <p class="lora-meta">
-                ${lora.creator ? "by " + lora.creator : "Unknown creator"}
+                ${lora.creator ? lora.creator : "Unknown creator"}
             </p>
 
             <h2>${lora.loraName ?? "Untitled LoRA"}</h2>
