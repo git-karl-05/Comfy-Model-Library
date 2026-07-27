@@ -47,7 +47,7 @@ public class LoraService {
     public LoraResponse saveLora(CreateLoraRequest request) {
         LoraEntity loraEntity = new LoraEntity();
         loraEntity.setLoraName(request.getLoraName());
-        loraEntity.setVersion(request.getVersion());
+        loraEntity.setVersion(normalizeVersion(request.getVersion()));
         loraEntity.setCreator(request.getCreator());
         loraEntity.setUrl(request.getUrl());
         loraEntity.setCreatedDate(LocalDateTime.now());
@@ -69,7 +69,7 @@ public class LoraService {
     public LoraResponse saveLoraWithPreviewImage(CreateLoraRequest request, MultipartFile previewImage) {
         LoraEntity loraEntity = new LoraEntity();
         loraEntity.setLoraName(request.getLoraName());
-        loraEntity.setVersion(request.getVersion());
+        loraEntity.setVersion(normalizeVersion(request.getVersion()));
         loraEntity.setCreator(request.getCreator());
         loraEntity.setUrl(request.getUrl());
         loraEntity.setCreatedDate(LocalDateTime.now());
@@ -95,32 +95,6 @@ public class LoraService {
         LoraEntity savedLora = loraRepository.save(loraEntity);
         return new LoraResponse(savedLora);
     }
-
-    public LoraResponse updateLoraById(UpdateLoraRequest request, Long loraId) {
-        LoraEntity loraEntity = loraRepository.findById(loraId).
-                orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
-
-        loraEntity.setLoraName(request.getLoraName());
-        loraEntity.setVersion(request.getVersion());
-        loraEntity.setCreator(request.getCreator());
-        loraEntity.setUrl(request.getUrl());
-        loraEntity.setLastUpdated(LocalDateTime.now());
-        loraEntity.setCategory(request.getCategory());
-        loraEntity.setSubCategory(request.getSubCategory());
-        loraEntity.setGroupName(request.getGroupName());
-        loraEntity.setPositivePrompt(request.getPositivePrompt());
-        loraEntity.setNegativePrompt(request.getNegativePrompt());
-        loraEntity.setSeedNumber(request.getSeedNumber());
-        loraEntity.setNotes(request.getNotes());
-        if (request.getFavorite() != null) {
-            loraEntity.setFavorite(request.getFavorite());
-        }
-
-        LoraEntity savedLora = loraRepository.save(loraEntity);
-        return new LoraResponse(savedLora);
-    }
-
-
     public LoraResponse updateLoraWithPreviewById(Long loraId, UpdateLoraRequest request, MultipartFile preview) {
         LoraEntity existingLora = loraRepository.findById(loraId)
                 .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
@@ -139,7 +113,7 @@ public class LoraService {
 
     private void updateEditFields(UpdateLoraRequest request, LoraEntity entity) {
         entity.setLoraName(request.getLoraName());
-        entity.setVersion(request.getVersion());
+        entity.setVersion(normalizeVersion(request.getVersion()));
         entity.setCreator(request.getCreator());
         entity.setUrl(request.getUrl());
         entity.setLastUpdated(LocalDateTime.now());
@@ -300,7 +274,7 @@ public class LoraService {
         LoraEntity entity = new LoraEntity();
 
         entity.setLoraName(resolveLoraName(root));
-        entity.setVersion(getText(root.path("civitai"), "name"));
+        entity.setVersion(normalizeVersion(getText(root.path("civitai"), "name")));
         entity.setCreator(null);
         entity.setUrl(resolveUrl(root));
         entity.setCreatedDate(LocalDateTime.now());
@@ -656,5 +630,21 @@ public class LoraService {
         return entityPage.map(LoraResponse::new);
     }
 
-}
+    private String normalizeVersion(String version) {
+        if (version == null || version.isBlank()) {
+            return "1";
+        }
 
+        String normalizedVersion = version.trim();
+
+        if (normalizedVersion.startsWith("v") || normalizedVersion.startsWith("V")) {
+            normalizedVersion = normalizedVersion.substring(1).trim();
+        }
+
+        if (normalizedVersion.isBlank()) {
+            return "1";
+        }
+
+        return normalizedVersion;
+    }
+}
