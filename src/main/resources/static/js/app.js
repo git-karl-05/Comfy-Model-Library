@@ -257,6 +257,7 @@ async function clearSearch() {
     isSearchActive = false;
 
     const restoredPage = pageBeforeSearch;
+
     const restoredScrollPosition =
         scrollPositionBeforeSearch;
 
@@ -266,11 +267,18 @@ async function clearSearch() {
         categoryFilter?.value ?? "ALL";
 
     if (selectedCategory === "FAVORITES") {
-        await fetchFavoriteLoras();
+        await fetchFavoriteLoras(
+            restoredPage
+        );
     } else if (selectedCategory !== "ALL") {
-        await fetchLorasByCategory(selectedCategory);
+        await fetchLorasByCategory(
+            selectedCategory,
+            restoredPage
+        );
     } else {
-        await fetchAllLoras(restoredPage);
+        await fetchAllLoras(
+            restoredPage
+        );
     }
 
     window.requestAnimationFrame(() => {
@@ -462,17 +470,28 @@ async function refreshCurrentView() {
         isSearchActive &&
         keyword.length >= MINIMUM_SEARCH_LENGTH
     ) {
-        await searchLoras(keyword, currentPage);
+        await searchLoras(
+            keyword,
+            currentPage
+        );
+
         return;
     }
 
     if (selectedCategory === "FAVORITES") {
-        await fetchFavoriteLoras();
+        await fetchFavoriteLoras(
+            currentPage
+        );
+
         return;
     }
 
     if (selectedCategory !== "ALL") {
-        await fetchLorasByCategory(selectedCategory);
+        await fetchLorasByCategory(
+            selectedCategory,
+            currentPage
+        );
+
         return;
     }
 
@@ -506,29 +525,52 @@ function setupCategoryFilter() {
     });
 }
 
-async function searchLoras(keyword, page = 0) {
+async function searchLoras(
+    keyword,
+    page = currentPage
+) {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/search?keyword=${encodeURIComponent(keyword)}`
-        );
+        const normalizedKeyword = keyword.trim();
 
-        if (!response.ok) {
-            throw new Error("Search failed");
+        if (
+            normalizedKeyword.length <
+            MINIMUM_SEARCH_LENGTH
+        ) {
+            return;
         }
 
-        currentSearchResults = await response.json();
-        isSearchActive = true;
+        const url = buildPaginatedUrl(
+            "/search",
+            page,
+            pageSize,
+            {
+                keyword: normalizedKeyword
+            }
+        );
 
-        renderSearchResultsPage(page);
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                `Search failed. Status: ${response.status}`
+            );
+        }
+
+        const pageResponse = await response.json();
+
+        isSearchActive = true;
+        lastSearchKeyword = normalizedKeyword;
+
+        displayPaginatedLoraResponse(pageResponse);
 
     } catch (error) {
-        console.error("Search error:", error);
+        console.error(
+            "Search error:",
+            error
+        );
 
-        currentSearchResults = [];
         isSearchActive = false;
-
-        displayLoras([]);
-        updatePaginationControls();
+        displayGalleryError(error);
     }
 }
 
@@ -557,39 +599,63 @@ function renderSearchResultsPage(page) {
     updatePaginationControls();
 }
 
-async function fetchLorasByCategory(category) {
+async function fetchLorasByCategory(
+    category,
+    page = currentPage
+) {
     isSearchActive = false;
     currentSearchResults = [];
+
     try {
-        const response = await fetch(`${API_BASE_URL}/category/${category}`);
+        const encodedCategory =
+            encodeURIComponent(category);
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch LoRAs by category");
-        }
+        const url = buildPaginatedUrl(
+            `/category/${encodedCategory}`,
+            page,
+            pageSize
+        );
 
-        const loras = await response.json();
-        displayLoras(loras);
+        await fetchPaginatedLoras(
+            url,
+            "Failed to fetch LoRAs by category"
+        );
 
     } catch (error) {
-        console.error("Category filter error:", error);
+        console.error(
+            "Category filter error:",
+            error
+        );
+
+        displayGalleryError(error);
     }
 }
 
-async function fetchFavoriteLoras() {
+async function fetchFavoriteLoras(
+    page = currentPage
+) {
     isSearchActive = false;
     currentSearchResults = [];
+
     try {
-        const response = await fetch(`${API_BASE_URL}/favorites`);
+        const url = buildPaginatedUrl(
+            "/favorites",
+            page,
+            pageSize
+        );
 
-        if (!response.ok) {
-            throw new Error("Failed to fetch favorite LoRAs");
-        }
-
-        const loras = await response.json();
-        displayLoras(loras);
+        await fetchPaginatedLoras(
+            url,
+            "Failed to fetch favorite LoRAs"
+        );
 
     } catch (error) {
-        console.error("Favorites filter error:", error);
+        console.error(
+            "Favorites filter error:",
+            error
+        );
+
+        displayGalleryError(error);
     }
 }
 
@@ -1696,48 +1762,121 @@ function displayGalleryError(error) {
     gallery.replaceChildren(message);
 }
 
+function buildPaginatedUrl(
+    path,
+    page,
+    size,
+    parameters = {}
+) {
+    const queryParameters =
+        new URLSearchParams({
+            page: String(page),
+            size: String(size)
+        });
+
+    Object.entries(parameters).forEach(
+        ([key, value]) => {
+            if (
+                value !== null &&
+                value !== undefined &&
+                String(value).trim() !== ""
+            ) {
+                queryParameters.set(
+                    key,
+                    String(value)
+                );
+            }
+        }
+    );
+
+    return (
+        `${API_BASE_URL}${path}` +
+        `?${queryParameters.toString()}`
+    );
+}
+
+function displayPaginatedLoraResponse(
+    pageResponse
+) {
+    validateLoraPageResponse(pageResponse);
+
+    updatePaginationState(pageResponse);
+    updatePaginationControls();
+
+    if (pageResponse.content.length === 0) {
+        displayEmptyGalleryMessage();
+        return;
+    }
+
+    renderLoraPage(pageResponse.content);
+}
+
+async function fetchPaginatedLoras(
+    url,
+    errorMessage
+) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(
+            `${errorMessage}. ` +
+            `Status: ${response.status}`
+        );
+    }
+
+    const pageResponse =
+        await response.json();
+
+    displayPaginatedLoraResponse(
+        pageResponse
+    );
+}
+
 function setupPaginationControls() {
     const previousButton =
-        document.getElementById("previousPageButton");
+        document.getElementById(
+            "previousPageButton"
+        );
 
     const nextButton =
-        document.getElementById("nextPageButton");
+        document.getElementById(
+            "nextPageButton"
+        );
 
     if (!previousButton || !nextButton) {
         return;
     }
 
-    previousButton.addEventListener("click", async () => {
-        if (currentPage <= 0) {
-            return;
+    previousButton.addEventListener(
+        "click",
+        async () => {
+            if (currentPage <= 0) {
+                return;
+            }
+
+            currentPage -= 1;
+
+            await refreshCurrentView();
+            await scrollToLoraGalleryControls();
         }
+    );
 
-        const previousPage = currentPage - 1;
+    nextButton.addEventListener(
+        "click",
+        async () => {
+            if (
+                totalPages === 0 ||
+                currentPage >= totalPages - 1
+            ) {
+                return;
+            }
 
-        if (isSearchActive) {
-            renderSearchResultsPage(previousPage);
-        } else {
-            await fetchAllLoras(previousPage);
+            currentPage += 1;
+
+            await refreshCurrentView();
+            await scrollToLoraGalleryControls();
         }
-
-        await scrollToLoraGalleryControls();
-    });
-
-    nextButton.addEventListener("click", async () => {
-        if (currentPage >= totalPages - 1) {
-            return;
-        }
-
-        const nextPage = currentPage + 1;
-
-        if (isSearchActive) {
-            renderSearchResultsPage(nextPage);
-        } else {
-            await fetchAllLoras(nextPage);
-        }
-
-        await scrollToLoraGalleryControls();
-    });
+    );
 }
 
 function updatePaginationControls() {

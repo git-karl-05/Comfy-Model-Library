@@ -2,29 +2,32 @@ package com.comfy.library.repository;
 
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
-import org.hibernate.query.Page;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.awt.print.Pageable;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface LoraRepository extends JpaRepository<LoraEntity, Long> {
 
-    List<LoraEntity> findByLoraNameContainingIgnoreCase(String keyword);
 
-    List<LoraEntity> findByCategory(LoraCategory category);
 
-    List<LoraEntity> findByGroupNameIgnoreCase(String groupName);
+    Page<LoraEntity> findByCategory(LoraCategory category, Pageable pageable);
 
-    List<LoraEntity> findByFavoriteTrue();
+    Page<LoraEntity> findByGroupNameIgnoreCase(String groupName, Pageable pageable);
+
+    Page<LoraEntity> findByFavoriteTrue(Pageable pageable);
+
+    Page<LoraEntity> findByLoraNameContainingIgnoreCase(String keyword, Pageable pageable);
 
     List<LoraEntity> findAllByOrderByGroupNameAsc();
 
-    Optional<LoraEntity> findBySha256(String sha256);
-
     boolean existsBySha256(String sha256);
+
+    Optional<LoraEntity> findBySha256(String sha256);
 
 }

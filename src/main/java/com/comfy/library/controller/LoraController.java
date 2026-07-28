@@ -4,6 +4,7 @@ import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.repository.LoraRepository;
 import com.comfy.library.service.LoraService;
+import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,20 +36,6 @@ public class LoraController {
         return loraService.saveLoraWithPreviewImage(request, previewImage);
     }
 
-    @GetMapping("/{loraId}")
-    public ResponseEntity<LoraResponse> getLoraById(@PathVariable long loraId) {
-        return ResponseEntity.ok(loraService.getLoraById(loraId));
-    }
-
-    @GetMapping
-    public ResponseEntity<Page<LoraResponse>> getLoras(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
-    ) {
-        Page<LoraResponse> response = loraService.getLoras(page,size);
-        return ResponseEntity.ok(response);
-    }
-
     @PutMapping(value = "/{loraId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LoraResponse> updateLoraWithPreview(
             @PathVariable Long loraId,
@@ -65,23 +52,54 @@ public class LoraController {
     }
 
     @GetMapping("/search")
-    public List<LoraResponse> searchLoras(@RequestParam String keyword) {
-        return loraService.searchLoras(keyword);
+    public ResponseEntity<Page<LoraResponse>> searchLoras(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        return ResponseEntity.ok(loraService.searchLoras(keyword, page, size));
+    }
+
+    @GetMapping("/{loraId}")
+    public ResponseEntity<LoraResponse> getLoraById(@PathVariable long loraId) {
+        return ResponseEntity.ok(loraService.getLoraById(loraId));
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<LoraResponse>> getLoras(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Page<LoraResponse> response = loraService.getLoras(page,size);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/category/{category}")
-    public List<LoraResponse> getLorasByCategory(@PathVariable LoraCategory category){
-        return loraService.getLorasByCategory(category);
+    public ResponseEntity<Page<LoraResponse>> getLorasByCategory(
+            @PathVariable LoraCategory category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ){
+
+        Page<LoraResponse> response = loraService.getLorasByCategory(category, page,size);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/group/{groupName}")
-    public List<LoraResponse> getLorasByGroup(@PathVariable String groupName) {
-        return loraService.getLorasByGroup(groupName);
+    public ResponseEntity<Page<LoraResponse>> getLorasByGroup(
+            @PathVariable String groupName,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Page<LoraResponse> response = loraService.getLorasByGroup(groupName, page, size);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/favorites")
-    public List<LoraResponse> getFavoriteLoras() {
-        return loraService.getFavoriteLoras();
+    public ResponseEntity<Page<LoraResponse>> getFavoriteLoras(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        return ResponseEntity.ok(loraService.getFavoriteLoras(page, size));
     }
 
     @PutMapping("/{loraId}/favorite")
@@ -89,10 +107,7 @@ public class LoraController {
         return loraService.toggleFavorite(loraId);
     }
 
-    @GetMapping("/sorted/group")
-    public List<LoraResponse> getAllLorasSortedByGroupName() {
-        return loraService.getAllLorasSortedByGroupname();
-    }
+
 
     @GetMapping("/categories")
     public List<LoraCategory> getCategories() {

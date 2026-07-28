@@ -4,7 +4,6 @@ import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraRepository;
-import org.hibernate.sql.Update;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -153,32 +152,47 @@ public class LoraService {
     //Filter by favorites
 
 
-    public List<LoraResponse> searchLoras(String keyword) {
-        return loraRepository.findByLoraNameContainingIgnoreCase(keyword)
-                .stream()
-                .map(LoraResponse::new)
-                .collect(Collectors.toList());
+    public Page<LoraResponse> searchLoras(String keyword, int page, int size) {
+
+        Pageable pageable = createPageable(page, size);
+
+        Page<LoraEntity> entityPage = loraRepository.findByLoraNameContainingIgnoreCase(keyword, pageable);
+
+        return entityPage.map(LoraResponse::new);
     }
 
-    public List<LoraResponse> getLorasByCategory(LoraCategory category) {
-        return loraRepository.findByCategory(category)
-                .stream()
-                .map(LoraResponse::new)
-                .collect(Collectors.toList());
+
+
+    private int normalizePageNumber(int page) {
+        return Math.max(page, 0);
     }
 
-    public List<LoraResponse> getLorasByGroup(String groupName) {
-        return loraRepository.findByGroupNameIgnoreCase(groupName)
-                .stream()
-                .map(LoraResponse::new)
-                .collect(Collectors.toList());
+    private int normalizePageSize(int size) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(size, MAX_PAGE_SIZE);
     }
 
-    public List<LoraResponse> getFavoriteLoras() {
-        return loraRepository.findByFavoriteTrue()
-                .stream()
-                .map(LoraResponse::new)
-                .collect(Collectors.toList());
+    private Pageable createPageable(int page, int size) {
+        int normalizedPage = normalizePageNumber(page);
+        int normalizedSize = normalizePageSize(size);
+
+        return PageRequest.of(normalizedPage, normalizedSize, Sort.by(Sort.Direction.DESC, "createdDate"));
+    }
+
+
+
+    public Page<LoraResponse> getFavoriteLoras(int page, int size) {
+
+
+        Pageable pageable = createPageable(page, size);
+
+        Page<LoraEntity> entityPage = loraRepository.findByFavoriteTrue(pageable);
+
+        return entityPage.map(LoraResponse::new);
+
     }
 
     public LoraResponse toggleFavorite(Long loraId) {
@@ -190,13 +204,6 @@ public class LoraService {
 
         LoraEntity savedLora = loraRepository.save(loraEntity);
         return new LoraResponse(savedLora);
-    }
-
-    public List<LoraResponse> getAllLorasSortedByGroupname() {
-        return loraRepository.findAllByOrderByGroupNameAsc()
-                .stream()
-                .map(LoraResponse::new)
-                .collect(Collectors.toList());
     }
 
     public List<LoraCategory> getCategories() {
@@ -623,24 +630,7 @@ public class LoraService {
         });
     }
 
-    private int normalizePageNumber(int page) {
-        return Math.max(page, 0);
-    }
 
-    private int normalizePageSize(int size) {
-        if (size <= 0) {
-            return DEFAULT_PAGE_SIZE;
-        }
-
-        return Math.min(size, MAX_PAGE_SIZE);
-    }
-
-    private Pageable createPageable(int page, int size) {
-        int normalizedPage = normalizePageNumber(page);
-        int normalizedSize = normalizePageSize(size);
-
-        return PageRequest.of(normalizedPage, normalizedSize, Sort.by(Sort.Direction.DESC, "createdDate"));
-    }
 
     public Page<LoraResponse> getLoras(int page, int size) {
         Pageable pageable = createPageable(page, size);
@@ -649,6 +639,29 @@ public class LoraService {
 
         return entityPage.map(LoraResponse::new);
     }
+
+    public Page<LoraResponse> getLorasByCategory(LoraCategory category, int page, int size) {
+
+        Pageable pageable = createPageable(page, size);
+
+        Page<LoraEntity> entityPage = loraRepository.findByCategory(category, pageable);
+
+        return entityPage.map(LoraResponse::new);
+    }
+
+    public Page<LoraResponse> getLorasByGroup(String groupName, int page, int size) {
+
+        Pageable pageable = createPageable(page, size);
+
+        Page<LoraEntity> entityPage = loraRepository.findByGroupNameIgnoreCase(
+                groupName,
+                pageable
+        );
+
+        return entityPage.map(LoraResponse::new);
+
+    }
+
 
     private String normalizeVersion(String version) {
         if (version == null || version.isBlank()) {
