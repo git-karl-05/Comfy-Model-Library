@@ -964,6 +964,35 @@ async function reopenRequestedLoraModal() {
 
     }
 }
+function restartLoraModalOpeningAnimation(
+    modalSheet
+) {
+    if (!modalSheet) {
+        return;
+    }
+
+    modalSheet.classList.remove(
+        "opening",
+        "closing"
+    );
+
+    // Force the browser to recognize the class removal.
+    void modalSheet.offsetWidth;
+
+    modalSheet.classList.add("opening");
+
+    modalSheet.addEventListener(
+        "animationend",
+        () => {
+            modalSheet.classList.remove(
+                "opening"
+            );
+        },
+        {
+            once: true
+        }
+    );
+}
 
 
 async function openLoraDetailsModal(loraId) {
@@ -990,8 +1019,19 @@ async function openLoraDetailsModal(loraId) {
         }
 
         populateLoraDetailsModal(currentLora);
+        const modalSheet =
+            modal.querySelector(
+                ".lora-details-sheet"
+            );
 
-        modal.classList.remove("hidden");
+        modal.classList.remove(
+            "hidden",
+            "closing"
+        );
+
+        restartLoraModalOpeningAnimation(
+            modalSheet
+        );
 
         resetLoraDetailsScrollPosition();
 
@@ -1007,13 +1047,77 @@ async function openLoraDetailsModal(loraId) {
     }
 }
 
-function closeLoraDetailsModal() {
-    const modal = document.getElementById("loraDetailsModal");
-    const video = document.querySelector("#detailsImageContainer video");
+function finishClosingLoraDetailsModal(
+    modal,
+    modalSheet
+) {
+    modal.classList.add("hidden");
 
-    if (modal) {
-        modal.classList.add("hidden");
+    modal.classList.remove("closing");
+
+    modalSheet.classList.remove(
+        "opening",
+        "closing"
+    );
+}
+
+function closeLoraDetailsModal() {
+    const modal =
+        document.getElementById(
+            "loraDetailsModal"
+        );
+
+    const modalSheet =
+        modal?.querySelector(
+            ".lora-details-sheet"
+        );
+
+    const video =
+        document.querySelector(
+            "#detailsImageContainer video"
+        );
+
+    if (!modal || !modalSheet) {
+        return;
     }
+
+    if (
+        modal.classList.contains("hidden") ||
+        modal.classList.contains("closing")
+    ) {
+        return;
+    }
+
+    modal.classList.add("closing");
+    modalSheet.classList.add("closing");
+
+    let closingFinished = false;
+
+    function finishCloseAnimation() {
+        if (closingFinished) {
+            return;
+        }
+
+        closingFinished = true;
+
+        finishClosingLoraDetailsModal(
+            modal,
+            modalSheet
+        );
+    }
+
+    modalSheet.addEventListener(
+        "animationend",
+        finishCloseAnimation,
+        {
+            once: true
+        }
+    );
+
+    window.setTimeout(
+        finishCloseAnimation,
+        250
+    );
 
     isEditingLora = false;
     currentLora = null;
@@ -1024,8 +1128,6 @@ function closeLoraDetailsModal() {
         video.pause();
         video.currentTime = 0;
     }
-
-
 }
 
 function populateLoraDetailsModal(lora) {
