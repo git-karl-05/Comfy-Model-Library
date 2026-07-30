@@ -13,6 +13,10 @@ let totalElements = 0;
 let currentSearchResults = [];
 let isSearchActive = false;
 
+let appliedBaseModelFilter = "ALL"
+let appliedCategoryFilter = "ALL";
+let appliedSubcategoryFilter = "ALL";
+
 let pageBeforeSearch = 0;
 let scrollPositionBeforeSearch = 0;
 
@@ -31,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
-    setupCategoryFilter();
+    setupFilterModal();
     setupLoraDetailsModal();
     setupSearchOverlay();
     setupActionMenu();
@@ -239,9 +243,6 @@ async function clearSearch() {
     const searchOverlay =
         document.getElementById("searchOverlay");
 
-    const categoryFilter =
-        document.getElementById("categoryFilter");
-
     if (searchInput) {
         searchInput.value = "";
     }
@@ -256,7 +257,8 @@ async function clearSearch() {
     currentSearchResults = [];
     isSearchActive = false;
 
-    const restoredPage = pageBeforeSearch;
+    const restoredPage =
+        pageBeforeSearch;
 
     const restoredScrollPosition =
         scrollPositionBeforeSearch;
@@ -264,7 +266,7 @@ async function clearSearch() {
     currentPage = restoredPage;
 
     const selectedCategory =
-        categoryFilter?.value ?? "ALL";
+        appliedCategoryFilter;
 
     if (selectedCategory === "FAVORITES") {
         await fetchFavoriteLoras(
@@ -455,16 +457,15 @@ function setupGoToTopButton() {
 
 async function refreshCurrentView() {
     const searchInput =
-        document.getElementById("searchInput");
-
-    const categoryFilter =
-        document.getElementById("categoryFilter");
+        document.getElementById(
+            "searchInput"
+        );
 
     const keyword =
         searchInput?.value.trim() ?? "";
 
     const selectedCategory =
-        categoryFilter?.value ?? "ALL";
+        appliedCategoryFilter;
 
     if (
         isSearchActive &&
@@ -478,18 +479,18 @@ async function refreshCurrentView() {
         return;
     }
 
-    if (selectedCategory === "FAVORITES") {
-        await fetchFavoriteLoras(
-            currentPage
-        );
-
+    if (
+        selectedCategory === "FAVORITES"
+    ) {
+        await fetchFavoriteLoras();
         return;
     }
 
-    if (selectedCategory !== "ALL") {
+    if (
+        selectedCategory !== "ALL"
+    ) {
         await fetchLorasByCategory(
-            selectedCategory,
-            currentPage
+            selectedCategory
         );
 
         return;
@@ -498,31 +499,149 @@ async function refreshCurrentView() {
     await fetchAllLoras(currentPage);
 }
 
-function setupCategoryFilter() {
-    const categoryFilter =
-        document.getElementById("categoryFilter");
+function getFilterElements() {
+    return {
+        modal:
+            document.getElementById(
+                "filterModal"
+            ),
 
-    const searchInput =
-        document.getElementById("searchInput");
+        backdrop:
+            document.getElementById(
+                "filterModalBackdrop"
+            ),
 
-    if (!categoryFilter) {
+        openButton:
+            document.getElementById(
+                "filterButton"
+            ),
+
+        closeButton:
+            document.getElementById(
+                "closeFilterButton"
+            ),
+
+        applyButton:
+            document.getElementById(
+                "applyFilterButton"
+            ),
+
+        resetButton:
+            document.getElementById(
+                "resetFilterButton"
+            ),
+
+        baseModelFilter:
+            document.getElementById(
+                "baseModelFilter"
+            ),
+
+        categoryFilter:
+            document.getElementById(
+                "categoryFilter"
+            ),
+
+        subcategoryFilter:
+            document.getElementById(
+                "subcategoryFilter"
+            ),
+
+        countBadge:
+            document.getElementById(
+                "filterCountBadge"
+            )
+    };
+}
+
+function setupFilterModal() {
+    const {
+        modal,
+        backdrop,
+        openButton,
+        closeButton,
+        applyButton,
+        resetButton,
+        baseModelFilter,
+        categoryFilter,
+        subcategoryFilter
+    } = getFilterElements();
+
+    if (
+        !modal ||
+        !backdrop ||
+        !openButton ||
+        !closeButton ||
+        !applyButton ||
+        !resetButton ||
+        !baseModelFilter ||
+        !categoryFilter ||
+        !subcategoryFilter
+    ) {
         return;
     }
 
-    categoryFilter.addEventListener("change", async () => {
-        if (searchInput) {
-            searchInput.value = "";
+    openButton.addEventListener(
+        "click",
+        () => {
+            baseModelFilter.value =
+                appliedBaseModelFilter;
+
+            categoryFilter.value =
+                appliedCategoryFilter;
+
+            subcategoryFilter.value =
+                appliedSubcategoryFilter;
+
+            openFilterModal();
         }
+    );
 
-        lastSearchKeyword = "";
-        currentSearchResults = [];
-        isSearchActive = false;
+    closeButton.addEventListener(
+        "click",
+        () => {
+            cancelPendingFilterChanges();
+            closeFilterModal();
+        }
+    );
 
-        currentPage = 0;
-        pageBeforeSearch = 0;
+    backdrop.addEventListener(
+        "click",
+        () => {
+            cancelPendingFilterChanges();
+            closeFilterModal();
+        }
+    );
 
-        await refreshCurrentView();
-    });
+    resetButton.addEventListener(
+        "click",
+        () => {
+            resetFilterSelection();
+        }
+    );
+
+    applyButton.addEventListener(
+        "click",
+        async () => {
+            await applySelectedFilter();
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key !== "Escape" ||
+                modal.classList.contains("hidden")
+            ) {
+                return;
+            }
+
+            cancelPendingFilterChanges();
+            closeFilterModal();
+        }
+    );
+
+    updateFilterButton();
 }
 
 async function searchLoras(
@@ -571,6 +690,198 @@ async function searchLoras(
 
         isSearchActive = false;
         displayGalleryError(error);
+    }
+}
+
+function openFilterModal() {
+    const {
+        modal,
+        openButton,
+        categoryFilter
+    } = getFilterElements();
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.remove("hidden");
+
+    modal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    openButton?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    window.requestAnimationFrame(() => {
+        categoryFilter?.focus();
+    });
+}
+
+function closeFilterModal() {
+    const {
+        modal,
+        openButton
+    } = getFilterElements();
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add("hidden");
+
+    modal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    openButton?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+}
+
+function getActiveFilterCount() {
+    let activeCount = 0;
+
+    if (appliedBaseModelFilter !== "ALL") {
+        activeCount += 1;
+    }
+
+    if (appliedCategoryFilter !== "ALL") {
+        activeCount += 1;
+    }
+
+    if (appliedSubcategoryFilter !== "ALL") {
+        activeCount += 1;
+    }
+
+
+    return activeCount;
+}
+
+function cancelPendingFilterChanges() {
+    const {
+        baseModelFilter,
+        categoryFilter,
+        subcategoryFilter
+    } = getFilterElements();
+
+    if (baseModelFilter) {
+        baseModelFilter.value =
+            appliedBaseModelFilter;
+    }
+
+    if (categoryFilter) {
+        categoryFilter.value =
+            appliedCategoryFilter;
+    }
+
+    if (subcategoryFilter) {
+        subcategoryFilter.value =
+            appliedSubcategoryFilter;
+    }
+}
+
+async function applySelectedFilter() {
+    const {
+        baseModelFilter,
+        categoryFilter,
+        subcategoryFilter
+    } = getFilterElements();
+
+    if (!baseModelFilter ||
+        !categoryFilter ||
+        !subcategoryFilter
+    ) {
+        return;
+    }
+
+    appliedBaseModelFilter =
+        appliedBaseModelFilter.value;
+
+    appliedCategoryFilter =
+        categoryFilter.value;
+
+    appliedSubcategoryFilter =
+        subcategoryFilter.value;
+
+    clearSearchForFilterChange();
+
+    updateFilterButton();
+    closeFilterModal();
+
+    await refreshCurrentView();
+}
+
+function clearSearchForFilterChange() {
+    const searchInput =
+        document.getElementById(
+            "searchInput"
+        );
+
+    if (searchInput) {
+        searchInput.value = "";
+    }
+
+    lastSearchKeyword = "";
+    currentSearchResults = [];
+    isSearchActive = false;
+
+    currentPage = 0;
+    pageBeforeSearch = 0;
+}
+
+function updateFilterButton() {
+    const {
+        openButton,
+        countBadge
+    } = getFilterElements();
+
+    if (!openButton || !countBadge) {
+        return;
+    }
+
+    const activeFilterCount =
+        getActiveFilterCount();
+
+    const hasActiveFilters =
+        activeFilterCount > 0;
+
+    openButton.classList.toggle(
+        "active",
+        hasActiveFilters
+    );
+
+    countBadge.classList.toggle(
+        "hidden",
+        !hasActiveFilters
+    );
+
+    countBadge.textContent =
+        String(activeFilterCount);
+}
+
+function resetFilterSelection() {
+    const {
+        baseModelFilter,
+        categoryFilter,
+        subcategoryFilter
+    } = getFilterElements();
+
+    if (baseModelFilter) {
+        baseModelFilter.value = "All";
+    }
+
+    if (categoryFilter) {
+        categoryFilter.value = "ALL"
+    }
+
+    if (subcategoryFilter) {
+        subcategoryFilter.value = "ALL";
     }
 }
 
