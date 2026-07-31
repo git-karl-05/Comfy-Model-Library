@@ -185,18 +185,6 @@ async function toggleFavorite(loraId) {
     }
 }
 
-// function setupSearch() {
-//     const searchInput = document.getElementById("searchInput");
-//
-//     if (!searchInput) {
-//         return;
-//     }
-//
-//     searchInput.addEventListener("input", async () => {
-//         await refreshCurrentView();
-//     });
-// }
-
 function clearSearchDebounceTimer() {
     if (searchDebounceTimer === null) {
         return;
@@ -238,17 +226,23 @@ async function performSearchFromInput() {
 
 async function clearSearch() {
     const searchInput =
-        document.getElementById("searchInput");
+        document.getElementById(
+            "searchInput"
+        );
 
     const searchOverlay =
-        document.getElementById("searchOverlay");
+        document.getElementById(
+            "searchOverlay"
+        );
 
     if (searchInput) {
         searchInput.value = "";
     }
 
     if (searchOverlay) {
-        searchOverlay.classList.add("hidden");
+        searchOverlay.classList.add(
+            "hidden"
+        );
     }
 
     clearSearchDebounceTimer();
@@ -265,23 +259,7 @@ async function clearSearch() {
 
     currentPage = restoredPage;
 
-    const selectedCategory =
-        appliedCategoryFilter;
-
-    if (selectedCategory === "FAVORITES") {
-        await fetchFavoriteLoras(
-            restoredPage
-        );
-    } else if (selectedCategory !== "ALL") {
-        await fetchLorasByCategory(
-            selectedCategory,
-            restoredPage
-        );
-    } else {
-        await fetchAllLoras(
-            restoredPage
-        );
-    }
+    await refreshCurrentView();
 
     window.requestAnimationFrame(() => {
         window.scrollTo({
@@ -614,9 +592,7 @@ function setupFilterModal() {
 
     resetButton.addEventListener(
         "click",
-        () => {
-            resetFilterSelection();
-        }
+        resetFilterSelection
     );
 
     applyButton.addEventListener(
@@ -631,7 +607,9 @@ function setupFilterModal() {
         event => {
             if (
                 event.key !== "Escape" ||
-                modal.classList.contains("hidden")
+                modal.classList.contains(
+                    "hidden"
+                )
             ) {
                 return;
             }
@@ -697,7 +675,7 @@ function openFilterModal() {
     const {
         modal,
         openButton,
-        categoryFilter
+        baseModelFilter
     } = getFilterElements();
 
     if (!modal) {
@@ -717,7 +695,7 @@ function openFilterModal() {
     );
 
     window.requestAnimationFrame(() => {
-        categoryFilter?.focus();
+        baseModelFilter?.focus();
     });
 }
 
@@ -761,6 +739,30 @@ function getActiveFilterCount() {
 
 
     return activeCount;
+}
+
+function hasActiveGalleryFilters() {
+    return getActiveFilterCount() > 0;
+}
+
+function buildFilterParameters() {
+    const parameters = {};
+
+    if (appliedBaseModelFilter !== "ALL") {
+        parameters.baseModel = appliedBaseModelFilter;
+    }
+
+    if (appliedCategoryFilter !== "ALL" &&
+        appliedCategoryFilter !== "FAVORITES"
+    ) {
+        parameters.category = appliedCategoryFilter;
+    }
+
+    if (appliedSubcategoryFilter !== "ALL") {
+        parameters.subCategory = appliedSubcategoryFilter;
+    }
+
+    return parameters;
 }
 
 function cancelPendingFilterChanges() {
@@ -965,6 +967,23 @@ async function fetchFavoriteLoras(
             "Favorites filter error:",
             error
         );
+
+        displayGalleryError(error);
+    }
+}
+
+async function fetchFilteredLoras(page = currentPage) {
+    isSearchActive = false;
+    currentSearchResults = [];
+
+    try {
+        const filterParameters = buildFilterParameters();
+
+        const url = buildPaginatedUrl("/filter", page, pageSize, filterParameters);
+
+        await fetchPaginatedLoras(url, "Failed to fetch filtered LoRAs");
+    } catch (error) {
+        console.error("Gallery filter error: ", error);
 
         displayGalleryError(error);
     }
