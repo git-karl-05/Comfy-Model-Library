@@ -442,9 +442,6 @@ async function refreshCurrentView() {
     const keyword =
         searchInput?.value.trim() ?? "";
 
-    const selectedCategory =
-        appliedCategoryFilter;
-
     if (
         isSearchActive &&
         keyword.length >= MINIMUM_SEARCH_LENGTH
@@ -458,23 +455,27 @@ async function refreshCurrentView() {
     }
 
     if (
-        selectedCategory === "FAVORITES"
+        appliedCategoryFilter ===
+        "FAVORITES"
     ) {
-        await fetchFavoriteLoras();
-        return;
-    }
-
-    if (
-        selectedCategory !== "ALL"
-    ) {
-        await fetchLorasByCategory(
-            selectedCategory
+        await fetchFavoriteLoras(
+            currentPage
         );
 
         return;
     }
 
-    await fetchAllLoras(currentPage);
+    if (hasActiveGalleryFilters()) {
+        await fetchFilteredLoras(
+            currentPage
+        );
+
+        return;
+    }
+
+    await fetchAllLoras(
+        currentPage
+    );
 }
 
 function getFilterElements() {
@@ -682,6 +683,8 @@ function openFilterModal() {
         return;
     }
 
+    modal.inert = false;
+
     modal.classList.remove("hidden");
 
     modal.setAttribute(
@@ -709,12 +712,19 @@ function closeFilterModal() {
         return;
     }
 
+    /*
+     * Move focus outside the modal before hiding it.
+     */
+    openButton?.focus();
+
     modal.classList.add("hidden");
 
     modal.setAttribute(
         "aria-hidden",
         "true"
     );
+
+    modal.inert = true;
 
     openButton?.setAttribute(
         "aria-expanded",
@@ -749,17 +759,21 @@ function buildFilterParameters() {
     const parameters = {};
 
     if (appliedBaseModelFilter !== "ALL") {
-        parameters.baseModel = appliedBaseModelFilter;
+        parameters.baseModel =
+            appliedBaseModelFilter;
     }
 
-    if (appliedCategoryFilter !== "ALL" &&
+    if (
+        appliedCategoryFilter !== "ALL" &&
         appliedCategoryFilter !== "FAVORITES"
     ) {
-        parameters.category = appliedCategoryFilter;
+        parameters.category =
+            appliedCategoryFilter;
     }
 
     if (appliedSubcategoryFilter !== "ALL") {
-        parameters.subCategory = appliedSubcategoryFilter;
+        parameters.subcategory =
+            appliedSubcategoryFilter;
     }
 
     return parameters;
@@ -795,7 +809,8 @@ async function applySelectedFilter() {
         subcategoryFilter
     } = getFilterElements();
 
-    if (!baseModelFilter ||
+    if (
+        !baseModelFilter ||
         !categoryFilter ||
         !subcategoryFilter
     ) {
@@ -803,7 +818,7 @@ async function applySelectedFilter() {
     }
 
     appliedBaseModelFilter =
-        appliedBaseModelFilter.value;
+        baseModelFilter.value;
 
     appliedCategoryFilter =
         categoryFilter.value;
@@ -875,11 +890,11 @@ function resetFilterSelection() {
     } = getFilterElements();
 
     if (baseModelFilter) {
-        baseModelFilter.value = "All";
+        baseModelFilter.value = "ALL";
     }
 
     if (categoryFilter) {
-        categoryFilter.value = "ALL"
+        categoryFilter.value = "ALL";
     }
 
     if (subcategoryFilter) {

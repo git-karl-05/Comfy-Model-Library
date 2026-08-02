@@ -119,5 +119,23 @@ public class LoraController {
         return loraService.importLorasFromFolder(request.getFolderPath());
     }
 
+    @GetMapping("/filter")
+    public ResponseEntity<Page<LoraResponse>> getFilteredLoras(
+            @RequestParam(required = false) String baseModel,
+            @RequestParam(required = false) LoraCategory category,
+            @RequestParam(name = "subcategory", required = false) String subcategory,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Page<LoraResponse> response =
+                loraService.getFilteredLoras(
+                        baseModel,
+                        category,
+                        subcategory,
+                        page,
+                        size
+                );
 
+        return ResponseEntity.ok(response);
+    }
 }

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.JsonNode;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import jakarta.persistence.criteria.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -680,4 +682,166 @@ public class LoraService {
 
         return normalizedVersion;
     }
+
+    private boolean hasFilterValue(String value) {
+        return value != null
+                && !value.isBlank()
+                && !value.equalsIgnoreCase("ALL");
+    }
+
+    private void addBaseModelPredicate(
+            List<Predicate> predicates,
+            String baseModel,
+            jakarta.persistence.criteria.Root<LoraEntity> root,
+            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder
+    ) {
+        if (!hasFilterValue(baseModel)) {
+            return;
+        }
+
+        predicates.add(
+                criteriaBuilder.equal(
+                        criteriaBuilder.lower(
+                                root.get("baseModel")
+                        ),
+                        baseModel.toLowerCase()
+                )
+        );
+    }
+
+    private void addCategoryPredicate(
+            List<Predicate> predicates,
+            LoraCategory category,
+            jakarta.persistence.criteria.Root<LoraEntity> root,
+            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder
+    ) {
+        if (category == null) {
+            return;
+        }
+
+        predicates.add(
+                criteriaBuilder.equal(
+                        root.get("category"),
+                        category
+                )
+        );
+    }
+
+    private void addSubcategoryPredicate(
+            List<Predicate> predicates,
+            String subcategory,
+            jakarta.persistence.criteria.Root<LoraEntity> root,
+            jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder
+    ) {
+        if (!hasFilterValue(subcategory)) {
+            return;
+        }
+
+        predicates.add(
+                criteriaBuilder.equal(
+                        criteriaBuilder.lower(
+                                root.get("subCategory")
+                        ),
+                        subcategory.toLowerCase()
+                )
+        );
+    }
+
+    private Specification<LoraEntity> buildFilterSpecification(
+            String baseModel,
+            LoraCategory category,
+            String subcategory
+    ) {
+        return (
+                root,
+                query,
+                criteriaBuilder
+        ) -> {
+            List<Predicate> predicates =
+                    new ArrayList<>();
+
+            addBaseModelPredicate(
+                    predicates,
+                    baseModel,
+                    root,
+                    criteriaBuilder
+            );
+
+            addCategoryPredicate(
+                    predicates,
+                    category,
+                    root,
+                    criteriaBuilder
+            );
+
+            addSubcategoryPredicate(
+                    predicates,
+                    subcategory,
+                    root,
+                    criteriaBuilder
+            );
+
+            return criteriaBuilder.and(
+                    predicates.toArray(
+                            new Predicate[0]
+                    )
+            );
+        };
+    }
+
+    private Pageable buildFilterPageable(
+            int page,
+            int size
+    ) {
+        int safePage =
+                Math.max(page, 0);
+
+        int safeSize =
+                Math.min(
+                        Math.max(size, 1),
+                        36
+                );
+
+        return PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(
+                        Sort.Direction.DESC,
+                        "createdDate"
+                )
+        );
+    }
+    public Page<LoraResponse> getFilteredLoras(
+            String baseModel,
+            LoraCategory category,
+            String subcategory,
+            int page,
+            int size
+    ) {
+        Specification<LoraEntity> specification =
+                buildFilterSpecification(
+                        baseModel,
+                        category,
+                        subcategory
+                );
+
+        Pageable pageable =
+                buildFilterPageable(
+                        page,
+                        size
+                );
+
+        Page<LoraEntity> entityPage =
+                loraRepository.findAll(
+                        specification,
+                        pageable
+                );
+
+        return entityPage.map(
+                LoraResponse::new
+        );
+    }
 }
+
+
+
