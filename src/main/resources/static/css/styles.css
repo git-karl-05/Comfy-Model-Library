@@ -2424,20 +2424,20 @@
     }
 
     .gallery-action-controls {
-        min-width: 0;
+        flex: 1;
 
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
-
     .gallery-chip-button {
+        flex: 1;
+
         min-height: 42px;
 
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 7px;
 
         padding: 0 15px;
 

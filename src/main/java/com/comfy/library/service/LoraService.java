@@ -441,6 +441,7 @@ public class LoraService {
         return "Imported";
     }
 
+
     private String resolvePositivePrompt(JsonNode root) {
         JsonNode trainedWords =
                 root.path("civitai").path("trainedWords");

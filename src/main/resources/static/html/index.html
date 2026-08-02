@@ -18,7 +18,13 @@
     <div class="content-container">
 
         <section class="top-toolbar">
-            <button id="optionsButton" class="options-button" aria-label="Open options">
+            <button
+                    id="optionsButton"
+                    class="options-button"
+                    type="button"
+                    aria-label="Open options"
+                    aria-controls="sideMenu"
+                    aria-expanded="false">
                 ☰
             </button>
 
@@ -48,24 +54,42 @@
             </div>
         </section>
 
-        <nav id="sideMenu" class="side-menu hidden" aria-label="Main menu">
+        <nav
+                id="sideMenu"
+                class="side-menu hidden"
+                aria-label="Main menu">
+
             <div class="side-menu-header">
                 <h2>Menu</h2>
 
-                <button id="closeMenuButton" class="menu-close-button" aria-label="Close menu">
+                <button
+                        id="closeMenuButton"
+                        class="menu-close-button"
+                        type="button"
+                        aria-label="Close menu">
                     ×
                 </button>
             </div>
 
-            <a href="/html/index.html" class="side-menu-link active">
+            <a
+                    href="/html/index.html"
+                    class="side-menu-link active">
                 LoRA Library
             </a>
 
-            <a href="/html/add-lora.html" class="side-menu-link">
+            <a
+                    href="/html/add-lora.html"
+                    class="side-menu-link">
                 Add LoRA
             </a>
 
         </nav>
+
+        <div
+                id="menuBackdrop"
+                class="menu-backdrop hidden"
+                aria-hidden="true">
+        </div>
 
         <div id="actionMenuOverlay" class="action-menu-overlay hidden">
 
@@ -196,24 +220,6 @@
 
         </div>
 
-<!--            <div class="layout-icon-controls">-->
-<!--                <button-->
-<!--                        id="singleColumnButton"-->
-<!--                        class="layout-icon-button active"-->
-<!--                        aria-label="Single column view">-->
-<!--                    ☰-->
-<!--                </button>-->
-
-<!--                <button-->
-<!--                        id="doubleColumnButton"-->
-<!--                        class="layout-icon-button"-->
-<!--                        aria-label="Double column view">-->
-<!--                    ▦-->
-<!--                </button>-->
-<!--            </div>-->
-
-        </section>
-
         <section id="loraList" class="lora-list single-column">
             <!-- LoRA cards will be loaded here by JavaScript -->
         </section>
@@ -327,7 +333,7 @@
                 <option value="PONY">
                     Pony
                 </option>
-                <option value="WAN 2.2">
+                <option value="Wan Video 2.2 I2V-A14B">
                     WAN 2.2
                 </option>
 

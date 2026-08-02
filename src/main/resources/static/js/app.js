@@ -1768,28 +1768,89 @@ function setInputValue(elementId, value) {
 }
 
 function setupMenu() {
-    const optionsButton = document.getElementById("optionsButton");
-    const sideMenu = document.getElementById("sideMenu");
-    const closeMenuButton = document.getElementById("closeMenuButton");
-    const menuBackdrop = document.getElementById("menuBackdrop");
+    const optionsButton =
+        document.getElementById(
+            "optionsButton"
+        );
 
-    if (!optionsButton || !sideMenu || !closeMenuButton || !menuBackdrop) {
+    const sideMenu =
+        document.getElementById(
+            "sideMenu"
+        );
+
+    const closeMenuButton =
+        document.getElementById(
+            "closeMenuButton"
+        );
+
+    const menuBackdrop =
+        document.getElementById(
+            "menuBackdrop"
+        );
+
+    if (
+        !optionsButton ||
+        !sideMenu ||
+        !closeMenuButton ||
+        !menuBackdrop
+    ) {
         return;
     }
 
-    const openMenu = () => {
-        sideMenu.classList.remove("hidden");
-        menuBackdrop.classList.remove("hidden");
-    };
+    function openMenu() {
+        sideMenu.classList.remove(
+            "hidden"
+        );
 
-    const closeMenu = () => {
-        sideMenu.classList.add("hidden");
-        menuBackdrop.classList.add("hidden");
-    };
+        menuBackdrop.classList.remove(
+            "hidden"
+        );
 
-    optionsButton.addEventListener("click", openMenu);
-    closeMenuButton.addEventListener("click", closeMenu);
-    menuBackdrop.addEventListener("click", closeMenu);
+        menuBackdrop.setAttribute(
+            "aria-hidden",
+            "false"
+        );
+
+        optionsButton.setAttribute(
+            "aria-expanded",
+            "true"
+        );
+    }
+
+    function closeMenu() {
+        sideMenu.classList.add(
+            "hidden"
+        );
+
+        menuBackdrop.classList.add(
+            "hidden"
+        );
+
+        menuBackdrop.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        optionsButton.setAttribute(
+            "aria-expanded",
+            "false"
+        );
+    }
+
+    optionsButton.addEventListener(
+        "click",
+        openMenu
+    );
+
+    closeMenuButton.addEventListener(
+        "click",
+        closeMenu
+    );
+
+    menuBackdrop.addEventListener(
+        "click",
+        closeMenu
+    );
 }
 
 
