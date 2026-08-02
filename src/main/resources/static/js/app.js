@@ -26,6 +26,9 @@ let lastSearchKeyword = "";
 const SEARCH_DEBOUNCE_DELAY = 400;
 const MINIMUM_SEARCH_LENGTH = 2;
 
+const SHEET_DISMISS_DISTANCE = 120;
+const SHEET_RESET_DURATION = 180;
+
 document.addEventListener("DOMContentLoaded", async () => {
     if (getRequestedLoraId()) {
         document.body.classList.add(
@@ -2464,3 +2467,26 @@ function clampScrollPosition(scrollPosition) {
         maximumScrollTop
     );
 }
+
+function isInteractiveSheetElement(target) {
+    return Boolean(
+        target.closest(`button, a, input, select, textarea, video, [role="button"]`)
+    );
+}
+
+function canStartSheetDrag(event, scrollContainer) {
+    if (event.touches.length !== 1) {
+        return false;
+    }
+
+    if (isInteractiveSheetElement(event.target)) {
+        return false;
+    }
+
+    if (scrollContainer && scrollContainer.scrollTop > 0) {
+        return false;
+    }
+
+    return true;
+}
+
