@@ -634,14 +634,10 @@ function populateEditForm(lora) {
     );
 
     setInputValue(
-        "editGroupName",
-        lora.groupName
+        "editBaseModel",
+        lora.baseModel
     );
 
-    setInputValue(
-        "editSeedNumber",
-        lora.seedNumber
-    );
 
     setInputValue(
         "editPositivePrompt",
@@ -698,9 +694,9 @@ function buildLoraUpdateRequest() {
                 "editSubCategory"
             ),
 
-        groupName:
+        baseModel:
             getInputValue(
-                "editGroupName"
+                "editBaseModel"
             ),
 
         seedNumber:

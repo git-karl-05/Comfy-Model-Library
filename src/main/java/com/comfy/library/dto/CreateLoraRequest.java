@@ -12,12 +12,13 @@ public class CreateLoraRequest {
     private String groupName;
     private String positivePrompt;
     private String negativePrompt;
+    private String baseModel;
     private Long seedNumber;
     private String notes;
 
     public CreateLoraRequest(){}
 
-    public CreateLoraRequest(String loraName, String version, String creator, String url, LoraCategory category, String subCategory, String groupName, String positivePrompt, String negativePrompt, Long seedNumber, String notes) {
+    public CreateLoraRequest(String loraName, String version, String creator, String url, LoraCategory category, String subCategory, String groupName, String positivePrompt, String negativePrompt, String baseModel, Long seedNumber, String notes) {
         this.loraName = loraName;
         this.version = version;
         this.creator = creator;
@@ -27,9 +28,12 @@ public class CreateLoraRequest {
         this.groupName = groupName;
         this.positivePrompt = positivePrompt;
         this.negativePrompt = negativePrompt;
+        this.baseModel = baseModel;
         this.seedNumber = seedNumber;
         this.notes = notes;
     }
+
+
 
     public String getLoraName() {
         return loraName;
@@ -117,6 +121,15 @@ public class CreateLoraRequest {
 
     public void setSeedNumber(Long seedNumber) {
         this.seedNumber = seedNumber;
+    }
+
+    public String getBaseModel() {
+
+        return baseModel;
+    }
+
+    public void setBaseModel(String baseModel) {
+        this.baseModel = baseModel;
     }
 }
 

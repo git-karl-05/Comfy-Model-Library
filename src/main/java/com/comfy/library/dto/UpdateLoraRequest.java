@@ -9,7 +9,7 @@ public class UpdateLoraRequest {
     private String url;
     private LoraCategory category;
     private String subCategory;
-    private String groupName;
+    private String baseModel;
     private String positivePrompt;
     private String negativePrompt;
     private Long seedNumber;
@@ -68,13 +68,6 @@ public class UpdateLoraRequest {
         this.subCategory = subCategory;
     }
 
-    public String getGroupName() {
-        return groupName;
-    }
-
-    public void setGroupName(String groupName) {
-        this.groupName = groupName;
-    }
 
     public String getPositivePrompt() {
         return positivePrompt;
@@ -114,5 +107,13 @@ public class UpdateLoraRequest {
 
     public void setSeedNumber(Long seedNumber) {
         this.seedNumber = seedNumber;
+    }
+
+    public String getBaseModel() {
+        return baseModel;
+    }
+
+    public void setBaseModel(String baseModel) {
+        this.baseModel = baseModel;
     }
 }

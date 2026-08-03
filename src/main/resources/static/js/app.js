@@ -1500,8 +1500,8 @@ function populateLoraDetailsModal(lora) {
     document.getElementById("detailsSubCategory").textContent =
         lora.subCategory || "N/A";
 
-    document.getElementById("detailsGroupName").textContent =
-        lora.groupName || "N/A";
+    document.getElementById("detailsBaseModel").textContent =
+        lora.baseModel || "N/A";
 
     setCopyableField(
         "detailsPositivePrompt",
@@ -1721,7 +1721,6 @@ function buildLoraUpdateRequest() {
         creator: getModalInputValue("editCreator"),
         category: getModalInputValue("editCategory"),
         subCategory: getModalInputValue("editSubCategory"),
-        groupName: getModalInputValue("editGroupName"),
         positivePrompt: getModalInputValue("editPositivePrompt"),
         negativePrompt: getModalInputValue("editNegativePrompt"),
         seedNumber: seedValue === "" ? null : Number(seedValue),

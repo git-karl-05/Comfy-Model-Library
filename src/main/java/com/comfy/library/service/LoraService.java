@@ -62,6 +62,7 @@ public class LoraService {
         loraEntity.setNotes(request.getNotes());
         loraEntity.setFavorite(false);
         loraEntity.setFilePath(null);
+        loraEntity.setBaseModel(request.getBaseModel());
 
         LoraEntity savedLora = loraRepository.save(loraEntity);
         return new LoraResponse(savedLora);
@@ -80,10 +81,12 @@ public class LoraService {
         loraEntity.setGroupName(request.getGroupName());
         loraEntity.setPositivePrompt(request.getPositivePrompt());
         loraEntity.setNegativePrompt(request.getNegativePrompt());
+        loraEntity.setBaseModel(request.getBaseModel());
         loraEntity.setSeedNumber(request.getSeedNumber());
         loraEntity.setNotes(request.getNotes());
         loraEntity.setFavorite(false);
         loraEntity.setFilePath(null);
+
 
         String filePath = null;
 
@@ -120,7 +123,7 @@ public class LoraService {
         entity.setLastUpdated(LocalDateTime.now());
         entity.setCategory(request.getCategory());
         entity.setSubCategory(request.getSubCategory());
-        entity.setGroupName(request.getGroupName());
+        entity.setBaseModel(request.getBaseModel());
         entity.setPositivePrompt(request.getPositivePrompt());
         entity.setNegativePrompt(request.getNegativePrompt());
         entity.setSeedNumber(request.getSeedNumber());
@@ -290,7 +293,7 @@ public class LoraService {
         entity.setLastUpdated(LocalDateTime.now());
         entity.setCategory(resolveCategory(root));
         entity.setSubCategory(resolveSubCategory(root));
-        entity.setGroupName(resolveGroupName(root));
+        entity.setBaseModel(resolveBaseModel(root));
         entity.setPositivePrompt(resolvePositivePrompt(root));
         entity.setNegativePrompt(resolveNegativePrompt(root));
         entity.setSeedNumber(resolveSeedNumber(root));
@@ -431,7 +434,7 @@ public class LoraService {
         return parent.getFileName().toString();
     }
 
-    private String resolveGroupName(JsonNode root) {
+    private String resolveBaseModel(JsonNode root) {
         String baseModel = getText(root, "base_model");
 
         if (baseModel != null) {

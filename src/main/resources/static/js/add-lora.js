@@ -315,41 +315,72 @@ function setupAddLoraForm() {
 ========================= */
 
 function buildAddLoraFormData() {
-    const formData = new FormData();
+    const formData =
+        new FormData();
 
-    formData.append("loraName", getValue("loraName"));
-    formData.append("creator", getValue("creator"));
-    formData.append("version", getValue("version"));
-    formData.append("category", getValue("category"));
-    formData.append("subCategory", getValue("subCategory"));
-    formData.append("groupName", getValue("groupName"));
+    formData.append(
+        "loraName",
+        getValue("loraName")
+    );
+
+    formData.append(
+        "creator",
+        getValue("creator")
+    );
+
+    formData.append(
+        "version",
+        getValue("version")
+    );
+
+    formData.append(
+        "category",
+        getValue("category")
+    );
+
+    formData.append(
+        "subCategory",
+        getValue("subCategory")
+    );
+
+    formData.append(
+        "groupName",
+        getValue("groupName")
+    );
+
+    formData.append(
+        "baseModel",
+        getValue("baseModel")
+    );
+
     formData.append(
         "positivePrompt",
         getValue("positivePrompt")
     );
+
     formData.append(
-        "negativePrompt",
-        getValue("negativePrompt")
+        "notes",
+        getValue("notes")
     );
-    formData.append("notes", getValue("notes"));
 
-    /*
-     * The backend request may still contain a URL property.
-     * Send an empty value until the field is removed from the DTO.
-     */
-    formData.append("url", "");
+    formData.append(
+        "url",
+        ""
+    );
 
-    const seedNumber = getValue("seedNumber");
+    const imageInput =
+        document.getElementById(
+            "previewImage"
+        );
 
-    if (seedNumber !== "") {
-        formData.append("seedNumber", seedNumber);
-    }
-
-    const imageInput = document.getElementById("previewImage");
-    const previewImage = imageInput?.files[0];
+    const previewImage =
+        imageInput?.files[0];
 
     if (previewImage) {
-        formData.append("previewImage", previewImage);
+        formData.append(
+            "previewImage",
+            previewImage
+        );
     }
 
     return formData;
@@ -360,9 +391,11 @@ function buildAddLoraFormData() {
 ========================= */
 
 function validateAddLoraForm() {
-    const loraName = getValue("loraName");
-    const category = getValue("category");
-    const seedNumber = getValue("seedNumber");
+    const loraName =
+        getValue("loraName");
+
+    const category =
+        getValue("category");
 
     if (loraName === "") {
         return "LoRA name is required.";
@@ -370,13 +403,6 @@ function validateAddLoraForm() {
 
     if (category === "") {
         return "Category is required.";
-    }
-
-    if (
-        seedNumber !== "" &&
-        Number.isNaN(Number(seedNumber))
-    ) {
-        return "Seed must be a valid number.";
     }
 
     return null;
