@@ -2737,3 +2737,41 @@
             display: none;
         }
     }
+
+    .filter-sheet,
+    .lora-details-sheet {
+        will-change: transform;
+
+        /*
+         * Allow vertical touch gestures while preventing
+         * the browser from interpreting horizontal movement.
+         */
+        touch-action: pan-y;
+    }
+
+    .filter-modal,
+    .modal-overlay {
+        overscroll-behavior: contain;
+    }
+
+    .lora-details-scroll-area {
+        overscroll-behavior-y: contain;
+    }
+
+    .filter-sheet.dragging,
+    .lora-details-sheet.dragging {
+        transition: none !important;
+    }
+
+    .sheet-drag-handle {
+        width: 42px;
+        height: 5px;
+
+        flex: 0 0 auto;
+
+        margin: 10px auto 4px;
+
+        border-radius: 999px;
+
+        background-color: var(--border);
+    }

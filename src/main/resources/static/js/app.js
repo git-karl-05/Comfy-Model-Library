@@ -38,13 +38,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
+
     setupFilterModal();
+    setupFilterSheetSwipe();
+
     setupLoraDetailsModal();
+    setupLoraDetailsSwipe();
+
     setupSearchOverlay();
     setupActionMenu();
     setupImportFolderForm();
     setupMenu();
     setupPaginationControls();
+
 
     await fetchAllLoras(0);
 
@@ -2474,19 +2480,308 @@ function isInteractiveSheetElement(target) {
     );
 }
 
-function canStartSheetDrag(event, scrollContainer) {
+function canStartSheetDrag(
+    event,
+    scrollContainer
+) {
     if (event.touches.length !== 1) {
         return false;
     }
 
-    if (isInteractiveSheetElement(event.target)) {
+    if (
+        isInteractiveSheetElement(
+            event.target
+        )
+    ) {
         return false;
     }
 
-    if (scrollContainer && scrollContainer.scrollTop > 0) {
+    /*
+     * Allow a tiny tolerance because mobile browsers
+     * may report a fractional scroll position at the top.
+     */
+    if (
+        scrollContainer &&
+        scrollContainer.scrollTop > 2
+    ) {
         return false;
     }
 
     return true;
 }
 
+function moveSheetDown(
+    sheet,
+    distance
+) {
+    sheet.classList.add(
+        "dragging"
+    );
+
+    sheet.style.transition = "none";
+
+    sheet.style.transform =
+        `translateY(${distance}px)`;
+}
+
+function resetDraggedSheet(
+    sheet
+) {
+    sheet.classList.remove(
+        "dragging"
+    );
+
+    sheet.style.transition =
+        `transform ${SHEET_RESET_DURATION}ms ease`;
+
+    sheet.style.transform =
+        "translateY(0)";
+
+    window.setTimeout(
+        () => {
+            sheet.style.transition = "";
+            sheet.style.transform = "";
+        },
+        SHEET_RESET_DURATION
+    );
+}
+
+function dismissDraggedSheet(
+    sheet,
+    onDismiss
+) {
+    sheet.classList.remove(
+        "dragging"
+    );
+
+    sheet.style.transition =
+        `transform ${SHEET_RESET_DURATION}ms ease-in`;
+
+    sheet.style.transform =
+        "translateY(100vh)";
+
+    window.setTimeout(
+        () => {
+            sheet.style.transition = "";
+            sheet.style.transform = "";
+
+            onDismiss();
+        },
+        SHEET_RESET_DURATION
+    );
+}
+
+function setupSwipeDownToClose(
+    sheet,
+    scrollContainer,
+    onDismiss
+) {
+    if (!sheet) {
+        return;
+    }
+
+    let startY = 0;
+    let currentDistance = 0;
+    let isTracking = false;
+    let isDragging = false;
+
+    sheet.addEventListener(
+        "touchstart",
+        event => {
+            if (
+                !canStartSheetDrag(
+                    event,
+                    scrollContainer
+                )
+            ) {
+                return;
+            }
+
+            startY =
+                event.touches[0].clientY;
+
+            currentDistance = 0;
+            isTracking = true;
+            isDragging = false;
+        },
+        {
+            passive: true
+        }
+    );
+
+    sheet.addEventListener(
+        "touchmove",
+        event => {
+            if (!isTracking) {
+                return;
+            }
+
+            const currentY =
+                event.touches[0].clientY;
+
+            const distance =
+                currentY - startY;
+
+            /*
+             * Ignore upward movement.
+             */
+            if (distance <= 0) {
+                return;
+            }
+
+            /*
+             * Wait for a small amount of movement before
+             * taking control away from normal scrolling.
+             */
+            if (
+                !isDragging &&
+                distance < 8
+            ) {
+                return;
+            }
+
+            isDragging = true;
+            currentDistance = distance;
+
+            moveSheetDown(
+                sheet,
+                currentDistance
+            );
+
+            event.preventDefault();
+        },
+        {
+            passive: false
+        }
+    );
+
+    sheet.addEventListener(
+        "touchend",
+        () => {
+            if (!isTracking) {
+                return;
+            }
+
+            isTracking = false;
+
+            if (!isDragging) {
+                return;
+            }
+
+            isDragging = false;
+
+            if (
+                currentDistance >=
+                SHEET_DISMISS_DISTANCE
+            ) {
+                dismissDraggedSheet(
+                    sheet,
+                    onDismiss
+                );
+
+                return;
+            }
+
+            resetDraggedSheet(
+                sheet
+            );
+        }
+    );
+
+    sheet.addEventListener(
+        "touchcancel",
+        () => {
+            if (!isTracking) {
+                return;
+            }
+
+            isTracking = false;
+
+            if (!isDragging) {
+                return;
+            }
+
+            isDragging = false;
+
+            resetDraggedSheet(
+                sheet
+            );
+        }
+    );
+}
+
+
+function setupFilterSheetSwipe() {
+    const filterModal =
+        document.getElementById(
+            "filterModal"
+        );
+
+    const filterSheet =
+        filterModal?.querySelector(
+            ".filter-sheet"
+        );
+
+    setupSwipeDownToClose(
+        filterSheet,
+        null,
+        closeFilterModal
+    );
+}
+
+function finishDraggedLoraDetailsClose() {
+    const modal =
+        document.getElementById(
+            "loraDetailsModal"
+        );
+
+    const modalSheet =
+        modal?.querySelector(
+            ".lora-details-sheet"
+        );
+
+    const video =
+        document.querySelector(
+            "#detailsImageContainer video"
+        );
+
+    if (!modal || !modalSheet) {
+        return;
+    }
+
+    finishClosingLoraDetailsModal(
+        modal,
+        modalSheet
+    );
+
+    currentLora = null;
+    isEditingLora = false;
+
+    clearEditMessage();
+
+    if (video) {
+        video.pause();
+        video.currentTime = 0;
+    }
+}
+
+function setupLoraDetailsSwipe() {
+    const modal =
+        document.getElementById(
+            "loraDetailsModal"
+        );
+
+    const modalSheet =
+        modal?.querySelector(
+            ".lora-details-sheet"
+        );
+
+    const scrollContainer =
+        getLoraDetailsScrollContainer();
+
+    setupSwipeDownToClose(
+        modalSheet,
+        scrollContainer,
+        finishDraggedLoraDetailsClose
+    );
+}
