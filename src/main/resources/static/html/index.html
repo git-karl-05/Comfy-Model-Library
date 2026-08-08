@@ -289,7 +289,7 @@
             aria-labelledby="filterSheetTitle"
     >
 
-        <div class="filter-sheet-handle"></div>
+        <div class="sheet-drag-handle"></div>
 
         <div class="filter-sheet-header">
 
@@ -441,9 +441,9 @@
 
 </div>
 
-<div id="loraDetailsModal" class="modal-overlay hidden">
+<div id="loraDetailsModal" class="modal-overlay hidden" aria-hidden="true">
 
-    <section class="lora-details-sheet">
+    <section class="lora-details-sheet" role="dialog" aria-modal="true" aria-labelledby="detailsLoraName">
 
         <div class="sheet-drag-handle" aria-hidden="true"></div>
 
@@ -484,10 +484,44 @@
 
             </div>
 
-            <div id="detailsImageContainer" class="details-image-container">
-                <div class="lora-card-placeholder">
-                    No Image
+            <div class="details-carousel">
+
+                <div class="details-carousel-preview">
+
+                    <button
+                            id="previousPreviewButton"
+                            class="carousel-navigation-button carousel-previous-button hidden"
+                            type="button"
+                            aria-label="Previous preview">
+                        ‹
+                    </button>
+
+                    <div
+                            id="detailsImageContainer"
+                            class="details-image-container">
+
+                        <div class="lora-card-placeholder">
+                            No Image
+                        </div>
+
+                    </div>
+
+                    <button
+                            id="nextPreviewButton"
+                            class="carousel-navigation-button carousel-next-button hidden"
+                            type="button"
+                            aria-label="Next preview">
+                        ›
+                    </button>
+
                 </div>
+
+                <div
+                        id="previewIndicators"
+                        class="preview-indicators hidden"
+                        aria-label="Preview selection">
+                </div>
+
             </div>
 
             <section id="detailsInfoView" class="details-info">
@@ -511,31 +545,33 @@
                     <strong>Base Model:</strong>
                     <span id="detailsBaseModel">N/A</span>
                 </p>
+
             </section>
 
             <section id="detailsPromptView" class="details-prompt-view">
 
                 <div class="details-field">
+
                     <div class="details-field-header">
-                        <span class="details-field-label">
-                            Trained Words
-                        </span>
+
+            <span class="details-field-label">
+                Trained Words
+            </span>
 
                         <button
                                 type="button"
                                 class="copy-field-button"
                                 data-copy-target="detailsPositivePrompt"
                                 aria-label="Copy trained words"
-                                title="Copy trained words"
-                        >
+                                title="Copy trained words">
                             Copy
                         </button>
+
                     </div>
 
                     <div
                             id="detailsPositivePrompt"
-                            class="details-field-value details-long-text"
-                    >
+                            class="details-field-value details-long-text">
                         No trained words saved.
                     </div>
 
@@ -545,17 +581,16 @@
 
                     <div class="details-field-header">
 
-                        <span class="details-field-label">
-                            Notes
-                        </span>
+            <span class="details-field-label">
+                Notes
+            </span>
 
                         <button
                                 type="button"
                                 class="copy-field-button"
                                 data-copy-target="detailsNotes"
                                 aria-label="Copy notes"
-                                title="Copy notes"
-                        >
+                                title="Copy notes">
                             Copy
                         </button>
 
@@ -563,18 +598,18 @@
 
                     <div
                             id="detailsNotes"
-                            class="details-field-value details-long-text"
-                    >
+                            class="details-field-value details-long-text">
                         No notes saved.
                     </div>
 
                 </div>
 
+            </section>
+
             <p
                     id="detailsEditMessage"
                     class="details-edit-message hidden"
-                    aria-live="polite"
-            >
+                    aria-live="polite">
             </p>
 
 

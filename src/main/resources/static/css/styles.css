@@ -2775,3 +2775,93 @@
 
         background-color: var(--border);
     }
+
+    /* =========================
+   LORA PREVIEW CAROUSEL
+========================= */
+
+    .details-carousel {
+        width: 100%;
+
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .details-carousel-preview {
+        position: relative;
+
+        width: 100%;
+    }
+
+    .carousel-navigation-button {
+        position: absolute;
+        top: 50%;
+
+        width: 42px;
+        height: 52px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 14px;
+
+        background-color: rgba(0, 0, 0, 0.62);
+        color: white;
+
+        font-size: 2rem;
+        line-height: 1;
+
+        cursor: pointer;
+
+        transform: translateY(-50%);
+
+        z-index: 4;
+    }
+
+    .carousel-navigation-button:hover {
+        background-color: rgba(0, 0, 0, 0.82);
+    }
+
+    .carousel-previous-button {
+        left: 10px;
+    }
+
+    .carousel-next-button {
+        right: 10px;
+    }
+
+    .preview-indicators {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .preview-indicator-button {
+        width: 10px;
+        height: 10px;
+
+        padding: 0;
+
+        border: 1px solid var(--border);
+        border-radius: 3px;
+
+        background-color: var(--surface-light);
+
+        cursor: pointer;
+    }
+
+    .preview-indicator-button.active {
+        border-color: var(--primary);
+        background-color: var(--primary);
+    }
+
+    @media (max-width: 480px) {
+        .carousel-navigation-button {
+            width: 38px;
+            height: 48px;
+        }
+    }

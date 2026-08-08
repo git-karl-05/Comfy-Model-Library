@@ -138,4 +138,17 @@ public class LoraController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/{loraId}/images")
+    public ResponseEntity<List<LoraImageResponse>> getLoraImages(@PathVariable Long loraId) {
+        List<LoraImageResponse> images = loraService.getImagesByLoraId(loraId);
+
+        return ResponseEntity.ok(images);
+    }
+
+    @PostMapping(value = "/{loraId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<LoraImageResponse> addLoraImage(@PathVariable Long loraId, @RequestParam("image") MultipartFile image) {
+        LoraImageResponse savedImage = loraService.addImageToLora(loraId, image);
+        return ResponseEntity.ok(savedImage);
+    }
 }

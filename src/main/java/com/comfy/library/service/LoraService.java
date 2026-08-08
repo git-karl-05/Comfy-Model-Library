@@ -3,7 +3,10 @@ package com.comfy.library.service;
 import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
+import com.comfy.library.entity.LoraImageEntity;
+import com.comfy.library.repository.LoraImageRepository;
 import com.comfy.library.repository.LoraRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -34,14 +37,18 @@ public class LoraService {
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final int MAX_PAGE_SIZE = 36;
 
+    private static final int MAX_PREVIEW_IMAGES = 5;
+
     @Value("${lora.upload.path}")
     private String uploadPath;
 
     private final LoraRepository loraRepository;
+    private final LoraImageRepository loraImageRepository;
     private final ObjectMapper objectMapper;
 
-    public LoraService(LoraRepository loraRepository, ObjectMapper objectMapper) {
+    public LoraService(LoraRepository loraRepository, LoraImageRepository loraImageRepository, ObjectMapper objectMapper) {
         this.loraRepository = loraRepository;
+        this.loraImageRepository = loraImageRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -99,6 +106,8 @@ public class LoraService {
         LoraEntity savedLora = loraRepository.save(loraEntity);
         return new LoraResponse(savedLora);
     }
+
+
     public LoraResponse updateLoraWithPreviewById(Long loraId, UpdateLoraRequest request, MultipartFile preview) {
         LoraEntity existingLora = loraRepository.findById(loraId)
                 .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
@@ -143,6 +152,38 @@ public class LoraService {
                 .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
 
         return new LoraResponse(loraEntity);
+    }
+
+    public LoraEntity findLoraById(Long loraId) {
+        return loraRepository.findById(loraId)
+                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
+
+    }
+
+    public List<LoraImageResponse> getImagesByLoraId(Long loraId) {
+        LoraEntity lora = findLoraById(loraId);
+
+        List<LoraImageResponse> images = new ArrayList<>();
+
+        if (lora.getFilePath() != null && !lora.getFilePath().isBlank()) {
+            images.add(
+                    new LoraImageResponse(
+                            null,
+                            lora.getFilePath(),
+                            true
+                    )
+            );
+        }
+
+        List<LoraImageResponse> additionalImages = loraImageRepository
+                .findByLoraIdOrderByIdAsc(loraId)
+                .stream()
+                .map(LoraImageResponse::new)
+                .toList();
+
+        images.addAll(additionalImages);
+
+        return images;
     }
 
     public List<LoraResponse> getAllLoras()  {
@@ -226,10 +267,29 @@ public class LoraService {
 
             previewImage.transferTo(destinationPath.toFile());
             return "/uploads/lora/" + safeFileName;
-
         } catch (IOException e) {
             throw new RuntimeException("Failed to save preview image", e);
         }
+    }
+
+    private String saveCarouselImage(MultipartFile image) {
+        if (image == null || image.isEmpty()) {
+            throw new RuntimeException("An image file is required.");
+        }
+        return savePreviewImage(image);
+    }
+
+    public LoraImageResponse addImageToLora(Long loraId, MultipartFile image) {
+        LoraEntity loraEntity = findLoraById(loraId);
+
+        String filePath = saveCarouselImage(image);
+
+        LoraImageEntity loraImageEntity = new LoraImageEntity();
+        loraImageEntity.setFilePath(filePath);
+        loraImageEntity.setLora(loraEntity);
+
+        LoraImageEntity savedImageEntity = loraImageRepository.save(loraImageEntity);
+        return new LoraImageResponse(savedImageEntity);
     }
 
     private enum ImportResult {
@@ -274,6 +334,7 @@ public class LoraService {
         return new ImportSummaryResponse(scanned, imported, skipped, failed);
     }
 
+
     private ImportResult importSingleMetadataFile(Path metadataFile) throws IOException {
         JsonNode root = objectMapper.readTree(metadataFile.toFile());
 
@@ -282,6 +343,8 @@ public class LoraService {
         if (sha256 != null && loraRepository.existsBySha256(sha256)) {
             return ImportResult.SKIPPED;
         }
+
+        List<String> previewPaths = resolvePreviewPaths(root);
 
         LoraEntity entity = new LoraEntity();
 
@@ -300,12 +363,13 @@ public class LoraService {
         entity.setNotes(null);
         entity.setFavorite(false);
 
-        entity.setFilePath(resolvePreviewPath(root));
+        entity.setFilePath(getPrimaryPreviewPath(previewPaths));
         entity.setModelFilePath(getText(root, "file_path"));
         entity.setSha256(sha256);
-        entity.setBaseModel(getText(root, "base_model"));
 
-        loraRepository.save(entity);
+        LoraEntity savedLora = loraRepository.save(entity);
+
+        saveAdditionalPreviewImages(savedLora, previewPaths);
 
         return ImportResult.IMPORTED;
     }
@@ -538,28 +602,45 @@ public class LoraService {
         return notes.isEmpty() ? null : notes.toString();
     }
 
-    private String resolvePreviewPath(JsonNode root) {
+    private List<String> resolvePreviewPaths(JsonNode root) {
+        List<String> previewPaths = new ArrayList<>();
         JsonNode previews = root.path("civitai").path("images");
 
-        if (previews.isArray() && !previews.isEmpty()) {
-            String previeweUrl = getText(previews.get(0), "url");
+        if (previews.isArray()) {
+            for (JsonNode preview : previews) {
+                String previewUrl = getText(preview, "url");
 
-            if (previeweUrl != null) {
-                System.out.println("Resolved preview URL: " + previeweUrl);
-                return previeweUrl;
+                if (previewUrl == null || previewPaths.contains(previewUrl)) {
+                    continue;
+                }
+
+                previewPaths.add(previewUrl);
+
+                if (previewPaths.size() >= MAX_PREVIEW_IMAGES) {
+                    break;
+                }
             }
         }
+        return previewPaths;
+    }
 
-        String previewUrl = getText(root, "preview_url");
-
-        if (previewUrl != null) {
-            System.out.println("Resolved fallback preview URL: " + previewUrl);
-            return previewUrl;
+    private String getPrimaryPreviewPath(List<String> previewPaths) {
+        if (previewPaths.isEmpty()) {
+            return null;
         }
 
-        System.out.println("No preview URL found in metadata");
+        return previewPaths.get(0);
+    }
 
-        return null;
+    private void saveAdditionalPreviewImages(LoraEntity loraEntity, List<String> previewPaths) {
+        for (int i = 1; i < previewPaths.size(); i++) {
+            LoraImageEntity loraImageEntity = new LoraImageEntity();
+
+            loraImageEntity.setFilePath(previewPaths.get(i));
+            loraImageEntity.setLora(loraEntity);
+
+            loraImageRepository.save(loraImageEntity);
+        }
     }
 
     private boolean isSafetensorsFile(Path file) {
@@ -635,6 +716,8 @@ public class LoraService {
             System.out.println("Expected JSON: " + resolveMetadataPath(modelFile));
         });
     }
+
+
 
 
 

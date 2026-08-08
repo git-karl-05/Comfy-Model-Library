@@ -29,6 +29,9 @@ const MINIMUM_SEARCH_LENGTH = 2;
 const SHEET_DISMISS_DISTANCE = 120;
 const SHEET_RESET_DURATION = 180;
 
+let currentPreviewImages = [];
+let currentPreviewIndex = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
     if (getRequestedLoraId()) {
         document.body.classList.add(
@@ -44,6 +47,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     setupLoraDetailsModal();
     setupLoraDetailsSwipe();
+    setupPreviewCarousel();
 
     setupSearchOverlay();
     setupActionMenu();
@@ -1351,53 +1355,35 @@ function restartLoraModalOpeningAnimation(
 
 async function openLoraDetailsModal(loraId) {
     try {
-        const response = await fetch(
-            `${API_BASE_URL}/${loraId}`
-        );
+        const response = await fetch(`${API_BASE_URL}/${loraId}`);
 
         if (!response.ok) {
-            throw new Error(
-                "Failed to load LoRA details"
-            );
+            throw new Error("Failed to load LoRA details");
         }
 
         currentLora = await response.json();
 
-        const modal =
-            getLoraDetailsModal();
+        const modal = getLoraDetailsModal();
 
         if (!modal) {
-            throw new Error(
-                "LoRA details modal was not found."
-            );
+            throw new Error("LoRA details modal was not found.");
         }
 
         populateLoraDetailsModal(currentLora);
-        const modalSheet =
-            modal.querySelector(
-                ".lora-details-sheet"
-            );
+        resetPreviewCarousel();
 
-        modal.classList.remove(
-            "hidden",
-            "closing"
-        );
+        const modalSheet = modal.querySelector(".lora-details-sheet");
 
-        restartLoraModalOpeningAnimation(
-            modalSheet
-        );
+        modal.classList.remove("hidden", "closing");
 
+        restartLoraModalOpeningAnimation(modalSheet);
         resetLoraDetailsScrollPosition();
 
-    } catch (error) {
-        console.error(
-            "Error loading LoRA details:",
-            error
-        );
+        await loadPreviewCarousel(currentLora.id);
 
-        alert(
-            "Unable to load LoRA details."
-        );
+    } catch (error) {
+        console.error("Error loading LoRA details:", error);
+        alert("Unable to load LoRA details.");
     }
 }
 
@@ -1545,8 +1531,6 @@ function populateLoraDetailsModal(lora) {
 
         additionalDetails.open = false;
     }
-
-    populateDetailsImage(lora);
     populateDetailsUrl(lora);
 }
 
@@ -2782,5 +2766,308 @@ function setupLoraDetailsSwipe() {
         modalSheet,
         scrollContainer,
         finishDraggedLoraDetailsClose
+    );
+}
+
+function getPreviewCarouselElements() {
+    return {
+        imageContainer:
+            document.getElementById(
+                "detailsImageContainer"
+            ),
+
+        previousButton:
+            document.getElementById(
+                "previousPreviewButton"
+            ),
+
+        nextButton:
+            document.getElementById(
+                "nextPreviewButton"
+            ),
+
+        indicators:
+            document.getElementById(
+                "previewIndicators"
+            )
+    };
+}
+
+function renderCarouselPreview(preview) {
+    const {
+        imageContainer
+    } = getPreviewCarouselElements();
+
+    if (!imageContainer) {
+        return;
+    }
+
+    if (!preview?.filePath) {
+        imageContainer.innerHTML = `
+            <div class="lora-card-placeholder">
+                No Preview
+            </div>
+        `;
+
+        return;
+    }
+
+    if (isVideoPreview(preview.filePath)) {
+        imageContainer.innerHTML = `
+            <video
+                src="${preview.filePath}"
+                class="details-image"
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata">
+            </video>
+        `;
+
+        return;
+    }
+
+    imageContainer.innerHTML = `
+        <img
+            src="${preview.filePath}"
+            class="details-image"
+            alt="LoRA preview ${currentPreviewIndex + 1}">
+    `;
+}
+
+function updatePreviewNavigationButtons() {
+    const {
+        previousButton,
+        nextButton
+    } = getPreviewCarouselElements();
+
+    const hasMultiplePreviews =
+        currentPreviewImages.length > 1;
+
+    previousButton?.classList.toggle(
+        "hidden",
+        !hasMultiplePreviews
+    );
+
+    nextButton?.classList.toggle(
+        "hidden",
+        !hasMultiplePreviews
+    );
+}
+
+function renderPreviewIndicators() {
+    const {
+        indicators
+    } = getPreviewCarouselElements();
+
+    if (!indicators) {
+        return;
+    }
+
+    indicators.replaceChildren();
+
+    const hasMultiplePreviews =
+        currentPreviewImages.length > 1;
+
+    indicators.classList.toggle(
+        "hidden",
+        !hasMultiplePreviews
+    );
+
+    if (!hasMultiplePreviews) {
+        return;
+    }
+
+    currentPreviewImages.forEach(
+        (preview, index) => {
+            const button =
+                document.createElement(
+                    "button"
+                );
+
+            button.type = "button";
+            button.className =
+                "preview-indicator-button";
+
+            button.setAttribute(
+                "aria-label",
+                `Show preview ${index + 1}`
+            );
+
+            button.classList.toggle(
+                "active",
+                index === currentPreviewIndex
+            );
+
+            button.addEventListener(
+                "click",
+                () => {
+                    showPreviewAtIndex(index);
+                }
+            );
+
+            indicators.appendChild(button);
+        }
+    );
+}
+
+function showPreviewAtIndex(index) {
+    if (
+        index < 0 ||
+        index >= currentPreviewImages.length
+    ) {
+        return;
+    }
+
+    currentPreviewIndex = index;
+
+    const selectedPreview =
+        currentPreviewImages[
+            currentPreviewIndex
+            ];
+
+    renderCarouselPreview(
+        selectedPreview
+    );
+
+    renderPreviewIndicators();
+}
+
+function showPreviousPreview() {
+    if (currentPreviewImages.length <= 1) {
+        return;
+    }
+
+    let previousIndex =
+        currentPreviewIndex - 1;
+
+    if (previousIndex < 0) {
+        previousIndex =
+            currentPreviewImages.length - 1;
+    }
+
+    showPreviewAtIndex(previousIndex);
+}
+
+function showNextPreview() {
+    if (currentPreviewImages.length <= 1) {
+        return;
+    }
+
+    let nextIndex =
+        currentPreviewIndex + 1;
+
+    if (
+        nextIndex >=
+        currentPreviewImages.length
+    ) {
+        nextIndex = 0;
+    }
+
+    showPreviewAtIndex(nextIndex);
+}
+
+function resetPreviewCarousel() {
+    currentPreviewImages = [];
+    currentPreviewIndex = 0;
+
+    const {
+        imageContainer,
+        previousButton,
+        nextButton,
+        indicators
+    } = getPreviewCarouselElements();
+
+    if (imageContainer) {
+        imageContainer.innerHTML = `
+            <div class="lora-card-placeholder">
+                No Preview
+            </div>
+        `;
+    }
+
+    previousButton?.classList.add("hidden");
+    nextButton?.classList.add("hidden");
+
+    if (indicators) {
+        indicators.classList.add("hidden");
+        indicators.replaceChildren();
+    }
+}
+
+async function fetchLoraPreviewImages(loraId) {
+    const response = await fetch(
+        `${API_BASE_URL}/${loraId}/images`
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            `Unable to load previews. Status: ${response.status}`
+        );
+    }
+
+    return response.json();
+}
+
+async function loadPreviewCarousel(loraId) {
+    resetPreviewCarousel();
+
+    try {
+        const previews =
+            await fetchLoraPreviewImages(
+                loraId
+            );
+
+        currentPreviewImages =
+            Array.isArray(previews)
+                ? previews
+                : [];
+
+        currentPreviewIndex = 0;
+
+        if (
+            currentPreviewImages.length === 0
+        ) {
+            return;
+        }
+
+        showPreviewAtIndex(0);
+        updatePreviewNavigationButtons();
+
+    } catch (error) {
+        console.error(
+            "Preview carousel error:",
+            error
+        );
+
+        resetPreviewCarousel();
+    }
+}
+
+function setupPreviewCarousel() {
+    const {
+        previousButton,
+        nextButton
+    } = getPreviewCarouselElements();
+
+    if (!previousButton || !nextButton) {
+        return;
+    }
+
+    previousButton.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+            showPreviousPreview();
+        }
+    );
+
+    nextButton.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+            showNextPreview();
+        }
     );
 }
