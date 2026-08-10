@@ -3,6 +3,7 @@ package com.comfy.library.controller;
 import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.repository.LoraRepository;
+import com.comfy.library.service.LoraImageService;
 import com.comfy.library.service.LoraService;
 import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
@@ -19,9 +20,11 @@ import java.util.List;
 public class LoraController {
 
     private final LoraService loraService;
+    private final LoraImageService loraImageService;
 
-    public LoraController(LoraService loraService) {
+    public LoraController(LoraService loraService, LoraImageService loraImageService) {
         this.loraService = loraService;
+        this.loraImageService = loraImageService;
     }
 
     @PostMapping
@@ -141,14 +144,14 @@ public class LoraController {
 
     @GetMapping("/{loraId}/images")
     public ResponseEntity<List<LoraImageResponse>> getLoraImages(@PathVariable Long loraId) {
-        List<LoraImageResponse> images = loraService.getImagesByLoraId(loraId);
+        List<LoraImageResponse> images = loraImageService.getImagesByLoraId(loraId);
 
         return ResponseEntity.ok(images);
     }
 
     @PostMapping(value = "/{loraId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LoraImageResponse> addLoraImage(@PathVariable Long loraId, @RequestParam("image") MultipartFile image) {
-        LoraImageResponse savedImage = loraService.addImageToLora(loraId, image);
+        LoraImageResponse savedImage = loraImageService.addImageToLora(loraId, image);
         return ResponseEntity.ok(savedImage);
     }
 }

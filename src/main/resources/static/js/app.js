@@ -1475,7 +1475,7 @@ function populateLoraDetailsModal(lora) {
         lora.loraName || "Untitled LoRA";
 
     document.getElementById("detailsCreator").textContent =
-        lora.creator ? `by ${lora.creator}` : "Unknown creator";
+        lora.creator || "Unknown creator";
 
     document.getElementById("detailsVersion").textContent =
         lora.version || "N/A";

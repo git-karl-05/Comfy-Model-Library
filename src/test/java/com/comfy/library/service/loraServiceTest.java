@@ -23,6 +23,7 @@ public class loraServiceTest {
     private LoraRepository loraRepository;
     private LoraService loraService;
     private LoraImageRepository loraImageRepository;
+    private LoraImageService loraImageService;
     private ObjectMapper objectMapper;
 
 
@@ -30,27 +31,13 @@ public class loraServiceTest {
     void setUp() {
         loraRepository = mock(LoraRepository.class);
         loraImageRepository = mock(LoraImageRepository.class);
+        loraImageService = mock(LoraImageService.class);
         objectMapper = mock(ObjectMapper.class);
 
-        loraService = new LoraService(loraRepository, loraImageRepository, objectMapper);
+        loraService = new LoraService(loraRepository, loraImageService, objectMapper);
     }
 
-    private LoraEntity createTestLora() {
-        LoraEntity lora = new LoraEntity();
 
-        lora.setId(1L);
-        lora.setLoraName("Test LoRA");
-        lora.setVersion("1");
-        lora.setCreator("Test Creator");
-        lora.setCategory(LoraCategory.CHARACTER);
-        lora.setSubCategory("Anime");
-        lora.setBaseModel("Illustrious");
-        lora.setPositivePrompt("testTrigger");
-        lora.setNotes("Test notes");
-        lora.setFavorite(false);
-
-        return lora;
-    }
 
     private CreateLoraRequest createTestRequest() {
         CreateLoraRequest request = new CreateLoraRequest();
@@ -106,6 +93,23 @@ public class loraServiceTest {
         assertEquals(LoraCategory.CHARACTER, entity.getCategory());
         assertEquals("Anime", entity.getSubCategory());
         assertEquals("Illustrious", entity.getBaseModel());
+    }
+
+    private LoraEntity createTestLora() {
+        LoraEntity lora = new LoraEntity();
+
+        lora.setId(1L);
+        lora.setLoraName("Test LoRA");
+        lora.setVersion("1");
+        lora.setCreator("Test Creator");
+        lora.setCategory(LoraCategory.CHARACTER);
+        lora.setSubCategory("Anime");
+        lora.setBaseModel("Illustrious");
+        lora.setPositivePrompt("testTrigger");
+        lora.setNotes("Test notes");
+        lora.setFavorite(false);
+
+        return lora;
     }
 
     @Test

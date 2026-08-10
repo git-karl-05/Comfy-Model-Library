@@ -36,19 +36,15 @@ public class LoraService {
 
     private static final int DEFAULT_PAGE_SIZE = 12;
     private static final int MAX_PAGE_SIZE = 36;
-
     private static final int MAX_PREVIEW_IMAGES = 5;
 
-    @Value("${lora.upload.path}")
-    private String uploadPath;
-
     private final LoraRepository loraRepository;
-    private final LoraImageRepository loraImageRepository;
+    private final LoraImageService loraImageService;
     private final ObjectMapper objectMapper;
 
-    public LoraService(LoraRepository loraRepository, LoraImageRepository loraImageRepository, ObjectMapper objectMapper) {
+    public LoraService(LoraRepository loraRepository, LoraImageService loraImageService, ObjectMapper objectMapper) {
         this.loraRepository = loraRepository;
-        this.loraImageRepository = loraImageRepository;
+        this.loraImageService = loraImageService;
         this.objectMapper = objectMapper;
     }
 
@@ -98,7 +94,7 @@ public class LoraService {
         String filePath = null;
 
         if (previewImage != null && !previewImage.isEmpty()) {
-            filePath = savePreviewImage(previewImage);
+            filePath = loraImageService.savePreviewImage(previewImage);
         }
 
         loraEntity.setFilePath(filePath);
@@ -115,7 +111,7 @@ public class LoraService {
         updateEditFields(request, existingLora);
 
         if (preview != null && !preview.isEmpty()) {
-            String newFilePath = savePreviewImage(preview);
+            String newFilePath = loraImageService.savePreviewImage(preview);
             existingLora.setFilePath(newFilePath);
         }
 
@@ -160,31 +156,7 @@ public class LoraService {
 
     }
 
-    public List<LoraImageResponse> getImagesByLoraId(Long loraId) {
-        LoraEntity lora = findLoraById(loraId);
 
-        List<LoraImageResponse> images = new ArrayList<>();
-
-        if (lora.getFilePath() != null && !lora.getFilePath().isBlank()) {
-            images.add(
-                    new LoraImageResponse(
-                            null,
-                            lora.getFilePath(),
-                            true
-                    )
-            );
-        }
-
-        List<LoraImageResponse> additionalImages = loraImageRepository
-                .findByLoraIdOrderByIdAsc(loraId)
-                .stream()
-                .map(LoraImageResponse::new)
-                .toList();
-
-        images.addAll(additionalImages);
-
-        return images;
-    }
 
     public List<LoraResponse> getAllLoras()  {
         return loraRepository.findAll()
@@ -206,7 +178,6 @@ public class LoraService {
 
         return entityPage.map(LoraResponse::new);
     }
-
 
 
     private int normalizePageNumber(int page) {
@@ -256,41 +227,9 @@ public class LoraService {
         return Arrays.asList(LoraCategory.values());
     }
 
-    public String savePreviewImage(MultipartFile previewImage) {
-        try {
-            Files.createDirectories(Paths.get(uploadPath));
 
-            String originalFileName = previewImage.getOriginalFilename();
-            String safeFileName = UUID.randomUUID() + "_" + originalFileName;
 
-            Path destinationPath = Paths.get(uploadPath, safeFileName);
 
-            previewImage.transferTo(destinationPath.toFile());
-            return "/uploads/lora/" + safeFileName;
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to save preview image", e);
-        }
-    }
-
-    private String saveCarouselImage(MultipartFile image) {
-        if (image == null || image.isEmpty()) {
-            throw new RuntimeException("An image file is required.");
-        }
-        return savePreviewImage(image);
-    }
-
-    public LoraImageResponse addImageToLora(Long loraId, MultipartFile image) {
-        LoraEntity loraEntity = findLoraById(loraId);
-
-        String filePath = saveCarouselImage(image);
-
-        LoraImageEntity loraImageEntity = new LoraImageEntity();
-        loraImageEntity.setFilePath(filePath);
-        loraImageEntity.setLora(loraEntity);
-
-        LoraImageEntity savedImageEntity = loraImageRepository.save(loraImageEntity);
-        return new LoraImageResponse(savedImageEntity);
-    }
 
     private enum ImportResult {
         IMPORTED,
@@ -363,13 +302,13 @@ public class LoraService {
         entity.setNotes(null);
         entity.setFavorite(false);
 
-        entity.setFilePath(getPrimaryPreviewPath(previewPaths));
+        entity.setFilePath(loraImageService.getPrimaryPreviewPath(previewPaths));
         entity.setModelFilePath(getText(root, "file_path"));
         entity.setSha256(sha256);
 
         LoraEntity savedLora = loraRepository.save(entity);
 
-        saveAdditionalPreviewImages(savedLora, previewPaths);
+        loraImageService.saveAdditionalPreviewImages(savedLora, previewPaths);
 
         return ImportResult.IMPORTED;
     }
@@ -390,7 +329,21 @@ public class LoraService {
         String fileName = getText(root, "file_name");
 
         if (fileName != null) {
-            return fileName;
+            String loraName = fileName;
+
+            int byIndex = loraName.toLowerCase().lastIndexOf(" by ");
+
+            if (byIndex != -1) {
+                loraName = loraName.substring(0, byIndex);
+            }
+
+            int versionIndex = loraName.toLowerCase().lastIndexOf(" v");
+
+            if (versionIndex != -1) {
+                loraName = loraName.substring(0, versionIndex);
+            }
+
+            return loraName.trim();
         }
 
         String modelName = getText(root, "model_name");
@@ -624,24 +577,9 @@ public class LoraService {
         return previewPaths;
     }
 
-    private String getPrimaryPreviewPath(List<String> previewPaths) {
-        if (previewPaths.isEmpty()) {
-            return null;
-        }
 
-        return previewPaths.get(0);
-    }
 
-    private void saveAdditionalPreviewImages(LoraEntity loraEntity, List<String> previewPaths) {
-        for (int i = 1; i < previewPaths.size(); i++) {
-            LoraImageEntity loraImageEntity = new LoraImageEntity();
 
-            loraImageEntity.setFilePath(previewPaths.get(i));
-            loraImageEntity.setLora(loraEntity);
-
-            loraImageRepository.save(loraImageEntity);
-        }
-    }
 
     private boolean isSafetensorsFile(Path file) {
         String fileName = file
