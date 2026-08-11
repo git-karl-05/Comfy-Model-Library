@@ -32,6 +32,8 @@ const SHEET_RESET_DURATION = 180;
 let currentPreviewImages = [];
 let currentPreviewIndex = 0;
 
+let stickyNavigationOffset = 0;
+
 document.addEventListener("DOMContentLoaded", async () => {
     if (getRequestedLoraId()) {
         document.body.classList.add(
@@ -41,6 +43,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupLayoutButtons();
     setupSearch();
     setupGoToTopButton();
+    setupStickyNavigationScroll();
 
     setupFilterModal();
     setupFilterSheetSwipe();
@@ -3070,4 +3073,65 @@ function setupPreviewCarousel() {
             showNextPreview();
         }
     );
+}
+
+function getStickyNavigation() {
+    return document.querySelector(".sticky-navigation");
+}
+
+function updateStickyNavigationPosition() {
+    const navigation = getStickyNavigation();
+
+    if (!navigation) {
+        return;
+    }
+
+    navigation.style.transform =
+        `translateY(-${stickyNavigationOffset}px)`;
+}
+
+function setupStickyNavigationScroll() {
+    const navigation = getStickyNavigation();
+
+    if (!navigation) {
+        return;
+    }
+
+    let previousScrollY = window.scrollY;
+
+    window.addEventListener("scroll", () => {
+        const currentScrollY = window.scrollY;
+
+        if (currentScrollY <= 0) {
+            stickyNavigationOffset = 0;
+
+            updateStickyNavigationPosition();
+
+            previousScrollY = currentScrollY;
+
+            return;
+        }
+
+        const scrollDifference =
+            currentScrollY - previousScrollY;
+
+        const navigationHeight =
+            navigation.offsetHeight;
+
+        stickyNavigationOffset +=
+            scrollDifference;
+
+        stickyNavigationOffset =
+            Math.max(
+                0,
+                Math.min(
+                    stickyNavigationOffset,
+                    navigationHeight
+                )
+            );
+
+        updateStickyNavigationPosition();
+
+        previousScrollY = currentScrollY;
+    });
 }
