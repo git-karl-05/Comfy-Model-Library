@@ -6,11 +6,13 @@ import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraImageRepository;
 import com.comfy.library.repository.LoraRepository;
+import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;
 
+import javax.swing.text.html.Option;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,7 +41,7 @@ public class loraServiceTest {
 
 
 
-    private CreateLoraRequest createTestRequest() {
+    private CreateLoraRequest createObjectToSave() {
         CreateLoraRequest request = new CreateLoraRequest();
 
         request.setLoraName("Test LoRA");
@@ -73,7 +75,7 @@ public class loraServiceTest {
 
     @Test
     void saveLora_shouldReturnLoraResponse() {
-        CreateLoraRequest createLoraRequest = createTestRequest();
+        CreateLoraRequest createLoraRequest = createObjectToSave();
         LoraEntity savedLoraEntity = createSavedLoraEntity();
 
         when(loraRepository.save(any(LoraEntity.class)))
@@ -95,7 +97,7 @@ public class loraServiceTest {
         assertEquals("Illustrious", entity.getBaseModel());
     }
 
-    private LoraEntity createTestLora() {
+    private LoraEntity createLoraEntityForTest() {
         LoraEntity lora = new LoraEntity();
 
         lora.setId(1L);
@@ -114,7 +116,7 @@ public class loraServiceTest {
 
     @Test
     void getLoraById_shouldReturnExpectedLora() {
-        LoraEntity existingLora = createTestLora();
+        LoraEntity existingLora = createLoraEntityForTest();
 
         when(loraRepository.findById(1L))
                 .thenReturn(Optional.of(existingLora));
@@ -132,7 +134,4 @@ public class loraServiceTest {
         assertEquals("Test notes", response.getNotes());
         assertFalse(response.isFavorite());
     }
-
-
-
 }
