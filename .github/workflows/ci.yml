@@ -26,3 +26,6 @@ jobs:
 
       - name: Build and test
         run: ./mvnw clean package
+
+      - name: Build Docker image
+        run: docker build -t comfy-model-library:latest .
