@@ -34,10 +34,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/comfy-model-library:latest .
+        run: |
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/comfy-model-library:latest \ 
+            -t ghcr.io/${{ github.repository_owner }}/comfy-model-library:${{ github.sha }} \
+            .
 
       - name: Push Docker image
-        run: docker push ghcr.io/${{ github.repository_owner }}/comfy-model-library:latest
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/comfy-model-library:latest
+          docker push ghcr.io/${{ github.repository_owner }}/comfy-model-library:${{ github.sha }}
 
 
 
