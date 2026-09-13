@@ -156,8 +156,6 @@ public class LoraService {
 
     }
 
-
-
     public List<LoraResponse> getAllLoras()  {
         return loraRepository.findAll()
                 .stream()
@@ -867,6 +865,7 @@ public class LoraService {
         );
     }
 }
+
 
 
 
