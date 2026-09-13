@@ -2415,30 +2415,19 @@ function updatePaginationControls() {
 }
 
 async function scrollToLoraGalleryControls() {
-    const galleryControls =
-        document.querySelector(
-            ".gallery-controls"
-        );
-
-    if (!galleryControls) {
-        return;
-    }
-
-    /*
-     * Wait until the newly rendered gallery has
-     * been applied to the page layout.
-     */
     await new Promise(resolve => {
         window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(
-                resolve
-            );
+            window.requestAnimationFrame(resolve);
         });
     });
 
-    galleryControls.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
+    stickyNavigationOffset = 0;
+    updateStickyNavigationPosition();
+
+    window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "smooth"
     });
 }
 
