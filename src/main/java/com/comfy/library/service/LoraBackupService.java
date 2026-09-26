@@ -1,6 +1,7 @@
 package com.comfy.library.service;
 
 
+import com.comfy.library.dto.BackupRestoreResponse;
 import com.comfy.library.dto.LoraBackup;
 import com.comfy.library.dto.LoraBackupItem;
 import com.comfy.library.entity.LoraEntity;
@@ -60,4 +61,60 @@ public class LoraBackupService {
         return backup;
     }
 
+    @Transactional
+    public BackupRestoreResponse restoreBackup(LoraBackup backup) {
+
+        int importedCount = 0;
+        int skippedCount = 0;
+
+        for (LoraBackupItem item : backup.getLoras()) {
+            boolean alreadyExists = loraRepository.existsByLoraNameAndVersion(item.getLoraName(), item.getVersion());
+
+            if (alreadyExists) {
+                skippedCount++;
+                continue;
+            }
+
+            LoraEntity entity =
+                    new LoraEntity();
+
+            entity.setLoraName(item.getLoraName());
+            entity.setCreator(item.getCreator());
+            entity.setVersion(item.getVersion());
+            entity.setCategory(item.getCategory());
+            entity.setSubCategory(item.getSubCategory());
+            entity.setBaseModel(item.getBaseModel());
+            entity.setGroupName(item.getGroupName());
+
+            entity.setPositivePrompt(item.getPositivePrompt());
+            entity.setNegativePrompt(item.getNegativePrompt());
+            entity.setSeedNumber(item.getSeedNumber());
+            entity.setNotes(item.getNotes());
+            entity.setFavorite(Boolean.TRUE.equals(item.getFavorite()));
+            entity.setUrl(item.getUrl());
+            entity.setFilePath(item.getFilePath());
+
+            loraRepository.save(entity);
+
+            importedCount++;
+
+
+        }
+
+        return new BackupRestoreResponse(importedCount, skippedCount);
+
+    }
+
+    private void validateBackup(LoraBackup backup) {
+
+        if (backup == null) {
+            throw new IllegalArgumentException("Backup file is empty.");
+        }
+
+        if (backup.getBackupVersion() != CURRENT_BACKUP_VERSION) {
+            throw new IllegalArgumentException("Upsupported backup version: " + backup.getBackupVersion());
+        }
+
+
+    }
 }

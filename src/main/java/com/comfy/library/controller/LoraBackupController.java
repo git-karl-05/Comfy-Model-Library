@@ -1,14 +1,13 @@
 package com.comfy.library.controller;
 
 
+import com.comfy.library.dto.BackupRestoreResponse;
 import com.comfy.library.dto.LoraBackup;
 import com.comfy.library.service.LoraBackupService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 
 @RestController
@@ -31,5 +30,10 @@ public class LoraBackupController {
                 )
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(backup);
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BackupRestoreResponse> importBackup(@RequestBody LoraBackup backup) {
+        return ResponseEntity.ok(loraBackupService.restoreBackup(backup));
     }
 }
