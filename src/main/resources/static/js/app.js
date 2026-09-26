@@ -58,6 +58,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupMenu();
     setupPaginationControls();
 
+    setupBackupExport();
+    setupBackupImport();
+
 
     await fetchAllLoras(0);
 
@@ -3123,4 +3126,121 @@ function setupStickyNavigationScroll() {
 
         previousScrollY = currentScrollY;
     });
+
+}
+
+function setupBackupExport() {
+    const exportButton =
+        document.getElementById(
+            "exportBackupButton"
+        );
+
+    if (!exportButton) {
+        return;
+    }
+
+    exportButton.addEventListener(
+        "click",
+        () => {
+            window.location.href =
+                "/api/backup/export";
+        }
+    );
+}
+
+function setupBackupImport() {
+    const importButton =
+        document.getElementById(
+            "importBackupButton"
+        );
+
+    const fileInput =
+        document.getElementById(
+            "backupFileInput"
+        );
+
+    if (!importButton || !fileInput) {
+        return;
+    }
+
+    importButton.addEventListener(
+        "click",
+        () => {
+            fileInput.click();
+        }
+    );
+
+    fileInput.addEventListener(
+        "change",
+        async () => {
+
+            const file =
+                fileInput.files?.[0];
+
+            if (!file) {
+                return;
+            }
+
+            try {
+                const backupText =
+                    await file.text();
+
+                const backup =
+                    JSON.parse(backupText);
+
+                const response = await fetch(
+                    "/api/backup/import",
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify(
+                            backup
+                        )
+                    }
+                );
+
+                if (!response.ok) {
+                    const errorText =
+                        await response.text();
+
+                    throw new Error(
+                        errorText ||
+                        "Backup import failed."
+                    );
+                }
+
+                const result =
+                    await response.json();
+
+                alert(
+                    `Backup restored.\n\n` +
+                    `Imported: ${result.importedCount}\n` +
+                    `Skipped: ${result.skippedCount}`
+                );
+
+                currentPage = 0;
+
+                await refreshCurrentView();
+
+            } catch (error) {
+                console.error(
+                    "Backup import error:",
+                    error
+                );
+
+                alert(
+                    "Unable to import backup."
+                );
+            } finally {
+                /*
+                 * Allows selecting the same backup
+                 * again if necessary.
+                 */
+                fileInput.value = "";
+            }
+        }
+    );
 }

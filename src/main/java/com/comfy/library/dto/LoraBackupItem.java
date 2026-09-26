@@ -1,7 +1,25 @@
 package com.comfy.library.dto;
 
 import com.comfy.library.entity.LoraCategory;
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
+
+@JsonPropertyOrder({
+        "loraName",
+        "creator",
+        "version",
+        "category",
+        "subCategory",
+        "baseModel",
+        "groupName",
+        "positivePrompt",
+        "negativePrompt",
+        "seedNumber",
+        "notes",
+        "favorite",
+        "url",
+        "filePath"
+})
 public class LoraBackupItem {
 
     private String loraName;
