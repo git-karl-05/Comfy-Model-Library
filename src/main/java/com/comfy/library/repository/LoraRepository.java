@@ -30,4 +30,6 @@ public interface LoraRepository extends JpaRepository<LoraEntity, Long>, JpaSpec
     boolean existsBySha256(String sha256);
 
     Optional<LoraEntity> findBySha256(String sha256);
+
+    boolean existsByLoraNameAndVersion(String loraName, String version);
 }
