@@ -9,5 +9,3 @@ public class ComfyLibraryMainApplication {
     public static void main(String[] args) {
         SpringApplication.run(ComfyLibraryMainApplication.class, args);
     }
-
-}
