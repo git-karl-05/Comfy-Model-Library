@@ -1,6 +1,5 @@
 package com.comfy.library.service;
 
-
 import com.comfy.library.dto.BackupRestoreResponse;
 import com.comfy.library.dto.LoraBackup;
 import com.comfy.library.dto.LoraBackupItem;
@@ -17,21 +16,28 @@ import java.util.List;
 public class LoraBackupService {
 
     private static final int CURRENT_BACKUP_VERSION = 1;
+
     private final LoraRepository loraRepository;
 
-    public LoraBackupService(LoraRepository loraRepository) {
+    public LoraBackupService(
+            LoraRepository loraRepository
+    ) {
         this.loraRepository = loraRepository;
     }
 
-
     @Transactional
     public LoraBackup exportBackup() {
-        List<LoraEntity> entities = loraRepository.findAll();
 
-        List<LoraBackupItem> backupItems = new ArrayList<>();
+        List<LoraEntity> entities =
+                loraRepository.findAll();
+
+        List<LoraBackupItem> backupItems =
+                new ArrayList<>();
 
         for (LoraEntity entity : entities) {
-            LoraBackupItem item = new LoraBackupItem();
+
+            LoraBackupItem item =
+                    new LoraBackupItem();
 
             item.setLoraName(entity.getLoraName());
             item.setCreator(entity.getCreator());
@@ -62,21 +68,30 @@ public class LoraBackupService {
     }
 
     @Transactional
-    public BackupRestoreResponse restoreBackup(LoraBackup backup) {
+    public BackupRestoreResponse restoreBackup(
+            LoraBackup backup
+    ) {
+
+        validateBackup(backup);
 
         int importedCount = 0;
         int skippedCount = 0;
 
         for (LoraBackupItem item : backup.getLoras()) {
-            boolean alreadyExists = loraRepository.existsByLoraNameAndVersion(item.getLoraName(), item.getVersion());
+
+            boolean alreadyExists =
+                    loraRepository
+                            .existsByLoraNameAndVersion(
+                                    item.getLoraName(),
+                                    item.getVersion()
+                            );
 
             if (alreadyExists) {
                 skippedCount++;
                 continue;
             }
 
-            LoraEntity entity =
-                    new LoraEntity();
+            LoraEntity entity = new LoraEntity();
 
             entity.setLoraName(item.getLoraName());
             entity.setCreator(item.getCreator());
@@ -85,36 +100,55 @@ public class LoraBackupService {
             entity.setSubCategory(item.getSubCategory());
             entity.setBaseModel(item.getBaseModel());
             entity.setGroupName(item.getGroupName());
-
             entity.setPositivePrompt(item.getPositivePrompt());
             entity.setNegativePrompt(item.getNegativePrompt());
             entity.setSeedNumber(item.getSeedNumber());
             entity.setNotes(item.getNotes());
-            entity.setFavorite(Boolean.TRUE.equals(item.getFavorite()));
+
+            entity.setFavorite(
+                    Boolean.TRUE.equals(
+                            item.getFavorite()
+                    )
+            );
+
             entity.setUrl(item.getUrl());
             entity.setFilePath(item.getFilePath());
 
             loraRepository.save(entity);
 
             importedCount++;
-
-
         }
 
-        return new BackupRestoreResponse(importedCount, skippedCount);
-
+        return new BackupRestoreResponse(
+                importedCount,
+                skippedCount
+        );
     }
 
-    private void validateBackup(LoraBackup backup) {
+    private void validateBackup(
+            LoraBackup backup
+    ) {
 
         if (backup == null) {
-            throw new IllegalArgumentException("Backup file is empty.");
+            throw new IllegalArgumentException(
+                    "Backup file is empty."
+            );
         }
 
-        if (backup.getBackupVersion() != CURRENT_BACKUP_VERSION) {
-            throw new IllegalArgumentException("Upsupported backup version: " + backup.getBackupVersion());
+        if (
+                backup.getBackupVersion()
+                        != CURRENT_BACKUP_VERSION
+        ) {
+            throw new IllegalArgumentException(
+                    "Unsupported backup version: "
+                            + backup.getBackupVersion()
+            );
         }
 
-
+        if (backup.getLoras() == null) {
+            throw new IllegalArgumentException(
+                    "Backup does not contain LoRA data."
+            );
+        }
     }
 }

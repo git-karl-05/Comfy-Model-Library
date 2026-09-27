@@ -412,15 +412,39 @@ function setupActionMenu() {
 }
 
 function closeActionMenu() {
-    const overlay = document.getElementById("actionMenuOverlay");
-    const importForm = document.getElementById("importFolderForm");
-    const importResult = document.getElementById("importResult");
+    const overlay =
+        document.getElementById(
+            "actionMenuOverlay"
+        );
 
-    overlay?.classList.add("hidden");
-    importForm?.classList.add("hidden");
+    const importForm =
+        document.getElementById(
+            "importFolderForm"
+        );
+
+    const importResult =
+        document.getElementById(
+            "importResult"
+        );
+
+    overlay?.classList.add(
+        "hidden"
+    );
+
+    importForm?.classList.add(
+        "hidden"
+    );
 
     if (importResult) {
-        importResult.classList.add("hidden");
+        importResult.classList.add(
+            "hidden"
+        );
+
+        importResult.classList.remove(
+            "import-result-success",
+            "import-result-error"
+        );
+
         importResult.innerHTML = "";
     }
 }
@@ -3159,13 +3183,26 @@ function setupBackupImport() {
             "backupFileInput"
         );
 
-    if (!importButton || !fileInput) {
+    const importResult =
+        document.getElementById(
+            "importResult"
+        );
+
+    if (
+        !importButton ||
+        !fileInput ||
+        !importResult
+    ) {
         return;
     }
 
     importButton.addEventListener(
         "click",
-        () => {
+        event => {
+            event.stopPropagation();
+
+            fileInput.value = "";
+
             fileInput.click();
         }
     );
@@ -3181,44 +3218,54 @@ function setupBackupImport() {
                 return;
             }
 
+            showBackupImportLoading(
+                importResult,
+                file.name
+            );
+
             try {
-                const backupText =
+
+                const fileText =
                     await file.text();
 
                 const backup =
-                    JSON.parse(backupText);
+                    JSON.parse(fileText);
 
-                const response = await fetch(
-                    "/api/backup/import",
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type":
-                                "application/json"
-                        },
-                        body: JSON.stringify(
-                            backup
-                        )
-                    }
-                );
+                const response =
+                    await fetch(
+                        "/api/backup/import",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    backup
+                                )
+                        }
+                    );
 
                 if (!response.ok) {
+
                     const errorText =
                         await response.text();
 
                     throw new Error(
                         errorText ||
-                        "Backup import failed."
+                        `Import failed with status ${response.status}`
                     );
                 }
 
                 const result =
                     await response.json();
 
-                alert(
-                    `Backup restored.\n\n` +
-                    `Imported: ${result.importedCount}\n` +
-                    `Skipped: ${result.skippedCount}`
+                displayBackupImportSuccess(
+                    importResult,
+                    result
                 );
 
                 currentPage = 0;
@@ -3226,21 +3273,95 @@ function setupBackupImport() {
                 await refreshCurrentView();
 
             } catch (error) {
+
                 console.error(
                     "Backup import error:",
                     error
                 );
 
-                alert(
-                    "Unable to import backup."
+                displayBackupImportError(
+                    importResult,
+                    error
                 );
+
             } finally {
-                /*
-                 * Allows selecting the same backup
-                 * again if necessary.
-                 */
+
                 fileInput.value = "";
             }
         }
     );
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function displayBackupImportSuccess(
+    importResult,
+    result
+) {
+    importResult.classList.remove(
+        "hidden",
+        "import-result-error"
+    );
+
+    importResult.classList.add(
+        "import-result-success"
+    );
+
+    importResult.innerHTML = `
+        <h3>Backup Import Complete</h3>
+
+        <div class="import-summary-list">
+
+            <div class="import-summary-row">
+                <span>Imported</span>
+
+                <strong>
+                    ${result.importedCount ?? 0}
+                </strong>
+            </div>
+
+            <div class="import-summary-row">
+                <span>Skipped</span>
+
+                <strong>
+                    ${result.skippedCount ?? 0}
+                </strong>
+            </div>
+
+        </div>
+    `;
+}
+
+function displayBackupImportError(
+    importResult,
+    error
+) {
+    importResult.classList.remove(
+        "hidden",
+        "import-result-success"
+    );
+
+    importResult.classList.add(
+        "import-result-error"
+    );
+
+    importResult.innerHTML = `
+        <h3>Backup Import Failed</h3>
+
+        <p>
+            ${
+        escapeHtml(
+            error?.message ||
+            "Unable to import backup."
+        )
+    }
+        </p>
+    `;
 }
