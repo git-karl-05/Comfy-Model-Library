@@ -116,9 +116,13 @@
         background-color: var(--background);
 
         will-change: transform;
+
+        transition: transform 0.12s ease-out;
     }
 
     .top-toolbar {
+        position: relative;
+
         display: grid;
         grid-template-columns: 44px 1fr auto;
         align-items: center;
@@ -784,10 +788,7 @@
         width: 100%;
     }
 
-    /*
-     * The Add footer remains sticky because the Add page uses normal
-     * document scrolling.
-     */
+
     .add-lora-action-bar {
         position: sticky;
         bottom: 0;
