@@ -98,6 +98,8 @@ async function fetchAllLoras(page) {
     }
 }
 
+
+
 function displayLoras(loras) {
     const loraList = document.getElementById("loraList");
 
@@ -402,6 +404,12 @@ function setupActionMenu() {
 
         if (importResult) {
             importResult.classList.add("hidden");
+
+            importResult.classList.remove(
+                "import-result-success",
+                "import-result-error"
+            );
+
             importResult.innerHTML = "";
         }
 
@@ -671,7 +679,8 @@ async function searchLoras(
     page = currentPage
 ) {
     try {
-        const normalizedKeyword = keyword.trim();
+        const normalizedKeyword =
+            keyword.trim();
 
         if (
             normalizedKeyword.length <
@@ -680,16 +689,28 @@ async function searchLoras(
             return;
         }
 
-        const url = buildPaginatedUrl(
-            "/search",
-            page,
-            pageSize,
-            {
-                keyword: normalizedKeyword
-            }
-        );
+        const parameters = {
+            keyword: normalizedKeyword,
+            ...buildFilterParameters()
+        };
 
-        const response = await fetch(url);
+        if (
+            appliedCategoryFilter ===
+            "FAVORITES"
+        ) {
+            parameters.favorite = true;
+        }
+
+        const url =
+            buildPaginatedUrl(
+                "/search",
+                page,
+                pageSize,
+                parameters
+            );
+
+        const response =
+            await fetch(url);
 
         if (!response.ok) {
             throw new Error(
@@ -697,12 +718,16 @@ async function searchLoras(
             );
         }
 
-        const pageResponse = await response.json();
+        const pageResponse =
+            await response.json();
 
         isSearchActive = true;
-        lastSearchKeyword = normalizedKeyword;
+        lastSearchKeyword =
+            normalizedKeyword;
 
-        displayPaginatedLoraResponse(pageResponse);
+        displayPaginatedLoraResponse(
+            pageResponse
+        );
 
     } catch (error) {
         console.error(
@@ -711,7 +736,10 @@ async function searchLoras(
         );
 
         isSearchActive = false;
-        displayGalleryError(error);
+
+        displayGalleryError(
+            error
+        );
     }
 }
 
@@ -925,7 +953,7 @@ function updateFilterButton() {
         String(activeFilterCount);
 }
 
-function resetFilterSelection() {
+async function resetFilterSelection() {
     const {
         baseModelFilter,
         categoryFilter,
@@ -943,6 +971,17 @@ function resetFilterSelection() {
     if (subcategoryFilter) {
         subcategoryFilter.value = "ALL";
     }
+
+    appliedBaseModelFilter = "ALL";
+    appliedCategoryFilter = "ALL";
+    appliedSubcategoryFilter = "ALL";
+
+    clearSearchForFilterChange();
+
+    updateFilterButton();
+    closeFilterModal();
+
+    await refreshCurrentView();
 }
 
 function renderSearchResultsPage(page) {
@@ -3363,5 +3402,40 @@ function displayBackupImportError(
         )
     }
         </p>
+    `;
+}
+
+function showBackupImportLoading(
+    importResult,
+    fileName
+) {
+    importResult.classList.remove(
+        "hidden",
+        "import-result-success",
+        "import-result-error"
+    );
+
+    importResult.innerHTML = `
+        <h3>Importing Backup</h3>
+
+        <div class="import-summary-list">
+
+            <div class="import-summary-row">
+                <span>File</span>
+
+                <strong>
+                    ${escapeHtml(fileName)}
+                </strong>
+            </div>
+
+            <div class="import-summary-row">
+                <span>Status</span>
+
+                <strong>
+                    Importing...
+                </strong>
+            </div>
+
+        </div>
     `;
 }

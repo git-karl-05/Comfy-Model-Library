@@ -57,9 +57,24 @@ public class LoraController {
     @GetMapping("/search")
     public ResponseEntity<Page<LoraResponse>> searchLoras(
             @RequestParam String keyword,
+            @RequestParam(required = false) String baseModel,
+            @RequestParam(required = false) LoraCategory category,
+            @RequestParam(required = false) String subcategory,
+            @RequestParam(required = false) Boolean favorite,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size) {
-        return ResponseEntity.ok(loraService.searchLoras(keyword, page, size));
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        return ResponseEntity.ok(
+                loraService.searchLoras(
+                        keyword,
+                        baseModel,
+                        category,
+                        subcategory,
+                        favorite,
+                        page,
+                        size
+                )
+        );
     }
 
     @GetMapping("/{loraId}")

@@ -3,11 +3,7 @@ package com.comfy.library.service;
 import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
-import com.comfy.library.entity.LoraImageEntity;
-import com.comfy.library.repository.LoraImageRepository;
 import com.comfy.library.repository.LoraRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -26,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
+
 import jakarta.persistence.criteria.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -156,8 +152,6 @@ public class LoraService {
 
     }
 
-
-
     public List<LoraResponse> getAllLoras()  {
         return loraRepository.findAll()
                 .stream()
@@ -165,18 +159,95 @@ public class LoraService {
                 .collect(Collectors.toList());
     }
 
-    //Filter by category
-    //Filter by group
-    //Filter by favorites
+    public Page<LoraResponse> searchLoras(
+            String keyword,
+            String baseModel,
+            LoraCategory category,
+            String subcategory,
+            Boolean favorite,
+            int page,
+            int size
+    ) {
+        Pageable pageable =
+                createPageable(page, size);
+
+        Specification<LoraEntity> specification =
+                (
+                        root,
+                        query,
+                        criteriaBuilder
+                ) -> {
+
+                    List<Predicate> predicates =
+                            new ArrayList<>();
 
 
-    public Page<LoraResponse> searchLoras(String keyword, int page, int size) {
+                    if (
+                            keyword != null &&
+                                    !keyword.isBlank()
+                    ) {
+                        predicates.add(
+                                criteriaBuilder.like(
+                                        criteriaBuilder.lower(
+                                                root.get("loraName")
+                                        ),
+                                        "%" +
+                                                keyword
+                                                        .trim()
+                                                        .toLowerCase() +
+                                                "%"
+                                )
+                        );
+                    }
 
-        Pageable pageable = createPageable(page, size);
 
-        Page<LoraEntity> entityPage = loraRepository.findByLoraNameContainingIgnoreCase(keyword, pageable);
+                    addBaseModelPredicate(
+                            predicates,
+                            baseModel,
+                            root,
+                            criteriaBuilder
+                    );
 
-        return entityPage.map(LoraResponse::new);
+
+                    addCategoryPredicate(
+                            predicates,
+                            category,
+                            root,
+                            criteriaBuilder
+                    );
+
+
+                    addSubcategoryPredicate(
+                            predicates,
+                            subcategory,
+                            root,
+                            criteriaBuilder
+                    );
+
+                    if (Boolean.TRUE.equals(favorite)) {
+                        predicates.add(
+                                criteriaBuilder.isTrue(
+                                        root.get("favorite")
+                                )
+                        );
+                    }
+
+                    return criteriaBuilder.and(
+                            predicates.toArray(
+                                    new Predicate[0]
+                            )
+                    );
+                };
+
+        Page<LoraEntity> entityPage =
+                loraRepository.findAll(
+                        specification,
+                        pageable
+                );
+
+        return entityPage.map(
+                LoraResponse::new
+        );
     }
 
 
