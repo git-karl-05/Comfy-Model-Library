@@ -61,6 +61,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupBackupExport();
     setupBackupImport();
 
+    setupExpandedTextModal();
+
 
     await fetchAllLoras(0);
 
@@ -3438,4 +3440,122 @@ function showBackupImportLoading(
 
         </div>
     `;
+}
+
+function setupExpandedTextModal() {
+    const modal =
+        document.getElementById(
+            "expandedTextModal"
+        );
+
+    const title =
+        document.getElementById(
+            "expandedTextTitle"
+        );
+
+    const content =
+        document.getElementById(
+            "expandedTextContent"
+        );
+
+    const closeButton =
+        document.getElementById(
+            "closeExpandedTextButton"
+        );
+
+    const expandButtons =
+        document.querySelectorAll(
+            ".expand-field-button"
+        );
+
+    if (
+        !modal ||
+        !title ||
+        !content ||
+        !closeButton
+    ) {
+        return;
+    }
+
+    expandButtons.forEach(button => {
+
+        button.addEventListener(
+            "click",
+            event => {
+                event.stopPropagation();
+
+                const targetId =
+                    button.dataset.expandTarget;
+
+                const fieldTitle =
+                    button.dataset.expandTitle ??
+                    "Text";
+
+                const target =
+                    document.getElementById(
+                        targetId
+                    );
+
+                if (!target) {
+                    return;
+                }
+
+                title.textContent =
+                    fieldTitle;
+
+                content.textContent =
+                    target.textContent.trim();
+
+                modal.classList.remove(
+                    "hidden"
+                );
+
+                modal.setAttribute(
+                    "aria-hidden",
+                    "false"
+                );
+            }
+        );
+    });
+
+    function closeExpandedTextModal() {
+        modal.classList.add(
+            "hidden"
+        );
+
+        modal.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        content.textContent = "";
+    }
+
+    closeButton.addEventListener(
+        "click",
+        closeExpandedTextModal
+    );
+
+    modal.addEventListener(
+        "click",
+        event => {
+            if (event.target === modal) {
+                closeExpandedTextModal();
+            }
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key === "Escape" &&
+                !modal.classList.contains(
+                    "hidden"
+                )
+            ) {
+                closeExpandedTextModal();
+            }
+        }
+    );
 }
