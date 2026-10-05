@@ -4,6 +4,7 @@ import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraRepository;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,8 +23,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import jakarta.persistence.criteria.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -34,130 +33,505 @@ public class LoraService {
     private static final int MAX_PAGE_SIZE = 36;
     private static final int MAX_PREVIEW_IMAGES = 5;
 
+    private static final String DEFAULT_SORT_BY = "createdDate";
+    private static final String DEFAULT_SORT_DIRECTION = "desc";
+
     private final LoraRepository loraRepository;
     private final LoraImageService loraImageService;
     private final ObjectMapper objectMapper;
 
-    public LoraService(LoraRepository loraRepository, LoraImageService loraImageService, ObjectMapper objectMapper) {
+    public LoraService(
+            LoraRepository loraRepository,
+            LoraImageService loraImageService,
+            ObjectMapper objectMapper
+    ) {
         this.loraRepository = loraRepository;
         this.loraImageService = loraImageService;
         this.objectMapper = objectMapper;
     }
 
-    public LoraResponse saveLora(CreateLoraRequest request) {
-        LoraEntity loraEntity = new LoraEntity();
-        loraEntity.setLoraName(request.getLoraName());
-        loraEntity.setVersion(normalizeVersion(request.getVersion()));
-        loraEntity.setCreator(request.getCreator());
-        loraEntity.setUrl(request.getUrl());
-        loraEntity.setCreatedDate(LocalDateTime.now());
-        loraEntity.setLastUpdated(LocalDateTime.now());
-        loraEntity.setCategory(request.getCategory());
-        loraEntity.setSubCategory(request.getSubCategory());
-        loraEntity.setGroupName(request.getGroupName());
-        loraEntity.setPositivePrompt(request.getPositivePrompt());
-        loraEntity.setNegativePrompt(request.getNegativePrompt());
-        loraEntity.setSeedNumber(request.getSeedNumber());
-        loraEntity.setNotes(request.getNotes());
+
+    // =========================================================
+    // CREATE
+    // =========================================================
+
+    public LoraResponse saveLora(
+            CreateLoraRequest request
+    ) {
+        LoraEntity loraEntity =
+                new LoraEntity();
+
+        loraEntity.setLoraName(
+                request.getLoraName()
+        );
+
+        loraEntity.setVersion(
+                normalizeVersion(
+                        request.getVersion()
+                )
+        );
+
+        loraEntity.setCreator(
+                request.getCreator()
+        );
+
+        loraEntity.setUrl(
+                request.getUrl()
+        );
+
+        loraEntity.setCreatedDate(
+                LocalDateTime.now()
+        );
+
+        loraEntity.setLastUpdated(
+                LocalDateTime.now()
+        );
+
+        loraEntity.setCategory(
+                request.getCategory()
+        );
+
+        loraEntity.setSubCategory(
+                request.getSubCategory()
+        );
+
+        loraEntity.setGroupName(
+                request.getGroupName()
+        );
+
+        loraEntity.setPositivePrompt(
+                request.getPositivePrompt()
+        );
+
+        loraEntity.setNegativePrompt(
+                request.getNegativePrompt()
+        );
+
+        loraEntity.setSeedNumber(
+                request.getSeedNumber()
+        );
+
+        loraEntity.setNotes(
+                request.getNotes()
+        );
+
         loraEntity.setFavorite(false);
         loraEntity.setFilePath(null);
-        loraEntity.setBaseModel(request.getBaseModel());
 
-        LoraEntity savedLora = loraRepository.save(loraEntity);
-        return new LoraResponse(savedLora);
+        loraEntity.setBaseModel(
+                request.getBaseModel()
+        );
+
+        LoraEntity savedLora =
+                loraRepository.save(
+                        loraEntity
+                );
+
+        return new LoraResponse(
+                savedLora
+        );
     }
 
-    public LoraResponse saveLoraWithPreviewImage(CreateLoraRequest request, MultipartFile previewImage) {
-        LoraEntity loraEntity = new LoraEntity();
-        loraEntity.setLoraName(request.getLoraName());
-        loraEntity.setVersion(normalizeVersion(request.getVersion()));
-        loraEntity.setCreator(request.getCreator());
-        loraEntity.setUrl(request.getUrl());
-        loraEntity.setCreatedDate(LocalDateTime.now());
-        loraEntity.setLastUpdated(LocalDateTime.now());
-        loraEntity.setCategory(request.getCategory());
-        loraEntity.setSubCategory(request.getSubCategory());
-        loraEntity.setGroupName(request.getGroupName());
-        loraEntity.setPositivePrompt(request.getPositivePrompt());
-        loraEntity.setNegativePrompt(request.getNegativePrompt());
-        loraEntity.setBaseModel(request.getBaseModel());
-        loraEntity.setSeedNumber(request.getSeedNumber());
-        loraEntity.setNotes(request.getNotes());
+
+    public LoraResponse saveLoraWithPreviewImage(
+            CreateLoraRequest request,
+            MultipartFile previewImage
+    ) {
+        LoraEntity loraEntity =
+                new LoraEntity();
+
+        loraEntity.setLoraName(
+                request.getLoraName()
+        );
+
+        loraEntity.setVersion(
+                normalizeVersion(
+                        request.getVersion()
+                )
+        );
+
+        loraEntity.setCreator(
+                request.getCreator()
+        );
+
+        loraEntity.setUrl(
+                request.getUrl()
+        );
+
+        loraEntity.setCreatedDate(
+                LocalDateTime.now()
+        );
+
+        loraEntity.setLastUpdated(
+                LocalDateTime.now()
+        );
+
+        loraEntity.setCategory(
+                request.getCategory()
+        );
+
+        loraEntity.setSubCategory(
+                request.getSubCategory()
+        );
+
+        loraEntity.setGroupName(
+                request.getGroupName()
+        );
+
+        loraEntity.setPositivePrompt(
+                request.getPositivePrompt()
+        );
+
+        loraEntity.setNegativePrompt(
+                request.getNegativePrompt()
+        );
+
+        loraEntity.setBaseModel(
+                request.getBaseModel()
+        );
+
+        loraEntity.setSeedNumber(
+                request.getSeedNumber()
+        );
+
+        loraEntity.setNotes(
+                request.getNotes()
+        );
+
         loraEntity.setFavorite(false);
         loraEntity.setFilePath(null);
-
 
         String filePath = null;
 
-        if (previewImage != null && !previewImage.isEmpty()) {
-            filePath = loraImageService.savePreviewImage(previewImage);
+        if (
+                previewImage != null &&
+                        !previewImage.isEmpty()
+        ) {
+            filePath =
+                    loraImageService
+                            .savePreviewImage(
+                                    previewImage
+                            );
         }
 
-        loraEntity.setFilePath(filePath);
+        loraEntity.setFilePath(
+                filePath
+        );
 
-        LoraEntity savedLora = loraRepository.save(loraEntity);
-        return new LoraResponse(savedLora);
+        LoraEntity savedLora =
+                loraRepository.save(
+                        loraEntity
+                );
+
+        return new LoraResponse(
+                savedLora
+        );
     }
 
 
-    public LoraResponse updateLoraWithPreviewById(Long loraId, UpdateLoraRequest request, MultipartFile preview) {
-        LoraEntity existingLora = loraRepository.findById(loraId)
-                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
+    // =========================================================
+    // UPDATE
+    // =========================================================
 
-        updateEditFields(request, existingLora);
+    public LoraResponse updateLoraWithPreviewById(
+            Long loraId,
+            UpdateLoraRequest request,
+            MultipartFile preview
+    ) {
+        LoraEntity existingLora =
+                loraRepository
+                        .findById(loraId)
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "Lora ID: " +
+                                                        loraId +
+                                                        " not found"
+                                        )
+                        );
 
-        if (preview != null && !preview.isEmpty()) {
-            String newFilePath = loraImageService.savePreviewImage(preview);
-            existingLora.setFilePath(newFilePath);
+        updateEditFields(
+                request,
+                existingLora
+        );
+
+        if (
+                preview != null &&
+                        !preview.isEmpty()
+        ) {
+            String newFilePath =
+                    loraImageService
+                            .savePreviewImage(
+                                    preview
+                            );
+
+            existingLora.setFilePath(
+                    newFilePath
+            );
         }
 
-        LoraEntity savedLora = loraRepository.save(existingLora);
-        return new LoraResponse(savedLora);
+        LoraEntity savedLora =
+                loraRepository.save(
+                        existingLora
+                );
 
+        return new LoraResponse(
+                savedLora
+        );
     }
 
-    private void updateEditFields(UpdateLoraRequest request, LoraEntity entity) {
-        entity.setLoraName(request.getLoraName());
-        entity.setVersion(normalizeVersion(request.getVersion()));
-        entity.setCreator(request.getCreator());
-        entity.setUrl(request.getUrl());
-        entity.setLastUpdated(LocalDateTime.now());
-        entity.setCategory(request.getCategory());
-        entity.setSubCategory(request.getSubCategory());
-        entity.setBaseModel(request.getBaseModel());
-        entity.setPositivePrompt(request.getPositivePrompt());
-        entity.setNegativePrompt(request.getNegativePrompt());
-        entity.setSeedNumber(request.getSeedNumber());
-        entity.setNotes(request.getNotes());
+
+    private void updateEditFields(
+            UpdateLoraRequest request,
+            LoraEntity entity
+    ) {
+        entity.setLoraName(
+                request.getLoraName()
+        );
+
+        entity.setVersion(
+                normalizeVersion(
+                        request.getVersion()
+                )
+        );
+
+        entity.setCreator(
+                request.getCreator()
+        );
+
+        entity.setUrl(
+                request.getUrl()
+        );
+
+        entity.setLastUpdated(
+                LocalDateTime.now()
+        );
+
+        entity.setCategory(
+                request.getCategory()
+        );
+
+        entity.setSubCategory(
+                request.getSubCategory()
+        );
+
+        entity.setBaseModel(
+                request.getBaseModel()
+        );
+
+        entity.setPositivePrompt(
+                request.getPositivePrompt()
+        );
+
+        entity.setNegativePrompt(
+                request.getNegativePrompt()
+        );
+
+        entity.setSeedNumber(
+                request.getSeedNumber()
+        );
+
+        entity.setNotes(
+                request.getNotes()
+        );
     }
 
-    public String deleteLoraById(Long loraId) {
-        LoraEntity loraEntity = loraRepository.findById(loraId)
-                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
 
-        loraRepository.delete(loraEntity);
-        return "Lora ID: " + loraId + " has been deleted";
+    // =========================================================
+    // DELETE
+    // =========================================================
+
+    public String deleteLoraById(
+            Long loraId
+    ) {
+        LoraEntity loraEntity =
+                loraRepository
+                        .findById(loraId)
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "Lora ID: " +
+                                                        loraId +
+                                                        " not found"
+                                        )
+                        );
+
+        loraRepository.delete(
+                loraEntity
+        );
+
+        return "Lora ID: " +
+                loraId +
+                " has been deleted";
     }
 
-    public LoraResponse getLoraById(Long loraId) {
-        LoraEntity loraEntity = loraRepository.findById(loraId)
-                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
 
-        return new LoraResponse(loraEntity);
+    // =========================================================
+    // FIND
+    // =========================================================
+
+    public LoraResponse getLoraById(
+            Long loraId
+    ) {
+        LoraEntity loraEntity =
+                loraRepository
+                        .findById(loraId)
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "Lora ID: " +
+                                                        loraId +
+                                                        " not found"
+                                        )
+                        );
+
+        return new LoraResponse(
+                loraEntity
+        );
     }
 
-    public LoraEntity findLoraById(Long loraId) {
-        return loraRepository.findById(loraId)
-                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
 
+    public LoraEntity findLoraById(
+            Long loraId
+    ) {
+        return loraRepository
+                .findById(loraId)
+                .orElseThrow(
+                        () ->
+                                new RuntimeException(
+                                        "Lora ID: " +
+                                                loraId +
+                                                " not found"
+                                )
+                );
     }
 
-    public List<LoraResponse> getAllLoras()  {
-        return loraRepository.findAll()
+
+    public List<LoraResponse> getAllLoras() {
+        return loraRepository
+                .findAll()
                 .stream()
-                .map(LoraEntity -> new LoraResponse(LoraEntity))
-                .collect(Collectors.toList());
+                .map(LoraResponse::new)
+                .collect(
+                        Collectors.toList()
+                );
     }
+
+
+    // =========================================================
+    // PAGINATION / SORTING
+    // =========================================================
+
+    private int normalizePageNumber(
+            int page
+    ) {
+        return Math.max(
+                page,
+                0
+        );
+    }
+
+
+    private int normalizePageSize(
+            int size
+    ) {
+        if (size <= 0) {
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        return Math.min(
+                size,
+                MAX_PAGE_SIZE
+        );
+    }
+
+
+    private String normalizeSortBy(
+            String sortBy
+    ) {
+        if (
+                sortBy == null ||
+                        sortBy.isBlank()
+        ) {
+            return DEFAULT_SORT_BY;
+        }
+
+        return switch (sortBy) {
+
+            case "loraName" ->
+                    "loraName";
+
+            case "creator" ->
+                    "creator";
+
+            case "createdDate" ->
+                    "createdDate";
+
+            default ->
+                    DEFAULT_SORT_BY;
+        };
+    }
+
+
+    private Sort.Direction normalizeSortDirection(
+            String sortDirection
+    ) {
+        if (
+                sortDirection != null &&
+                        sortDirection.equalsIgnoreCase(
+                                "asc"
+                        )
+        ) {
+            return Sort.Direction.ASC;
+        }
+
+        return Sort.Direction.DESC;
+    }
+
+
+    private Pageable createPageable(
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection
+    ) {
+        int normalizedPage =
+                normalizePageNumber(
+                        page
+                );
+
+        int normalizedSize =
+                normalizePageSize(
+                        size
+                );
+
+        String normalizedSortBy =
+                normalizeSortBy(
+                        sortBy
+                );
+
+        Sort.Direction direction =
+                normalizeSortDirection(
+                        sortDirection
+                );
+
+        Sort sort =
+                Sort.by(
+                        direction,
+                        normalizedSortBy
+                );
+
+        return PageRequest.of(
+                normalizedPage,
+                normalizedSize,
+                sort
+        );
+    }
+
+
+    // =========================================================
+    // SEARCH
+    // =========================================================
 
     public Page<LoraResponse> searchLoras(
             String keyword,
@@ -166,10 +540,17 @@ public class LoraService {
             String subcategory,
             Boolean favorite,
             int page,
-            int size
+            int size,
+            String sortBy,
+            String sortDirection
     ) {
         Pageable pageable =
-                createPageable(page, size);
+                createPageable(
+                        page,
+                        size,
+                        sortBy,
+                        sortDirection
+                );
 
         Specification<LoraEntity> specification =
                 (
@@ -181,7 +562,6 @@ public class LoraService {
                     List<Predicate> predicates =
                             new ArrayList<>();
 
-
                     if (
                             keyword != null &&
                                     !keyword.isBlank()
@@ -189,7 +569,9 @@ public class LoraService {
                         predicates.add(
                                 criteriaBuilder.like(
                                         criteriaBuilder.lower(
-                                                root.get("loraName")
+                                                root.get(
+                                                        "loraName"
+                                                )
                                         ),
                                         "%" +
                                                 keyword
@@ -200,14 +582,12 @@ public class LoraService {
                         );
                     }
 
-
                     addBaseModelPredicate(
                             predicates,
                             baseModel,
                             root,
                             criteriaBuilder
                     );
-
 
                     addCategoryPredicate(
                             predicates,
@@ -216,7 +596,6 @@ public class LoraService {
                             criteriaBuilder
                     );
 
-
                     addSubcategoryPredicate(
                             predicates,
                             subcategory,
@@ -224,10 +603,16 @@ public class LoraService {
                             criteriaBuilder
                     );
 
-                    if (Boolean.TRUE.equals(favorite)) {
+                    if (
+                            Boolean.TRUE.equals(
+                                    favorite
+                            )
+                    ) {
                         predicates.add(
                                 criteriaBuilder.isTrue(
-                                        root.get("favorite")
+                                        root.get(
+                                                "favorite"
+                                        )
                                 )
                         );
                     }
@@ -251,64 +636,93 @@ public class LoraService {
     }
 
 
-    private int normalizePageNumber(int page) {
-        return Math.max(page, 0);
+    // =========================================================
+    // FAVORITES
+    // =========================================================
+
+    public Page<LoraResponse> getFavoriteLoras(
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection
+    ) {
+        Pageable pageable =
+                createPageable(
+                        page,
+                        size,
+                        sortBy,
+                        sortDirection
+                );
+
+        Page<LoraEntity> entityPage =
+                loraRepository
+                        .findByFavoriteTrue(
+                                pageable
+                        );
+
+        return entityPage.map(
+                LoraResponse::new
+        );
     }
 
-    private int normalizePageSize(int size) {
-        if (size <= 0) {
-            return DEFAULT_PAGE_SIZE;
-        }
 
-        return Math.min(size, MAX_PAGE_SIZE);
+    public LoraResponse toggleFavorite(
+            Long loraId
+    ) {
+        LoraEntity loraEntity =
+                loraRepository
+                        .findById(loraId)
+                        .orElseThrow(
+                                () ->
+                                        new RuntimeException(
+                                                "Lora ID: " +
+                                                        loraId +
+                                                        " not found"
+                                        )
+                        );
+
+        loraEntity.setFavorite(
+                !loraEntity.isFavorite()
+        );
+
+        loraEntity.setLastUpdated(
+                LocalDateTime.now()
+        );
+
+        LoraEntity savedLora =
+                loraRepository.save(
+                        loraEntity
+                );
+
+        return new LoraResponse(
+                savedLora
+        );
     }
 
-    private Pageable createPageable(int page, int size) {
-        int normalizedPage = normalizePageNumber(page);
-        int normalizedSize = normalizePageSize(size);
-
-        return PageRequest.of(normalizedPage, normalizedSize, Sort.by(Sort.Direction.DESC, "createdDate"));
-    }
-
-
-
-    public Page<LoraResponse> getFavoriteLoras(int page, int size) {
-
-
-        Pageable pageable = createPageable(page, size);
-
-        Page<LoraEntity> entityPage = loraRepository.findByFavoriteTrue(pageable);
-
-        return entityPage.map(LoraResponse::new);
-
-    }
-
-    public LoraResponse toggleFavorite(Long loraId) {
-        LoraEntity loraEntity = loraRepository.findById(loraId)
-                .orElseThrow(() -> new RuntimeException("Lora ID: " + loraId + " not found"));
-
-        loraEntity.setFavorite(!loraEntity.isFavorite());
-        loraEntity.setLastUpdated(LocalDateTime.now());
-
-        LoraEntity savedLora = loraRepository.save(loraEntity);
-        return new LoraResponse(savedLora);
-    }
 
     public List<LoraCategory> getCategories() {
-        return Arrays.asList(LoraCategory.values());
+        return Arrays.asList(
+                LoraCategory.values()
+        );
     }
 
 
-
-
+    // =========================================================
+    // IMPORT
+    // =========================================================
 
     private enum ImportResult {
         IMPORTED,
         SKIPPED
     }
 
-    public ImportSummaryResponse importLorasFromFolder(String folderPath) {
-        printLorasMissingMetadata(folderPath);
+
+    public ImportSummaryResponse importLorasFromFolder(
+            String folderPath
+    ) {
+        printLorasMissingMetadata(
+                folderPath
+        );
 
         int scanned = 0;
         int imported = 0;
@@ -316,108 +730,295 @@ public class LoraService {
         int failed = 0;
 
         try {
-            List<Path> metadataFiles = Files.walk(Paths.get(folderPath))
-                    .filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".metadata.json"))
-                    .toList();
+            List<Path> metadataFiles =
+                    Files.walk(
+                                    Paths.get(
+                                            folderPath
+                                    )
+                            )
+                            .filter(
+                                    Files::isRegularFile
+                            )
+                            .filter(
+                                    path ->
+                                            path
+                                                    .toString()
+                                                    .endsWith(
+                                                            ".metadata.json"
+                                                    )
+                            )
+                            .toList();
 
-            scanned = metadataFiles.size();
+            scanned =
+                    metadataFiles.size();
 
-            for (Path metadataFile : metadataFiles) {
+            for (
+                    Path metadataFile :
+                    metadataFiles
+            ) {
                 try {
-                    ImportResult result = importSingleMetadataFile(metadataFile);
+                    ImportResult result =
+                            importSingleMetadataFile(
+                                    metadataFile
+                            );
 
-                    if (result == ImportResult.IMPORTED) {
+                    if (
+                            result ==
+                                    ImportResult.IMPORTED
+                    ) {
                         imported++;
-                    } else if (result == ImportResult.SKIPPED) {
+                    } else if (
+                            result ==
+                                    ImportResult.SKIPPED
+                    ) {
                         skipped++;
                     }
+
                 } catch (Exception e) {
                     failed++;
-                    System.out.println("Failed to import: " + metadataFile);
+
+                    System.out.println(
+                            "Failed to import: " +
+                                    metadataFile
+                    );
+
                     e.printStackTrace();
                 }
             }
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to scan folder: " + folderPath, e);
+            throw new RuntimeException(
+                    "Failed to scan folder: " +
+                            folderPath,
+                    e
+            );
         }
-        return new ImportSummaryResponse(scanned, imported, skipped, failed);
+
+        return new ImportSummaryResponse(
+                scanned,
+                imported,
+                skipped,
+                failed
+        );
     }
 
 
-    private ImportResult importSingleMetadataFile(Path metadataFile) throws IOException {
-        JsonNode root = objectMapper.readTree(metadataFile.toFile());
+    private ImportResult importSingleMetadataFile(
+            Path metadataFile
+    ) throws IOException {
+        JsonNode root =
+                objectMapper.readTree(
+                        metadataFile.toFile()
+                );
 
-        String sha256 = getText(root, "sha256");
+        String sha256 =
+                getText(
+                        root,
+                        "sha256"
+                );
 
-        if (sha256 != null && loraRepository.existsBySha256(sha256)) {
+        if (
+                sha256 != null &&
+                        loraRepository.existsBySha256(
+                                sha256
+                        )
+        ) {
             return ImportResult.SKIPPED;
         }
 
-        List<String> previewPaths = resolvePreviewPaths(root);
+        List<String> previewPaths =
+                resolvePreviewPaths(
+                        root
+                );
 
-        LoraEntity entity = new LoraEntity();
+        LoraEntity entity =
+                new LoraEntity();
 
-        entity.setLoraName(resolveLoraName(root));
-        entity.setVersion(normalizeVersion(getText(root.path("civitai"), "name")));
-        entity.setCreator(resolveCreator(root));
-        entity.setUrl(resolveUrl(root));
-        entity.setCreatedDate(LocalDateTime.now());
-        entity.setLastUpdated(LocalDateTime.now());
-        entity.setCategory(resolveCategory(root));
-        entity.setSubCategory(resolveSubCategory(root));
-        entity.setBaseModel(resolveBaseModel(root));
-        entity.setPositivePrompt(resolvePositivePrompt(root));
-        entity.setNegativePrompt(resolveNegativePrompt(root));
-        entity.setSeedNumber(resolveSeedNumber(root));
+        entity.setLoraName(
+                resolveLoraName(
+                        root
+                )
+        );
+
+        entity.setVersion(
+                normalizeVersion(
+                        getText(
+                                root.path(
+                                        "civitai"
+                                ),
+                                "name"
+                        )
+                )
+        );
+
+        entity.setCreator(
+                resolveCreator(
+                        root
+                )
+        );
+
+        entity.setUrl(
+                resolveUrl(
+                        root
+                )
+        );
+
+        entity.setCreatedDate(
+                LocalDateTime.now()
+        );
+
+        entity.setLastUpdated(
+                LocalDateTime.now()
+        );
+
+        entity.setCategory(
+                resolveCategory(
+                        root
+                )
+        );
+
+        entity.setSubCategory(
+                resolveSubCategory(
+                        root
+                )
+        );
+
+        entity.setBaseModel(
+                resolveBaseModel(
+                        root
+                )
+        );
+
+        entity.setPositivePrompt(
+                resolvePositivePrompt(
+                        root
+                )
+        );
+
+        entity.setNegativePrompt(
+                resolveNegativePrompt(
+                        root
+                )
+        );
+
+        entity.setSeedNumber(
+                resolveSeedNumber(
+                        root
+                )
+        );
+
         entity.setNotes(null);
         entity.setFavorite(false);
 
-        entity.setFilePath(loraImageService.getPrimaryPreviewPath(previewPaths));
-        entity.setModelFilePath(getText(root, "file_path"));
-        entity.setSha256(sha256);
+        entity.setFilePath(
+                loraImageService
+                        .getPrimaryPreviewPath(
+                                previewPaths
+                        )
+        );
 
-        LoraEntity savedLora = loraRepository.save(entity);
+        entity.setModelFilePath(
+                getText(
+                        root,
+                        "file_path"
+                )
+        );
 
-        loraImageService.saveAdditionalPreviewImages(savedLora, previewPaths);
+        entity.setSha256(
+                sha256
+        );
+
+        LoraEntity savedLora =
+                loraRepository.save(
+                        entity
+                );
+
+        loraImageService
+                .saveAdditionalPreviewImages(
+                        savedLora,
+                        previewPaths
+                );
 
         return ImportResult.IMPORTED;
     }
 
-    private String getText(JsonNode node, String fieldName) {
-        JsonNode value = node.get(fieldName);
 
-        if (value == null || value.isNull()) {
+    private String getText(
+            JsonNode node,
+            String fieldName
+    ) {
+        JsonNode value =
+                node.get(
+                        fieldName
+                );
+
+        if (
+                value == null ||
+                        value.isNull()
+        ) {
             return null;
         }
 
-        String text = value.asText();
+        String text =
+                value.asText();
 
-        return text.isBlank() ? null : text;
+        return text.isBlank()
+                ? null
+                : text;
     }
 
-    private String resolveLoraName(JsonNode root) {
-        String fileName = getText(root, "file_name");
+
+    private String resolveLoraName(
+            JsonNode root
+    ) {
+        String fileName =
+                getText(
+                        root,
+                        "file_name"
+                );
 
         if (fileName != null) {
-            String loraName = fileName;
+            String loraName =
+                    fileName;
 
-            int byIndex = loraName.toLowerCase().lastIndexOf(" by ");
+            int byIndex =
+                    loraName
+                            .toLowerCase()
+                            .lastIndexOf(
+                                    " by "
+                            );
 
             if (byIndex != -1) {
-                loraName = loraName.substring(0, byIndex);
+                loraName =
+                        loraName.substring(
+                                0,
+                                byIndex
+                        );
             }
 
-            int versionIndex = loraName.toLowerCase().lastIndexOf(" v");
+            int versionIndex =
+                    loraName
+                            .toLowerCase()
+                            .lastIndexOf(
+                                    " v"
+                            );
 
             if (versionIndex != -1) {
-                loraName = loraName.substring(0, versionIndex);
+                loraName =
+                        loraName.substring(
+                                0,
+                                versionIndex
+                        );
             }
 
             return loraName.trim();
         }
 
-        String modelName = getText(root, "model_name");
+        String modelName =
+                getText(
+                        root,
+                        "model_name"
+                );
 
         if (modelName != null) {
             return modelName;
@@ -426,104 +1027,215 @@ public class LoraService {
         return "Untitled LoRA";
     }
 
-    private String resolveCreator(JsonNode root) {
-        String fileName = getText(root, "file_name");
 
-        if (fileName == null || fileName.isBlank()) {
+    private String resolveCreator(
+            JsonNode root
+    ) {
+        String fileName =
+                getText(
+                        root,
+                        "file_name"
+                );
+
+        if (
+                fileName == null ||
+                        fileName.isBlank()
+        ) {
             return "Unknown Creator";
         }
 
-        String[] parts = fileName.split("(?i)\\s+by\\s+", 2);
+        String[] parts =
+                fileName.split(
+                        "(?i)\\s+by\\s+",
+                        2
+                );
 
         if (parts.length < 2) {
             return "Unknown Creator";
         }
 
-        String creator = parts[1].trim();
+        String creator =
+                parts[1].trim();
 
         return creator.isBlank()
                 ? "Unknown Creator"
                 : creator;
     }
 
-    private String resolveUrl(JsonNode root) {
-        JsonNode civitai = root.path("civitai");
 
-        String downloadUrl = getText(civitai, "downloadUrl");
+    private String resolveUrl(
+            JsonNode root
+    ) {
+        JsonNode civitai =
+                root.path(
+                        "civitai"
+                );
+
+        String downloadUrl =
+                getText(
+                        civitai,
+                        "downloadUrl"
+                );
 
         if (downloadUrl != null) {
             return downloadUrl;
         }
 
-        JsonNode files = civitai.path("files");
+        JsonNode files =
+                civitai.path(
+                        "files"
+                );
 
-        if (files.isArray() && files.size() > 0) {
-            return getText(files.get(0), "downloadUrl");
+        if (
+                files.isArray() &&
+                        files.size() > 0
+        ) {
+            return getText(
+                    files.get(0),
+                    "downloadUrl"
+            );
         }
 
         return null;
     }
 
-    private LoraCategory resolveCategory(JsonNode root) {
-        String filePath = getText(root, "file_path");
+
+    private LoraCategory resolveCategory(
+            JsonNode root
+    ) {
+        String filePath =
+                getText(
+                        root,
+                        "file_path"
+                );
 
         if (filePath == null) {
             return LoraCategory.CONCEPT;
         }
 
-        String normalized = filePath.toLowerCase();
+        String normalized =
+                filePath.toLowerCase();
 
-        if (normalized.contains("/character/") || normalized.contains("\\character\\")) {
+        if (
+                normalized.contains(
+                        "/character/"
+                ) ||
+                        normalized.contains(
+                                "\\character\\"
+                        )
+        ) {
             return LoraCategory.CHARACTER;
         }
 
-        if (normalized.contains("/style/") || normalized.contains("\\style\\")) {
+        if (
+                normalized.contains(
+                        "/style/"
+                ) ||
+                        normalized.contains(
+                                "\\style\\"
+                        )
+        ) {
             return LoraCategory.STYLE;
         }
 
-        if (normalized.contains("/outfit/") || normalized.contains("\\outfit\\")) {
+        if (
+                normalized.contains(
+                        "/outfit/"
+                ) ||
+                        normalized.contains(
+                                "\\outfit\\"
+                        )
+        ) {
             return LoraCategory.OUTFIT;
         }
 
-        if (normalized.contains("/pose/") || normalized.contains("\\pose\\")) {
+        if (
+                normalized.contains(
+                        "/pose/"
+                ) ||
+                        normalized.contains(
+                                "\\pose\\"
+                        )
+        ) {
             return LoraCategory.POSES;
         }
 
-        if (normalized.contains("/background/") || normalized.contains("\\background\\")) {
+        if (
+                normalized.contains(
+                        "/background/"
+                ) ||
+                        normalized.contains(
+                                "\\background\\"
+                        )
+        ) {
             return LoraCategory.BACKGROUND;
         }
 
-        if (normalized.contains("/slider/") || normalized.contains("\\slider\\")) {
+        if (
+                normalized.contains(
+                        "/slider/"
+                ) ||
+                        normalized.contains(
+                                "\\slider\\"
+                        )
+        ) {
             return LoraCategory.SLIDER;
         }
 
-        if (normalized.contains("/enhancer/") || normalized.contains("\\enhancer\\")) {
+        if (
+                normalized.contains(
+                        "/enhancer/"
+                ) ||
+                        normalized.contains(
+                                "\\enhancer\\"
+                        )
+        ) {
             return LoraCategory.ENHANCER;
         }
 
         return LoraCategory.CONCEPT;
     }
 
-    private String resolveSubCategory(JsonNode root) {
-        String filePath = getText(root, "file_path");
+
+    private String resolveSubCategory(
+            JsonNode root
+    ) {
+        String filePath =
+                getText(
+                        root,
+                        "file_path"
+                );
 
         if (filePath == null) {
             return null;
         }
 
-        Path path = Paths.get(filePath);
+        Path path =
+                Paths.get(
+                        filePath
+                );
 
-        Path parent = path.getParent();
+        Path parent =
+                path.getParent();
 
         if (parent == null) {
             return null;
         }
 
-        return parent.getFileName().toString();
+        return parent
+                .getFileName()
+                .toString();
     }
 
-    private String resolveBaseModel(JsonNode root) {
-        String baseModel = getText(root, "base_model");
+
+    private String resolveBaseModel(
+            JsonNode root
+    ) {
+        String baseModel =
+                getText(
+                        root,
+                        "base_model"
+                );
 
         if (baseModel != null) {
             return baseModel;
@@ -533,54 +1245,122 @@ public class LoraService {
     }
 
 
-    private String resolvePositivePrompt(JsonNode root) {
+    private String resolvePositivePrompt(
+            JsonNode root
+    ) {
         JsonNode trainedWords =
-                root.path("civitai").path("trainedWords");
+                root
+                        .path(
+                                "civitai"
+                        )
+                        .path(
+                                "trainedWords"
+                        );
 
-        if (!trainedWords.isArray() || trainedWords.isEmpty()) {
+        if (
+                !trainedWords.isArray() ||
+                        trainedWords.isEmpty()
+        ) {
             return null;
         }
 
-        List<String> trainedWordGroups = new ArrayList<>();
+        List<String> trainedWordGroups =
+                new ArrayList<>();
 
-        for (JsonNode wordNode : trainedWords) {
+        for (
+                JsonNode wordNode :
+                trainedWords
+        ) {
             if (!wordNode.isTextual()) {
                 continue;
             }
 
-            String value = wordNode
-                    .asText()
-                    .trim()
-                    .replaceAll("^,+|,+$", "")
-                    .trim();
+            String value =
+                    wordNode
+                            .asText()
+                            .trim()
+                            .replaceAll(
+                                    "^,+|,+$",
+                                    ""
+                            )
+                            .trim();
 
             if (!value.isEmpty()) {
-                trainedWordGroups.add(value);
+                trainedWordGroups.add(
+                        value
+                );
             }
         }
 
         return trainedWordGroups.isEmpty()
                 ? null
-                : String.join(", ", trainedWordGroups);
+                : String.join(
+                ", ",
+                trainedWordGroups
+        );
     }
 
-    private String resolveNegativePrompt(JsonNode root) {
-        JsonNode images = root.path("civitai").path("images");
 
-        if (images.isArray() && images.size() > 0) {
-            return getText(images.get(0).path("meta"), "negativePrompt");
+    private String resolveNegativePrompt(
+            JsonNode root
+    ) {
+        JsonNode images =
+                root
+                        .path(
+                                "civitai"
+                        )
+                        .path(
+                                "images"
+                        );
+
+        if (
+                images.isArray() &&
+                        images.size() > 0
+        ) {
+            return getText(
+                    images
+                            .get(0)
+                            .path(
+                                    "meta"
+                            ),
+                    "negativePrompt"
+            );
         }
 
         return null;
     }
 
-    private Long resolveSeedNumber(JsonNode root) {
-        JsonNode images = root.path("civitai").path("images");
 
-        if (images.isArray() && images.size() > 0) {
-            JsonNode seed = images.get(0).path("meta").get("seed");
+    private Long resolveSeedNumber(
+            JsonNode root
+    ) {
+        JsonNode images =
+                root
+                        .path(
+                                "civitai"
+                        )
+                        .path(
+                                "images"
+                        );
 
-            if (seed != null && seed.canConvertToLong()) {
+        if (
+                images.isArray() &&
+                        images.size() > 0
+        ) {
+            JsonNode seed =
+                    images
+                            .get(0)
+                            .path(
+                                    "meta"
+                            )
+                            .get(
+                                    "seed"
+                            );
+
+            if (
+                    seed != null &&
+                            seed.canConvertToLong()
+            ) {
                 return seed.asLong();
             }
         }
@@ -589,201 +1369,471 @@ public class LoraService {
     }
 
 
+    private String resolveNotes(
+            JsonNode root
+    ) {
+        StringBuilder notes =
+                new StringBuilder();
 
-    private String resolveNotes(JsonNode root) {
-        StringBuilder notes = new StringBuilder();
-
-        String baseModel = getText(root, "base_model");
+        String baseModel =
+                getText(
+                        root,
+                        "base_model"
+                );
 
         if (baseModel != null) {
-            notes.append("Base model: ").append(baseModel).append("\n");
+            notes
+                    .append(
+                            "Base model: "
+                    )
+                    .append(
+                            baseModel
+                    )
+                    .append(
+                            "\n"
+                    );
         }
 
-        JsonNode trainedWords = root.path("civitai").path("trainedWords");
+        JsonNode trainedWords =
+                root
+                        .path(
+                                "civitai"
+                        )
+                        .path(
+                                "trainedWords"
+                        );
 
-        if (trainedWords.isArray() && trainedWords.size() > 0) {
-            notes.append("Trained words: ");
+        if (
+                trainedWords.isArray() &&
+                        trainedWords.size() > 0
+        ) {
+            notes.append(
+                    "Trained words: "
+            );
 
-            for (JsonNode word : trainedWords) {
-                notes.append(word.asText()).append(" ");
+            for (
+                    JsonNode word :
+                    trainedWords
+            ) {
+                notes
+                        .append(
+                                word.asText()
+                        )
+                        .append(
+                                " "
+                        );
             }
 
-            notes.append("\n");
+            notes.append(
+                    "\n"
+            );
         }
 
-        String modelFilePath = getText(root, "file_path");
+        String modelFilePath =
+                getText(
+                        root,
+                        "file_path"
+                );
 
         if (modelFilePath != null) {
-            notes.append("Model file path: ").append(modelFilePath).append("\n");
+            notes
+                    .append(
+                            "Model file path: "
+                    )
+                    .append(
+                            modelFilePath
+                    )
+                    .append(
+                            "\n"
+                    );
         }
 
-        String description = getText(root.path("civitai"), "description");
+        String description =
+                getText(
+                        root.path(
+                                "civitai"
+                        ),
+                        "description"
+                );
 
         if (description != null) {
-            notes.append("Description: ").append(description);
+            notes
+                    .append(
+                            "Description: "
+                    )
+                    .append(
+                            description
+                    );
         }
 
-        return notes.isEmpty() ? null : notes.toString();
+        return notes.isEmpty()
+                ? null
+                : notes.toString();
     }
 
-    private List<String> resolvePreviewPaths(JsonNode root) {
-        List<String> previewPaths = new ArrayList<>();
-        JsonNode previews = root.path("civitai").path("images");
+
+    private List<String> resolvePreviewPaths(
+            JsonNode root
+    ) {
+        List<String> previewPaths =
+                new ArrayList<>();
+
+        JsonNode previews =
+                root
+                        .path(
+                                "civitai"
+                        )
+                        .path(
+                                "images"
+                        );
 
         if (previews.isArray()) {
-            for (JsonNode preview : previews) {
-                String previewUrl = getText(preview, "url");
 
-                if (previewUrl == null || previewPaths.contains(previewUrl)) {
+            for (
+                    JsonNode preview :
+                    previews
+            ) {
+                String previewUrl =
+                        getText(
+                                preview,
+                                "url"
+                        );
+
+                if (
+                        previewUrl == null ||
+                                previewPaths.contains(
+                                        previewUrl
+                                )
+                ) {
                     continue;
                 }
 
-                previewPaths.add(previewUrl);
+                previewPaths.add(
+                        previewUrl
+                );
 
-                if (previewPaths.size() >= MAX_PREVIEW_IMAGES) {
+                if (
+                        previewPaths.size() >=
+                                MAX_PREVIEW_IMAGES
+                ) {
                     break;
                 }
             }
         }
+
         return previewPaths;
     }
 
 
+    // =========================================================
+    // IMPORT FILE HELPERS
+    // =========================================================
 
+    private boolean isSafetensorsFile(
+            Path file
+    ) {
+        String fileName =
+                file
+                        .getFileName()
+                        .toString()
+                        .toLowerCase();
 
-
-    private boolean isSafetensorsFile(Path file) {
-        String fileName = file
-                .getFileName()
-                .toString()
-                .toLowerCase();
-
-        return fileName.endsWith(".safetensors");
+        return fileName.endsWith(
+                ".safetensors"
+        );
     }
 
-    private boolean isMetadataFileMissing(Path modelFile) {
-        Path expectedMetadataFile = resolveMetadataPath(modelFile);
 
-        return Files.notExists(expectedMetadataFile);
+    private boolean isMetadataFileMissing(
+            Path modelFile
+    ) {
+        Path expectedMetadataFile =
+                resolveMetadataPath(
+                        modelFile
+                );
+
+        return Files.notExists(
+                expectedMetadataFile
+        );
     }
 
 
+    private String removeSafetensorsExtension(
+            String fileName
+    ) {
+        String extension =
+                ".safetensors";
 
-    private String removeSafetensorsExtension(String fileName) {
-        String extension = ".safetensors";
-
-        if (!fileName.toLowerCase().endsWith(extension)) {
-            throw new IllegalArgumentException("Not a safetensors file: " + fileName);
+        if (
+                !fileName
+                        .toLowerCase()
+                        .endsWith(
+                                extension
+                        )
+        ) {
+            throw new IllegalArgumentException(
+                    "Not a safetensors file: " +
+                            fileName
+            );
         }
-        return fileName.substring(0, fileName.length() - extension.length());
+
+        return fileName.substring(
+                0,
+                fileName.length() -
+                        extension.length()
+        );
     }
 
-    private Path resolveMetadataPath(Path modelFile) {
-        String modelFileName = modelFile
-                .getFileName()
-                .toString();
 
-        String baseName = removeSafetensorsExtension(modelFileName);
+    private Path resolveMetadataPath(
+            Path modelFile
+    ) {
+        String modelFileName =
+                modelFile
+                        .getFileName()
+                        .toString();
 
-        String metadataFileName = baseName + ".metadata.json";
+        String baseName =
+                removeSafetensorsExtension(
+                        modelFileName
+                );
+
+        String metadataFileName =
+                baseName +
+                        ".metadata.json";
 
         return modelFile
                 .getParent()
-                .resolve(metadataFileName);
+                .resolve(
+                        metadataFileName
+                );
     }
 
-    private List<Path> findLorasMissingMetadata(String folderPath) {
-        Path rootFolder = Paths.get(folderPath);
 
-        if (!Files.exists(rootFolder)) {
-            throw new IllegalArgumentException("Folder does not exist: " + folderPath);
+    private List<Path> findLorasMissingMetadata(
+            String folderPath
+    ) {
+        Path rootFolder =
+                Paths.get(
+                        folderPath
+                );
+
+        if (
+                !Files.exists(
+                        rootFolder
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "Folder does not exist: " +
+                            folderPath
+            );
         }
 
-        if (!Files.isDirectory(rootFolder)) {
-            throw new IllegalArgumentException("Path is not a folder: " + folderPath);
+        if (
+                !Files.isDirectory(
+                        rootFolder
+                )
+        ) {
+            throw new IllegalArgumentException(
+                    "Path is not a folder: " +
+                            folderPath
+            );
         }
 
-        try (Stream<Path> paths = Files.walk(rootFolder)) {
+        try (
+                Stream<Path> paths =
+                        Files.walk(
+                                rootFolder
+                        )
+        ) {
             return paths
-                    .filter(Files::isRegularFile)
-                    .filter(this::isSafetensorsFile)
-                    .filter(this::isMetadataFileMissing)
+                    .filter(
+                            Files::isRegularFile
+                    )
+                    .filter(
+                            this::isSafetensorsFile
+                    )
+                    .filter(
+                            this::isMetadataFileMissing
+                    )
                     .toList();
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to scan folder for LoRA files: " + folderPath);
+            throw new RuntimeException(
+                    "Failed to scan folder for LoRA files: " +
+                            folderPath
+            );
         }
     }
 
-    private void printLorasMissingMetadata(String folderPath) {
-        List<Path> missingMetadataFiles = findLorasMissingMetadata(folderPath);
 
-        System.out.println("LoRAs missing metadata: " + missingMetadataFiles.size());
+    private void printLorasMissingMetadata(
+            String folderPath
+    ) {
+        List<Path> missingMetadataFiles =
+                findLorasMissingMetadata(
+                        folderPath
+                );
 
-        missingMetadataFiles.forEach(modelFile -> {
-            System.out.println("Model: " + modelFile);
-
-            System.out.println("Expected JSON: " + resolveMetadataPath(modelFile));
-        });
-    }
-
-
-
-
-
-    public Page<LoraResponse> getLoras(int page, int size) {
-        Pageable pageable = createPageable(page, size);
-
-        Page<LoraEntity> entityPage = loraRepository.findAll(pageable);
-
-        return entityPage.map(LoraResponse::new);
-    }
-
-    public Page<LoraResponse> getLorasByCategory(LoraCategory category, int page, int size) {
-
-        Pageable pageable = createPageable(page, size);
-
-        Page<LoraEntity> entityPage = loraRepository.findByCategory(category, pageable);
-
-        return entityPage.map(LoraResponse::new);
-    }
-
-    public Page<LoraResponse> getLorasByGroup(String groupName, int page, int size) {
-
-        Pageable pageable = createPageable(page, size);
-
-        Page<LoraEntity> entityPage = loraRepository.findByGroupNameIgnoreCase(
-                groupName,
-                pageable
+        System.out.println(
+                "LoRAs missing metadata: " +
+                        missingMetadataFiles.size()
         );
 
-        return entityPage.map(LoraResponse::new);
+        missingMetadataFiles.forEach(
+                modelFile -> {
 
+                    System.out.println(
+                            "Model: " +
+                                    modelFile
+                    );
+
+                    System.out.println(
+                            "Expected JSON: " +
+                                    resolveMetadataPath(
+                                            modelFile
+                                    )
+                    );
+                }
+        );
     }
 
 
-    private String normalizeVersion(String version) {
-        if (version == null || version.isBlank()) {
+    // =========================================================
+    // STANDARD GALLERY QUERIES
+    // =========================================================
+
+    public Page<LoraResponse> getLoras(
+            int page,
+            int size,
+            String sortBy,
+            String sortDirection
+    ) {
+        Pageable pageable =
+                createPageable(
+                        page,
+                        size,
+                        sortBy,
+                        sortDirection
+                );
+
+        Page<LoraEntity> entityPage =
+                loraRepository.findAll(
+                        pageable
+                );
+
+        return entityPage.map(
+                LoraResponse::new
+        );
+    }
+
+
+    public Page<LoraResponse> getLorasByCategory(
+            LoraCategory category,
+            int page,
+            int size
+    ) {
+        Pageable pageable =
+                createPageable(
+                        page,
+                        size,
+                        DEFAULT_SORT_BY,
+                        DEFAULT_SORT_DIRECTION
+                );
+
+        Page<LoraEntity> entityPage =
+                loraRepository.findByCategory(
+                        category,
+                        pageable
+                );
+
+        return entityPage.map(
+                LoraResponse::new
+        );
+    }
+
+
+    public Page<LoraResponse> getLorasByGroup(
+            String groupName,
+            int page,
+            int size
+    ) {
+        Pageable pageable =
+                createPageable(
+                        page,
+                        size,
+                        DEFAULT_SORT_BY,
+                        DEFAULT_SORT_DIRECTION
+                );
+
+        Page<LoraEntity> entityPage =
+                loraRepository
+                        .findByGroupNameIgnoreCase(
+                                groupName,
+                                pageable
+                        );
+
+        return entityPage.map(
+                LoraResponse::new
+        );
+    }
+
+
+    // =========================================================
+    // GENERAL HELPERS
+    // =========================================================
+
+    private String normalizeVersion(
+            String version
+    ) {
+        if (
+                version == null ||
+                        version.isBlank()
+        ) {
             return "1";
         }
 
-        String normalizedVersion = version.trim();
+        String normalizedVersion =
+                version.trim();
 
-        if (normalizedVersion.startsWith("v") || normalizedVersion.startsWith("V")) {
-            normalizedVersion = normalizedVersion.substring(1).trim();
+        if (
+                normalizedVersion.startsWith(
+                        "v"
+                ) ||
+                        normalizedVersion.startsWith(
+                                "V"
+                        )
+        ) {
+            normalizedVersion =
+                    normalizedVersion
+                            .substring(1)
+                            .trim();
         }
 
-        if (normalizedVersion.isBlank()) {
+        if (
+                normalizedVersion.isBlank()
+        ) {
             return "1";
         }
 
         return normalizedVersion;
     }
 
-    private boolean hasFilterValue(String value) {
+
+    private boolean hasFilterValue(
+            String value
+    ) {
         return value != null
                 && !value.isBlank()
-                && !value.equalsIgnoreCase("ALL");
+                && !value.equalsIgnoreCase(
+                "ALL"
+        );
     }
+
+
+    // =========================================================
+    // FILTER PREDICATES
+    // =========================================================
 
     private void addBaseModelPredicate(
             List<Predicate> predicates,
@@ -791,19 +1841,26 @@ public class LoraService {
             jakarta.persistence.criteria.Root<LoraEntity> root,
             jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder
     ) {
-        if (!hasFilterValue(baseModel)) {
+        if (
+                !hasFilterValue(
+                        baseModel
+                )
+        ) {
             return;
         }
 
         predicates.add(
                 criteriaBuilder.equal(
                         criteriaBuilder.lower(
-                                root.get("baseModel")
+                                root.get(
+                                        "baseModel"
+                                )
                         ),
                         baseModel.toLowerCase()
                 )
         );
     }
+
 
     private void addCategoryPredicate(
             List<Predicate> predicates,
@@ -817,11 +1874,14 @@ public class LoraService {
 
         predicates.add(
                 criteriaBuilder.equal(
-                        root.get("category"),
+                        root.get(
+                                "category"
+                        ),
                         category
                 )
         );
     }
+
 
     private void addSubcategoryPredicate(
             List<Predicate> predicates,
@@ -829,19 +1889,26 @@ public class LoraService {
             jakarta.persistence.criteria.Root<LoraEntity> root,
             jakarta.persistence.criteria.CriteriaBuilder criteriaBuilder
     ) {
-        if (!hasFilterValue(subcategory)) {
+        if (
+                !hasFilterValue(
+                        subcategory
+                )
+        ) {
             return;
         }
 
         predicates.add(
                 criteriaBuilder.equal(
                         criteriaBuilder.lower(
-                                root.get("subCategory")
+                                root.get(
+                                        "subCategory"
+                                )
                         ),
                         subcategory.toLowerCase()
                 )
         );
     }
+
 
     private Specification<LoraEntity> buildFilterSpecification(
             String baseModel,
@@ -853,6 +1920,7 @@ public class LoraService {
                 query,
                 criteriaBuilder
         ) -> {
+
             List<Predicate> predicates =
                     new ArrayList<>();
 
@@ -885,34 +1953,19 @@ public class LoraService {
         };
     }
 
-    private Pageable buildFilterPageable(
-            int page,
-            int size
-    ) {
-        int safePage =
-                Math.max(page, 0);
 
-        int safeSize =
-                Math.min(
-                        Math.max(size, 1),
-                        36
-                );
+    // =========================================================
+    // FILTERED GALLERY
+    // =========================================================
 
-        return PageRequest.of(
-                safePage,
-                safeSize,
-                Sort.by(
-                        Sort.Direction.DESC,
-                        "createdDate"
-                )
-        );
-    }
     public Page<LoraResponse> getFilteredLoras(
             String baseModel,
             LoraCategory category,
             String subcategory,
             int page,
-            int size
+            int size,
+            String sortBy,
+            String sortDirection
     ) {
         Specification<LoraEntity> specification =
                 buildFilterSpecification(
@@ -922,9 +1975,11 @@ public class LoraService {
                 );
 
         Pageable pageable =
-                buildFilterPageable(
+                createPageable(
                         page,
-                        size
+                        size,
+                        sortBy,
+                        sortDirection
                 );
 
         Page<LoraEntity> entityPage =
@@ -938,6 +1993,3 @@ public class LoraService {
         );
     }
 }
-
-
-

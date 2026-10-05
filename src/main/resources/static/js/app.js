@@ -13,9 +13,12 @@ let totalElements = 0;
 let currentSearchResults = [];
 let isSearchActive = false;
 
-let appliedBaseModelFilter = "ALL"
+let appliedBaseModelFilter = "ALL";
 let appliedCategoryFilter = "ALL";
 let appliedSubcategoryFilter = "ALL";
+
+let appliedSortBy = null;
+let appliedSortDirection = null;
 
 let pageBeforeSearch = 0;
 let scrollPositionBeforeSearch = 0;
@@ -45,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setupGoToTopButton();
     setupStickyNavigationScroll();
 
+    setupSortModal();
     setupFilterModal();
     setupFilterSheetSwipe();
 
@@ -692,8 +696,11 @@ async function searchLoras(
         }
 
         const parameters = {
-            keyword: normalizedKeyword,
-            ...buildFilterParameters()
+            keyword:
+            normalizedKeyword,
+
+            ...buildFilterParameters(),
+            ...buildSortParameters()
         };
 
         if (
@@ -1050,11 +1057,13 @@ async function fetchFavoriteLoras(
     currentSearchResults = [];
 
     try {
-        const url = buildPaginatedUrl(
-            "/favorites",
-            page,
-            pageSize
-        );
+        const url =
+            buildPaginatedUrl(
+                "/favorites",
+                page,
+                pageSize,
+                buildSortParameters()
+            );
 
         await fetchPaginatedLoras(
             url,
@@ -1067,24 +1076,46 @@ async function fetchFavoriteLoras(
             error
         );
 
-        displayGalleryError(error);
+        displayGalleryError(
+            error
+        );
     }
 }
 
-async function fetchFilteredLoras(page = currentPage) {
+async function fetchFilteredLoras(
+    page = currentPage
+) {
     isSearchActive = false;
     currentSearchResults = [];
 
     try {
-        const filterParameters = buildFilterParameters();
+        const parameters = {
+            ...buildFilterParameters(),
+            ...buildSortParameters()
+        };
 
-        const url = buildPaginatedUrl("/filter", page, pageSize, filterParameters);
+        const url =
+            buildPaginatedUrl(
+                "/filter",
+                page,
+                pageSize,
+                parameters
+            );
 
-        await fetchPaginatedLoras(url, "Failed to fetch filtered LoRAs");
+        await fetchPaginatedLoras(
+            url,
+            "Failed to fetch filtered LoRAs"
+        );
+
     } catch (error) {
-        console.error("Gallery filter error: ", error);
+        console.error(
+            "Gallery filter error:",
+            error
+        );
 
-        displayGalleryError(error);
+        displayGalleryError(
+            error
+        );
     }
 }
 
@@ -2255,13 +2286,16 @@ function resetGalleryVideo(video) {
     }
 }
 
-function buildLoraPageUrl(page, size) {
-    const queryParameters = new URLSearchParams({
-        page: page.toString(),
-        size: size.toString()
-    });
-
-    return `${API_BASE_URL}?${queryParameters.toString()}`;
+function buildLoraPageUrl(
+    page,
+    size
+) {
+    return buildPaginatedUrl(
+        "",
+        page,
+        size,
+        buildSortParameters()
+    );
 }
 
 function validateLoraPageResponse(pageResponse) {
@@ -3558,4 +3592,356 @@ function setupExpandedTextModal() {
             }
         }
     );
+}
+
+// =========================
+// SORT
+// =========================
+
+function getSortElements() {
+    return {
+        modal:
+            document.getElementById(
+                "sortModal"
+            ),
+
+        backdrop:
+            document.getElementById(
+                "sortModalBackdrop"
+            ),
+
+        openButton:
+            document.getElementById(
+                "sortButton"
+            ),
+
+        closeButton:
+            document.getElementById(
+                "closeSortButton"
+            ),
+
+        buttonText:
+            document.getElementById(
+                "sortButtonText"
+            ),
+
+        buttonArrow:
+            document.getElementById(
+                "sortButtonArrow"
+            ),
+
+        optionButtons:
+            document.querySelectorAll(
+                ".sort-option-button"
+            )
+    };
+}
+
+
+function setupSortModal() {
+    const {
+        modal,
+        backdrop,
+        openButton,
+        closeButton,
+        optionButtons
+    } = getSortElements();
+
+    if (
+        !modal ||
+        !backdrop ||
+        !openButton ||
+        !closeButton ||
+        optionButtons.length === 0
+    ) {
+        return;
+    }
+
+    openButton.addEventListener(
+        "click",
+        openSortModal
+    );
+
+    closeButton.addEventListener(
+        "click",
+        closeSortModal
+    );
+
+    backdrop.addEventListener(
+        "click",
+        closeSortModal
+    );
+
+    optionButtons.forEach(
+        button => {
+            button.addEventListener(
+                "click",
+                async () => {
+                    const sortField =
+                        button.dataset.sortField;
+
+                    const sortLabel =
+                        button.dataset.sortLabel;
+
+                    await applySort(
+                        sortField,
+                        sortLabel
+                    );
+                }
+            );
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key !== "Escape" ||
+                modal.classList.contains(
+                    "hidden"
+                )
+            ) {
+                return;
+            }
+
+            closeSortModal();
+        }
+    );
+
+    updateSortDisplay();
+}
+
+
+function openSortModal() {
+    const {
+        modal,
+        openButton
+    } = getSortElements();
+
+    if (!modal) {
+        return;
+    }
+
+    modal.inert = false;
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+    modal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    openButton?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    updateSortDisplay();
+}
+
+
+function closeSortModal() {
+    const {
+        modal,
+        openButton
+    } = getSortElements();
+
+    if (!modal) {
+        return;
+    }
+
+    openButton?.focus();
+
+    modal.classList.add(
+        "hidden"
+    );
+
+    modal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    modal.inert = true;
+
+    openButton?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+}
+
+
+async function applySort(
+    sortField,
+    sortLabel
+) {
+    if (!sortField) {
+        return;
+    }
+
+    if (appliedSortBy === sortField) {
+        appliedSortDirection =
+            appliedSortDirection === "asc"
+                ? "desc"
+                : "asc";
+    } else {
+        appliedSortBy =
+            sortField;
+
+        appliedSortDirection =
+            "asc";
+    }
+
+    currentPage = 0;
+
+    updateSortDisplay(
+        sortLabel
+    );
+
+    closeSortModal();
+
+    await refreshCurrentView();
+}
+
+
+function buildSortParameters() {
+    if (
+        !appliedSortBy ||
+        !appliedSortDirection
+    ) {
+        return {};
+    }
+
+    return {
+        sortBy:
+        appliedSortBy,
+
+        sortDirection:
+        appliedSortDirection
+    };
+}
+
+
+function getSortLabel(
+    sortField
+) {
+    switch (sortField) {
+        case "loraName":
+            return "Name";
+
+        case "creator":
+            return "Creator";
+
+        case "createdDate":
+            return "Created";
+
+        default:
+            return "Sort";
+    }
+}
+
+
+function getSortArrow() {
+    if (
+        !appliedSortBy ||
+        !appliedSortDirection
+    ) {
+        return "";
+    }
+
+    return appliedSortDirection === "asc"
+        ? "↑"
+        : "↓";
+}
+
+
+function updateSortDisplay() {
+    const {
+        openButton,
+        buttonText,
+        buttonArrow,
+        optionButtons
+    } = getSortElements();
+
+    if (
+        !openButton ||
+        !buttonText ||
+        !buttonArrow
+    ) {
+        return;
+    }
+
+    const hasActiveSort =
+        Boolean(
+            appliedSortBy &&
+            appliedSortDirection
+        );
+
+    const label =
+        getSortLabel(
+            appliedSortBy
+        );
+
+    const arrow =
+        getSortArrow();
+
+    buttonText.textContent =
+        hasActiveSort
+            ? label
+            : "Sort";
+
+    buttonArrow.textContent =
+        arrow;
+
+    buttonArrow.classList.toggle(
+        "hidden",
+        !hasActiveSort
+    );
+
+    openButton.classList.toggle(
+        "active",
+        hasActiveSort
+    );
+
+
+    optionButtons.forEach(
+        button => {
+            const isActive =
+                button.dataset.sortField ===
+                appliedSortBy;
+
+            button.classList.toggle(
+                "active",
+                isActive
+            );
+
+            const arrowElement =
+                button.querySelector(
+                    ".sort-direction-arrow"
+                );
+
+            if (!arrowElement) {
+                return;
+            }
+
+            arrowElement.textContent =
+                isActive
+                    ? arrow
+                    : "";
+        }
+    );
+}
+
+if (appliedSortBy === sortField) {
+    appliedSortDirection =
+        appliedSortDirection === "asc"
+            ? "desc"
+            : "asc";
+} else {
+    appliedSortBy =
+        sortField;
+
+    appliedSortDirection =
+        "asc";
 }

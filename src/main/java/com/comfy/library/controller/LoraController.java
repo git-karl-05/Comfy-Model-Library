@@ -2,17 +2,14 @@ package com.comfy.library.controller;
 
 import com.comfy.library.dto.*;
 import com.comfy.library.entity.LoraCategory;
-import com.comfy.library.repository.LoraRepository;
 import com.comfy.library.service.LoraImageService;
 import com.comfy.library.service.LoraService;
-import org.apache.coyote.Response;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -22,47 +19,113 @@ public class LoraController {
     private final LoraService loraService;
     private final LoraImageService loraImageService;
 
-    public LoraController(LoraService loraService, LoraImageService loraImageService) {
+    public LoraController(
+            LoraService loraService,
+            LoraImageService loraImageService
+    ) {
         this.loraService = loraService;
         this.loraImageService = loraImageService;
     }
 
+
+    // =========================================================
+    // CREATE
+    // =========================================================
+
     @PostMapping
-    public ResponseEntity<LoraResponse> saveLora(@RequestBody CreateLoraRequest loraRequest) {
-        return ResponseEntity.ok(loraService.saveLora(loraRequest));
+    public ResponseEntity<LoraResponse> saveLora(
+            @RequestBody CreateLoraRequest loraRequest
+    ) {
+        return ResponseEntity.ok(
+                loraService.saveLora(
+                        loraRequest
+                )
+        );
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+
+    @PostMapping(
+            consumes =
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public LoraResponse saveLoraWithPreviewImage(
             @ModelAttribute CreateLoraRequest request,
-            @RequestParam(required = false)MultipartFile previewImage) {
-        return loraService.saveLoraWithPreviewImage(request, previewImage);
+            @RequestParam(required = false)
+            MultipartFile previewImage
+    ) {
+        return loraService
+                .saveLoraWithPreviewImage(
+                        request,
+                        previewImage
+                );
     }
 
-    @PutMapping(value = "/{loraId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+
+    // =========================================================
+    // UPDATE
+    // =========================================================
+
+    @PutMapping(
+            value = "/{loraId}",
+            consumes =
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+    )
     public ResponseEntity<LoraResponse> updateLoraWithPreview(
             @PathVariable Long loraId,
             @ModelAttribute UpdateLoraRequest request,
-            @RequestParam(required = false) MultipartFile preview
-
+            @RequestParam(required = false)
+            MultipartFile preview
     ) {
-        return ResponseEntity.ok(loraService.updateLoraWithPreviewById(loraId, request, preview));
+        return ResponseEntity.ok(
+                loraService
+                        .updateLoraWithPreviewById(
+                                loraId,
+                                request,
+                                preview
+                        )
+        );
     }
+
+
+    // =========================================================
+    // DELETE
+    // =========================================================
 
     @DeleteMapping("/{loraId}")
-    public ResponseEntity<String> deleteLora(@PathVariable Long loraId) {
-        return ResponseEntity.ok(loraService.deleteLoraById(loraId));
+    public ResponseEntity<String> deleteLora(
+            @PathVariable Long loraId
+    ) {
+        return ResponseEntity.ok(
+                loraService.deleteLoraById(
+                        loraId
+                )
+        );
     }
+
+
+    // =========================================================
+    // SEARCH
+    // =========================================================
 
     @GetMapping("/search")
     public ResponseEntity<Page<LoraResponse>> searchLoras(
             @RequestParam String keyword,
-            @RequestParam(required = false) String baseModel,
-            @RequestParam(required = false) LoraCategory category,
-            @RequestParam(required = false) String subcategory,
-            @RequestParam(required = false) Boolean favorite,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(required = false)
+            String baseModel,
+            @RequestParam(required = false)
+            LoraCategory category,
+            @RequestParam(required = false)
+            String subcategory,
+            @RequestParam(required = false)
+            Boolean favorite,
+            @RequestParam(defaultValue = "0")
+            int page,
+            @RequestParam(defaultValue = "12")
+            int size,
+            @RequestParam(defaultValue = "createdDate")
+            String sortBy,
+            @RequestParam(defaultValue = "desc")
+            String sortDirection
     ) {
         return ResponseEntity.ok(
                 loraService.searchLoras(
@@ -72,78 +135,193 @@ public class LoraController {
                         subcategory,
                         favorite,
                         page,
-                        size
+                        size,
+                        sortBy,
+                        sortDirection
                 )
         );
     }
 
+
+    // =========================================================
+    // GET BY ID
+    // =========================================================
+
     @GetMapping("/{loraId}")
-    public ResponseEntity<LoraResponse> getLoraById(@PathVariable long loraId) {
-        return ResponseEntity.ok(loraService.getLoraById(loraId));
+    public ResponseEntity<LoraResponse> getLoraById(
+            @PathVariable long loraId
+    ) {
+        return ResponseEntity.ok(
+                loraService.getLoraById(
+                        loraId
+                )
+        );
     }
+
+
+    // =========================================================
+    // STANDARD GALLERY
+    // =========================================================
 
     @GetMapping
     public ResponseEntity<Page<LoraResponse>> getLoras(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(defaultValue = "0")
+            int page,
+            @RequestParam(defaultValue = "12")
+            int size,
+            @RequestParam(defaultValue = "createdDate")
+            String sortBy,
+            @RequestParam(defaultValue = "desc")
+            String sortDirection
     ) {
-        Page<LoraResponse> response = loraService.getLoras(page,size);
-        return ResponseEntity.ok(response);
+        Page<LoraResponse> response =
+                loraService.getLoras(
+                        page,
+                        size,
+                        sortBy,
+                        sortDirection
+                );
+
+        return ResponseEntity.ok(
+                response
+        );
     }
+
+
+    // =========================================================
+    // CATEGORY
+    // =========================================================
 
     @GetMapping("/category/{category}")
     public ResponseEntity<Page<LoraResponse>> getLorasByCategory(
             @PathVariable LoraCategory category,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
-    ){
+            @RequestParam(defaultValue = "0")
+            int page,
+            @RequestParam(defaultValue = "12")
+            int size
+    ) {
+        Page<LoraResponse> response =
+                loraService.getLorasByCategory(
+                        category,
+                        page,
+                        size
+                );
 
-        Page<LoraResponse> response = loraService.getLorasByCategory(category, page,size);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                response
+        );
     }
+
+
+    // =========================================================
+    // GROUP
+    // =========================================================
 
     @GetMapping("/group/{groupName}")
     public ResponseEntity<Page<LoraResponse>> getLorasByGroup(
             @PathVariable String groupName,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(defaultValue = "0")
+            int page,
+            @RequestParam(defaultValue = "12")
+            int size
     ) {
-        Page<LoraResponse> response = loraService.getLorasByGroup(groupName, page, size);
-        return ResponseEntity.ok(response);
+        Page<LoraResponse> response =
+                loraService.getLorasByGroup(
+                        groupName,
+                        page,
+                        size
+                );
+
+        return ResponseEntity.ok(
+                response
+        );
     }
+
+
+    // =========================================================
+    // FAVORITES
+    // =========================================================
 
     @GetMapping("/favorites")
     public ResponseEntity<Page<LoraResponse>> getFavoriteLoras(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(defaultValue = "0")
+            int page,
+            @RequestParam(defaultValue = "12")
+            int size,
+            @RequestParam(defaultValue = "createdDate")
+            String sortBy,
+            @RequestParam(defaultValue = "desc")
+            String sortDirection
     ) {
-        return ResponseEntity.ok(loraService.getFavoriteLoras(page, size));
+        return ResponseEntity.ok(
+                loraService.getFavoriteLoras(
+                        page,
+                        size,
+                        sortBy,
+                        sortDirection
+                )
+        );
     }
+
 
     @PutMapping("/{loraId}/favorite")
-    public LoraResponse toggleFavorite(@PathVariable Long loraId) {
-        return loraService.toggleFavorite(loraId);
+    public LoraResponse toggleFavorite(
+            @PathVariable Long loraId
+    ) {
+        return loraService.toggleFavorite(
+                loraId
+        );
     }
 
 
+    // =========================================================
+    // CATEGORIES
+    // =========================================================
 
     @GetMapping("/categories")
     public List<LoraCategory> getCategories() {
         return loraService.getCategories();
     }
 
+
+    // =========================================================
+    // IMPORT
+    // =========================================================
+
     @PostMapping("/import-folder")
-    public ImportSummaryResponse importFolder(@RequestBody ImportFolderRequest request) {
-        return loraService.importLorasFromFolder(request.getFolderPath());
+    public ImportSummaryResponse importFolder(
+            @RequestBody ImportFolderRequest request
+    ) {
+        return loraService
+                .importLorasFromFolder(
+                        request.getFolderPath()
+                );
     }
+
+
+    // =========================================================
+    // FILTER
+    // =========================================================
 
     @GetMapping("/filter")
     public ResponseEntity<Page<LoraResponse>> getFilteredLoras(
-            @RequestParam(required = false) String baseModel,
-            @RequestParam(required = false) LoraCategory category,
-            @RequestParam(name = "subcategory", required = false) String subcategory,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
+            @RequestParam(required = false)
+            String baseModel,
+            @RequestParam(required = false)
+            LoraCategory category,
+            @RequestParam(
+                    name = "subcategory",
+                    required = false
+            )
+            String subcategory,
+            @RequestParam(defaultValue = "0")
+            int page,
+            @RequestParam(defaultValue = "12")
+            int size,
+            @RequestParam(defaultValue = "createdDate")
+            String sortBy,
+            @RequestParam(defaultValue = "desc")
+            String sortDirection
     ) {
         Page<LoraResponse> response =
                 loraService.getFilteredLoras(
@@ -151,22 +329,56 @@ public class LoraController {
                         category,
                         subcategory,
                         page,
-                        size
+                        size,
+                        sortBy,
+                        sortDirection
                 );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                response
+        );
     }
+
+
+    // =========================================================
+    // LORA IMAGES
+    // =========================================================
 
     @GetMapping("/{loraId}/images")
-    public ResponseEntity<List<LoraImageResponse>> getLoraImages(@PathVariable Long loraId) {
-        List<LoraImageResponse> images = loraImageService.getImagesByLoraId(loraId);
+    public ResponseEntity<List<LoraImageResponse>> getLoraImages(
+            @PathVariable Long loraId
+    ) {
+        List<LoraImageResponse> images =
+                loraImageService
+                        .getImagesByLoraId(
+                                loraId
+                        );
 
-        return ResponseEntity.ok(images);
+        return ResponseEntity.ok(
+                images
+        );
     }
 
-    @PostMapping(value = "/{loraId}/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<LoraImageResponse> addLoraImage(@PathVariable Long loraId, @RequestParam("image") MultipartFile image) {
-        LoraImageResponse savedImage = loraImageService.addImageToLora(loraId, image);
-        return ResponseEntity.ok(savedImage);
+
+    @PostMapping(
+            value = "/{loraId}/images",
+            consumes =
+                    MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<LoraImageResponse> addLoraImage(
+            @PathVariable Long loraId,
+            @RequestParam("image")
+            MultipartFile image
+    ) {
+        LoraImageResponse savedImage =
+                loraImageService
+                        .addImageToLora(
+                                loraId,
+                                image
+                        );
+
+        return ResponseEntity.ok(
+                savedImage
+        );
     }
 }

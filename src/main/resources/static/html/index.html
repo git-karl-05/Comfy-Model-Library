@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -279,12 +278,19 @@
                         id="sortButton"
                         class="gallery-chip-button"
                         type="button"
-                        disabled
                         aria-label="Sort LoRAs"
+                        aria-controls="sortModal"
+                        aria-expanded="false"
                 >
-                    <span>
+                    <span id="sortButtonText">
                         Sort
                     </span>
+
+                    <span
+                            id="sortButtonArrow"
+                            class="hidden"
+                            aria-hidden="true"
+                    ></span>
                 </button>
 
 
@@ -396,6 +402,105 @@
 
 </main>
 
+<!-- Sort Modal -->
+<div
+        id="sortModal"
+        class="filter-modal hidden"
+        aria-hidden="true"
+        inert
+>
+
+    <div
+            id="sortModalBackdrop"
+            class="filter-modal-backdrop"
+    ></div>
+
+
+    <section
+            class="filter-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sortSheetTitle"
+    >
+
+        <div class="sheet-drag-handle"></div>
+
+
+        <div class="filter-sheet-header">
+
+            <h2 id="sortSheetTitle">
+                Sort
+            </h2>
+
+            <button
+                    id="closeSortButton"
+                    class="filter-close-button"
+                    type="button"
+                    aria-label="Close sort"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="filter-sheet-content">
+
+            <button
+                    class="compact-action-button sort-option-button"
+                    type="button"
+                    data-sort-field="loraName"
+                    data-sort-label="Name"
+            >
+                <span>
+                    Name
+                </span>
+
+                <span
+                        class="sort-direction-arrow"
+                        aria-hidden="true"
+                ></span>
+            </button>
+
+
+            <button
+                    class="compact-action-button sort-option-button"
+                    type="button"
+                    data-sort-field="creator"
+                    data-sort-label="Creator"
+            >
+                <span>
+                    Creator
+                </span>
+
+                <span
+                        class="sort-direction-arrow"
+                        aria-hidden="true"
+                ></span>
+            </button>
+
+
+            <button
+                    class="compact-action-button sort-option-button"
+                    type="button"
+                    data-sort-field="createdDate"
+                    data-sort-label="Created"
+            >
+                <span>
+                    Created
+                </span>
+
+                <span
+                        class="sort-direction-arrow"
+                        aria-hidden="true"
+                ></span>
+            </button>
+
+        </div>
+
+    </section>
+
+</div>
 
 <!-- Filter Modal -->
 <div
@@ -908,4 +1013,3 @@
 
 </body>
 </html>
-```
