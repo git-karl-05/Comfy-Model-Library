@@ -1,44 +1,39 @@
-package com.comfy.library.dto;
+package com.comfy.library.dto.lora;
 
 import com.comfy.library.entity.LoraCategory;
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
-
-@JsonPropertyOrder({
-        "loraName",
-        "creator",
-        "version",
-        "category",
-        "subCategory",
-        "baseModel",
-        "groupName",
-        "positivePrompt",
-        "negativePrompt",
-        "seedNumber",
-        "notes",
-        "favorite",
-        "url",
-        "filePath"
-})
-public class LoraBackupItem {
-
+public class CreateLoraRequest {
     private String loraName;
-    private String creator;
     private String version;
+    private String creator;
+    private String url;
     private LoraCategory category;
     private String subCategory;
-    private String baseModel;
     private String groupName;
-
     private String positivePrompt;
     private String negativePrompt;
+    private String baseModel;
     private Long seedNumber;
-
     private String notes;
-    private Boolean favorite;
 
-    private String url;
-    private String filePath;
+    public CreateLoraRequest(){}
+
+    public CreateLoraRequest(String loraName, String version, String creator, String url, LoraCategory category, String subCategory, String groupName, String positivePrompt, String negativePrompt, String baseModel, Long seedNumber, String notes) {
+        this.loraName = loraName;
+        this.version = version;
+        this.creator = creator;
+        this.url = url;
+        this.category = category;
+        this.subCategory = subCategory;
+        this.groupName = groupName;
+        this.positivePrompt = positivePrompt;
+        this.negativePrompt = negativePrompt;
+        this.baseModel = baseModel;
+        this.seedNumber = seedNumber;
+        this.notes = notes;
+    }
+
+
 
     public String getLoraName() {
         return loraName;
@@ -46,6 +41,14 @@ public class LoraBackupItem {
 
     public void setLoraName(String loraName) {
         this.loraName = loraName;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 
     public String getCreator() {
@@ -56,12 +59,12 @@ public class LoraBackupItem {
         this.creator = creator;
     }
 
-    public String getVersion() {
-        return version;
+    public String getUrl() {
+        return url;
     }
 
-    public void setVersion(String version) {
-        this.version = version;
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public LoraCategory getCategory() {
@@ -78,14 +81,6 @@ public class LoraBackupItem {
 
     public void setSubCategory(String subCategory) {
         this.subCategory = subCategory;
-    }
-
-    public String getBaseModel() {
-        return baseModel;
-    }
-
-    public void setBaseModel(String baseModel) {
-        this.baseModel = baseModel;
     }
 
     public String getGroupName() {
@@ -112,14 +107,6 @@ public class LoraBackupItem {
         this.negativePrompt = negativePrompt;
     }
 
-    public Long getSeedNumber() {
-        return seedNumber;
-    }
-
-    public void setSeedNumber(Long seedNumber) {
-        this.seedNumber = seedNumber;
-    }
-
     public String getNotes() {
         return notes;
     }
@@ -128,27 +115,21 @@ public class LoraBackupItem {
         this.notes = notes;
     }
 
-    public Boolean getFavorite() {
-        return favorite;
+    public Long getSeedNumber() {
+        return seedNumber;
     }
 
-    public void setFavorite(Boolean favorite) {
-        this.favorite = favorite;
+    public void setSeedNumber(Long seedNumber) {
+        this.seedNumber = seedNumber;
     }
 
-    public String getUrl() {
-        return url;
+    public String getBaseModel() {
+
+        return baseModel;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setBaseModel(String baseModel) {
+        this.baseModel = baseModel;
     }
 }
+

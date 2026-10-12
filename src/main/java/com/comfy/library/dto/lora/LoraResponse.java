@@ -1,4 +1,4 @@
-package com.comfy.library.dto;
+package com.comfy.library.dto.lora;
 
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;

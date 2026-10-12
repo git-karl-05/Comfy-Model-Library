@@ -1,6 +1,4 @@
-package com.comfy.library.dto;
-
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
+package com.comfy.library.dto.lora;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

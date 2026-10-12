@@ -1,4 +1,4 @@
-package com.comfy.library.dto;
+package com.comfy.library.dto.lora;
 
 public class ImportSummaryResponse {
 

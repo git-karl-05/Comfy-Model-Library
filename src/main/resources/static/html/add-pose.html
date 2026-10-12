@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    >
+
+    <title>Add Pose</title>
+
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/add-lora.js" defer></script>
+</head>
+
+<body>
+
+<main class="add-lora-page">
+
+    <div class="add-lora-container">
+
+
+        <header class="add-lora-header">
+
+            <button
+                    type="button"
+                    id="optionsButton"
+                    class="options-button"
+                    aria-label="Open navigation menu"
+                    aria-controls="sideMenu"
+                    aria-expanded="false">
+                ☰
+            </button>
+
+            <h1>Add LoRA</h1>
+
+            <a
+                    href="/html/index.html"
+                    class="page-close-button"
+                    aria-label="Cancel and return to LoRA Library"
+                    title="Cancel">
+                ×
+            </a>
+
+        </header>
+
+        <div
+                id="menuBackdrop"
+                class="menu-backdrop hidden"
+                aria-hidden="true">
+        </div>
+
+        <nav
+                id="sideMenu"
+                class="side-menu hidden"
+                aria-label="Main navigation"
+                aria-hidden="true">
+
+            <div class="side-menu-header">
+                <h2>Menu</h2>
+
+                <button
+                        type="button"
+                        id="closeMenuButton"
+                        class="menu-close-button"
+                        aria-label="Close navigation menu">
+                    ×
+                </button>
+            </div>
+
+            <a href="/html/index.html" class="side-menu-link">
+                LoRA Library
+            </a>
+
+            <a href="/html/add-lora.html" class="side-menu-link active">
+                Add LoRA
+            </a>
+
+        </nav>
+
+
+        <form id="addLoraForm" class="add-lora-form">
+
+
+            <section class="add-image-section">
+
+                <label
+                        id="addImagePreviewContainer"
+                        class="details-image-container add-image-preview"
+                        for="previewImage">
+
+                    <div class="lora-card-placeholder">
+                        Click to choose a preview image
+                    </div>
+
+                    <button
+                            type="button"
+                            id="removePreviewImageButton"
+                            class="remove-preview-image-button hidden"
+                            aria-label="Remove preview image"
+                            title="Remove preview image">
+                        ×
+                    </button>
+
+                </label>
+
+                <input
+                        type="file"
+                        id="previewImage"
+                        name="previewImage"
+                        class="hidden-file-input"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                >
+
+
+
+            </section>
+
+
+            <section class="details-edit-grid add-lora-details-grid">
+
+                <label class="details-edit-full-width">
+                    LoRA Name
+
+                    <input
+                            type="text"
+                            id="loraName"
+                            name="loraName"
+                            class="details-edit-input"
+                            required
+                    >
+                </label>
+
+                <label class="details-edit-full-width">
+                    Creator
+
+                    <input
+                            type="text"
+                            id="creator"
+                            name="creator"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Version
+
+                    <input
+                            type="text"
+                            id="version"
+                            name="version"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Category
+
+                    <select
+                            id="category"
+                            name="category"
+                            class="details-edit-input"
+                            required>
+
+                        <option value="">
+                            Select category
+                        </option>
+
+                    </select>
+                </label>
+
+                <label>
+                    Subcategory
+
+                    <input
+                            type="text"
+                            id="subCategory"
+                            name="subCategory"
+                            class="details-edit-input"
+                    >
+                </label>
+
+                <label>
+                    Base Model
+
+                    <input
+                            type="text"
+                            id="baseModel"
+                            name="baseModel"
+                            class="details-edit-input"
+                    >
+                </label>
+
+            </section>
+
+
+
+            <section class="details-prompt-section">
+                <h2>Positive Prompt</h2>
+
+                <textarea
+                        id="positivePrompt"
+                        name="positivePrompt"
+                        class="details-edit-textarea"
+                        rows="8"
+                        placeholder="Enter the positive prompt or trigger words..."></textarea>
+            </section>
+
+
+            <section class="details-prompt-section">
+                <h2>Notes</h2>
+
+                <textarea
+                        id="notes"
+                        name="notes"
+                        class="details-edit-textarea"
+                        rows="6"
+                        placeholder="Add notes about this LoRA..."></textarea>
+            </section>
+
+
+            <p
+                    id="addLoraMessage"
+                    class="details-edit-message hidden"
+                    aria-live="polite">
+            </p>
+
+
+
+            <div class="shared-form-action-bar add-lora-action-bar">
+
+                <a
+                        href="/html/index.html"
+                        class="details-cancel-button add-cancel-button">
+                    Cancel
+                </a>
+
+                <button
+                        type="submit"
+                        id="saveLoraButton"
+                        class="details-save-button">
+                    Save LoRA
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</main>
+
+</body>
+</html>

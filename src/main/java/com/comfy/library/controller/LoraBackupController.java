@@ -1,8 +1,8 @@
 package com.comfy.library.controller;
 
 
-import com.comfy.library.dto.BackupRestoreResponse;
-import com.comfy.library.dto.LoraBackup;
+import com.comfy.library.dto.lora.BackupRestoreResponse;
+import com.comfy.library.dto.lora.LoraBackup;
 import com.comfy.library.service.LoraBackupService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;

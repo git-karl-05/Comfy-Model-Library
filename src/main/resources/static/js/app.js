@@ -1,7 +1,17 @@
 const API_BASE_URL = "/api/loras";
 
+
+/* =========================
+   APPLICATION STATE
+========================= */
+
 let currentLora = null;
 let isEditingLora = false;
+
+
+/* =========================
+   PAGINATION STATE
+========================= */
 
 const DEFAULT_PAGE_SIZE = 12;
 
@@ -10,15 +20,16 @@ let pageSize = DEFAULT_PAGE_SIZE;
 let totalPages = 0;
 let totalElements = 0;
 
+
+/* =========================
+   SEARCH STATE
+========================= */
+
+const SEARCH_DEBOUNCE_DELAY = 400;
+const MINIMUM_SEARCH_LENGTH = 2;
+
 let currentSearchResults = [];
 let isSearchActive = false;
-
-let appliedBaseModelFilter = "ALL";
-let appliedCategoryFilter = "ALL";
-let appliedSubcategoryFilter = "ALL";
-
-let appliedSortBy = null;
-let appliedSortDirection = null;
 
 let pageBeforeSearch = 0;
 let scrollPositionBeforeSearch = 0;
@@ -26,216 +37,525 @@ let scrollPositionBeforeSearch = 0;
 let searchDebounceTimer = null;
 let lastSearchKeyword = "";
 
-const SEARCH_DEBOUNCE_DELAY = 400;
-const MINIMUM_SEARCH_LENGTH = 2;
+
+/* =========================
+   FILTER STATE
+========================= */
+
+let appliedBaseModelFilter = "ALL";
+let appliedCategoryFilter = "ALL";
+let appliedSubcategoryFilter = "ALL";
+
+
+/* =========================
+   SORT STATE
+========================= */
+
+let appliedSortBy = null;
+let appliedSortDirection = null;
+
+
+/* =========================
+   BOTTOM SHEET STATE
+========================= */
 
 const SHEET_DISMISS_DISTANCE = 120;
 const SHEET_RESET_DURATION = 180;
 
+
+/* =========================
+   PREVIEW CAROUSEL STATE
+========================= */
+
 let currentPreviewImages = [];
 let currentPreviewIndex = 0;
 
-let stickyNavigationOffset = 0;
 
-document.addEventListener("DOMContentLoaded", async () => {
-    if (getRequestedLoraId()) {
-        document.body.classList.add(
-            "returning-to-modal"
-        );
+/* =========================
+   APPLICATION STARTUP
+========================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    async () => {
+
+        if (getRequestedLoraId()) {
+            document.body.classList.add(
+                "returning-to-modal"
+            );
+        }
+
+
+        /* -------------------------
+           Gallery
+        ------------------------- */
+
+        setupLayoutButtons();
+        setupPaginationControls();
+        setupGoToTopButton();
+
+
+        /* -------------------------
+           Search / Sort / Filter
+        ------------------------- */
+
+        setupSearch();
+        setupSearchOverlay();
+
+        setupSortModal();
+
+        setupFilterModal();
+        setupFilterSheetSwipe();
+
+
+        /* -------------------------
+           LoRA Details
+        ------------------------- */
+
+        setupLoraDetailsModal();
+        setupLoraDetailsSwipe();
+
+        setupPreviewCarousel();
+        setupExpandedTextModal();
+
+
+        /* -------------------------
+           Menus / Actions
+        ------------------------- */
+
+        setupMenu();
+        setupActionMenu();
+
+        setupImportFolderForm();
+
+        setupBackupExport();
+        setupBackupImport();
+
+
+        /* -------------------------
+           Initial Gallery Load
+        ------------------------- */
+
+        await fetchAllLoras(0);
+
+        await reopenRequestedLoraModal();
     }
-    setupLayoutButtons();
-    setupSearch();
-    setupGoToTopButton();
-    setupStickyNavigationScroll();
-
-    setupSortModal();
-    setupFilterModal();
-    setupFilterSheetSwipe();
-
-    setupLoraDetailsModal();
-    setupLoraDetailsSwipe();
-    setupPreviewCarousel();
-
-    setupSearchOverlay();
-    setupActionMenu();
-    setupImportFolderForm();
-    setupMenu();
-    setupPaginationControls();
-
-    setupBackupExport();
-    setupBackupImport();
-
-    setupExpandedTextModal();
+);
 
 
-    await fetchAllLoras(0);
+/* =========================
+   GALLERY DATA
+========================= */
 
-    await reopenRequestedLoraModal();
-
-});
-
-async function fetchAllLoras(page) {
+async function fetchAllLoras(
+    page = currentPage
+) {
     isSearchActive = false;
     currentSearchResults = [];
 
     try {
-        const url = buildLoraPageUrl(page, pageSize);
-        const response = await fetch(url);
+        const url =
+            buildLoraPageUrl(
+                page,
+                pageSize
+            );
+
+        const response =
+            await fetch(url);
 
         if (!response.ok) {
-            throw new Error("Failed to fetch LoRAs");
+            throw new Error(
+                "Failed to fetch LoRAs"
+            );
         }
 
-        const pageResponse = await response.json();
+        const pageResponse =
+            await response.json();
 
-        validateLoraPageResponse(pageResponse);
-        updatePaginationState(pageResponse);
+        validateLoraPageResponse(
+            pageResponse
+        );
+
+        updatePaginationState(
+            pageResponse
+        );
+
         updatePaginationControls();
 
-        if (pageResponse.content.length === 0) {
+        if (
+            pageResponse.content.length === 0
+        ) {
             displayEmptyGalleryMessage();
             return;
         }
 
-        renderLoraPage(pageResponse.content);
+        renderLoraPage(
+            pageResponse.content
+        );
 
     } catch (error) {
-        displayGalleryError(error);
+        displayGalleryError(
+            error
+        );
     }
 }
 
 
+function displayLoras(
+    loras
+) {
+    const loraList =
+        document.getElementById(
+            "loraList"
+        );
 
-function displayLoras(loras) {
-    const loraList = document.getElementById("loraList");
+    if (!loraList) {
+        return;
+    }
 
     loraList.innerHTML = "";
 
-    if (!loras || loras.length === 0) {
+    if (
+        !loras ||
+        loras.length === 0
+    ) {
         loraList.innerHTML = `
             <p class="empty-message">
                 No LoRAs found.
             </p>
         `;
+
         return;
     }
 
-    loras.forEach(lora => {
-        loraList.appendChild(createLoraCard(lora));
-    });
+    loras.forEach(
+        lora => {
+            loraList.appendChild(
+                createLoraCard(lora)
+            );
+        }
+    );
 }
 
-function createLoraCard(lora) {
-    const card = document.createElement("article");
-    card.className = "lora-card";
 
-    const imageHtml = lora.filePath
-        ? isVideoPreview(lora.filePath)
-            ? `
-            <video
-                class="lora-card-image"
-                src="${lora.filePath}"
-                muted
-                loop
-                playsinline
-                preload="auto"
-            ></video>
-          `
+function createLoraCard(
+    lora
+) {
+    const card =
+        document.createElement(
+            "article"
+        );
+
+    card.className =
+        "lora-card";
+
+
+    const imageHtml =
+        lora.filePath
+
+            ? isVideoPreview(
+                lora.filePath
+            )
+
+                ? `
+                    <video
+                        class="lora-card-image"
+                        src="${lora.filePath}"
+                        muted
+                        loop
+                        playsinline
+                        preload="auto"
+                    ></video>
+                  `
+
+                : `
+                    <img
+                        class="lora-card-image"
+                        src="${lora.filePath}"
+                        alt="${lora.loraName ?? "LoRA Preview"}"
+                    >
+                  `
+
             : `
-            <img
-                class="lora-card-image"
-                src="${lora.filePath}"
-                alt="${lora.loraName ?? "LoRA Preview"}"
-            >
-          `
-        : `
-        <div class="lora-card-placeholder">
-            No Image
-        </div>
-      `;
+                <div class="lora-card-placeholder">
+                    No Image
+                </div>
+              `;
+
 
     card.innerHTML = `
         ${imageHtml}
 
-        <button class="favorite-button" aria-label="Toggle favorite">
+        <button
+            class="favorite-button"
+            type="button"
+            aria-label="Toggle favorite"
+        >
             ${lora.favorite ? "★" : "☆"}
         </button>
 
         <div class="lora-card-header">
+
             <p class="lora-meta">
-                ${lora.creator ? lora.creator : "Unknown creator"}
+                ${
+        lora.creator
+            ? lora.creator
+            : "Unknown creator"
+    }
             </p>
 
-            <h2>${lora.loraName ?? "Untitled LoRA"}</h2>
+            <h2>
+                ${
+        lora.loraName
+        ?? "Untitled LoRA"
+    }
+            </h2>
+
         </div>
     `;
 
+
     const previewVideo =
-        card.querySelector("video.lora-card-image");
+        card.querySelector(
+            "video.lora-card-image"
+        );
 
 
     if (previewVideo) {
-        setupGalleryVideoPreview(card, previewVideo);
-
+        setupGalleryVideoPreview(
+            card,
+            previewVideo
+        );
     }
 
 
+    const favoriteButton =
+        card.querySelector(
+            ".favorite-button"
+        );
 
-    card.addEventListener("click", () => {
-        openLoraDetailsModal(lora.id);
-    });
 
-    const favoriteButton = card.querySelector(".favorite-button");
+    if (favoriteButton) {
+        favoriteButton.addEventListener(
+            "click",
+            async event => {
 
-    favoriteButton.addEventListener("click", async (event) => {
-        event.stopPropagation();
-        await toggleFavorite(lora.id);
-    });
+                event.stopPropagation();
+
+                await toggleFavorite(
+                    lora.id
+                );
+            }
+        );
+    }
+
+
+    card.addEventListener(
+        "click",
+        () => {
+            openLoraDetailsModal(
+                lora.id
+            );
+        }
+    );
+
 
     return card;
 }
 
+
+/* =========================
+   GALLERY VIDEO PREVIEW
+========================= */
+
+function setupGalleryVideoPreview(
+    card,
+    video
+) {
+    if (
+        !card ||
+        !video
+    ) {
+        return;
+    }
+
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+
+    if (
+        window.matchMedia(
+            "(hover: hover)"
+        ).matches
+    ) {
+        card.addEventListener(
+            "mouseenter",
+            () => {
+                playGalleryVideo(
+                    video
+                );
+            }
+        );
+
+        card.addEventListener(
+            "mouseleave",
+            () => {
+                resetGalleryVideo(
+                    video
+                );
+            }
+        );
+
+        card.addEventListener(
+            "focusin",
+            () => {
+                playGalleryVideo(
+                    video
+                );
+            }
+        );
+
+        card.addEventListener(
+            "focusout",
+            () => {
+                resetGalleryVideo(
+                    video
+                );
+            }
+        );
+
+        return;
+    }
+
+    galleryVideoObserver.observe(
+        video
+    );
+}
+
+
+/* =========================
+   GALLERY RENDERING
+========================= */
+
+function renderLoraPage(
+    loras
+) {
+    displayLoras(
+        loras
+    );
+}
+
+
+function displayEmptyGalleryMessage() {
+    const loraList =
+        document.getElementById(
+            "loraList"
+        );
+
+    if (!loraList) {
+        return;
+    }
+
+    loraList.innerHTML = `
+        <p class="empty-message">
+            No LoRAs found.
+        </p>
+    `;
+}
+
+
+function displayGalleryError(
+    error
+) {
+    console.error(
+        "Gallery error:",
+        error
+    );
+
+    const loraList =
+        document.getElementById(
+            "loraList"
+        );
+
+    if (!loraList) {
+        return;
+    }
+
+    loraList.innerHTML = `
+        <p class="empty-message">
+            Unable to load LoRAs.
+        </p>
+    `;
+}
+
+/* =========================
+   FAVORITES
+========================= */
+
 async function toggleFavorite(loraId) {
     try {
-        const response = await fetch(`${API_BASE_URL}/${loraId}/favorite`, {
-            method: "PUT"
-        });
+        const response = await fetch(
+            `${API_BASE_URL}/${loraId}/favorite`,
+            {
+                method: "PUT"
+            }
+        );
 
         if (!response.ok) {
-            throw new Error("Failed to toggle favorite");
+            throw new Error(
+                "Failed to toggle favorite"
+            );
         }
 
         await refreshCurrentView();
 
     } catch (error) {
-        console.error("Error toggling favorite:", error);
+        console.error(
+            "Error toggling favorite:",
+            error
+        );
     }
 }
+
+
+/* =========================
+   SEARCH
+========================= */
 
 function clearSearchDebounceTimer() {
     if (searchDebounceTimer === null) {
         return;
     }
 
-    window.clearTimeout(searchDebounceTimer);
+    window.clearTimeout(
+        searchDebounceTimer
+    );
+
     searchDebounceTimer = null;
 }
 
+
 async function performSearchFromInput() {
     const searchInput =
-        document.getElementById("searchInput");
+        document.getElementById(
+            "searchInput"
+        );
 
     if (!searchInput) {
         return;
     }
 
-    const keyword = searchInput.value.trim();
+    const keyword =
+        searchInput.value.trim();
 
     if (keyword === "") {
         return;
     }
 
-    if (keyword.length < MINIMUM_SEARCH_LENGTH) {
+    if (
+        keyword.length <
+        MINIMUM_SEARCH_LENGTH
+    ) {
         return;
     }
 
@@ -248,8 +568,12 @@ async function performSearchFromInput() {
 
     lastSearchKeyword = keyword;
 
-    await searchLoras(keyword, 0);
+    await searchLoras(
+        keyword,
+        0
+    );
 }
+
 
 async function clearSearch() {
     const searchInput =
@@ -288,62 +612,88 @@ async function clearSearch() {
 
     await refreshCurrentView();
 
-    window.requestAnimationFrame(() => {
-        window.scrollTo({
-            top: restoredScrollPosition,
-            behavior: "auto"
-        });
-    });
+    window.requestAnimationFrame(
+        () => {
+            window.scrollTo({
+                top: restoredScrollPosition,
+                behavior: "auto"
+            });
+        }
+    );
 }
 
+
 function setupSearch() {
-    const searchInput = document.getElementById("searchInput");
+    const searchInput =
+        document.getElementById(
+            "searchInput"
+        );
 
     if (!searchInput) {
         return;
     }
 
-    searchInput.addEventListener("input", () => {
-        clearSearchDebounceTimer();
+    searchInput.addEventListener(
+        "input",
+        () => {
+            clearSearchDebounceTimer();
 
-        searchDebounceTimer = window.setTimeout(
-            async () => {
+            searchDebounceTimer =
+                window.setTimeout(
+                    async () => {
+                        await performSearchFromInput();
+                    },
+                    SEARCH_DEBOUNCE_DELAY
+                );
+        }
+    );
+
+    searchInput.addEventListener(
+        "keydown",
+        async event => {
+
+            if (event.key === "Enter") {
+                event.preventDefault();
+
+                clearSearchDebounceTimer();
+
                 await performSearchFromInput();
-            },
-            SEARCH_DEBOUNCE_DELAY
-        );
-    });
 
-    searchInput.addEventListener("keydown", async event => {
-        if (event.key === "Enter") {
-            event.preventDefault();
+                return;
+            }
 
-            clearSearchDebounceTimer();
-            await performSearchFromInput();
-            return;
+            if (event.key === "Escape") {
+                event.preventDefault();
+
+                clearSearchDebounceTimer();
+
+                await clearSearch();
+            }
         }
-
-        if (event.key === "Escape") {
-            event.preventDefault();
-
-            clearSearchDebounceTimer();
-            await clearSearch();
-        }
-    });
+    );
 }
+
 
 function setupSearchOverlay() {
     const searchButton =
-        document.getElementById("searchIconButton");
+        document.getElementById(
+            "searchIconButton"
+        );
 
     const closeButton =
-        document.getElementById("closeSearchButton");
+        document.getElementById(
+            "closeSearchButton"
+        );
 
     const searchOverlay =
-        document.getElementById("searchOverlay");
+        document.getElementById(
+            "searchOverlay"
+        );
 
     const searchInput =
-        document.getElementById("searchInput");
+        document.getElementById(
+            "searchInput"
+        );
 
     if (
         !searchButton ||
@@ -354,30 +704,214 @@ function setupSearchOverlay() {
         return;
     }
 
-    searchButton.addEventListener("click", () => {
-        if (!isSearchActive) {
-            pageBeforeSearch = currentPage;
-            scrollPositionBeforeSearch = window.scrollY;
+    searchButton.addEventListener(
+        "click",
+        () => {
+
+            if (!isSearchActive) {
+                pageBeforeSearch =
+                    currentPage;
+
+                scrollPositionBeforeSearch =
+                    window.scrollY;
+            }
+
+            searchOverlay.classList.remove(
+                "hidden"
+            );
+
+            searchInput.focus();
         }
+    );
 
-        searchOverlay.classList.remove("hidden");
-        searchInput.focus();
-    });
+    closeButton.addEventListener(
+        "click",
+        async () => {
+            clearSearchDebounceTimer();
 
-    closeButton.addEventListener("click", async () => {
-        clearSearchDebounceTimer();
-        await clearSearch();
-    });
+            await clearSearch();
+        }
+    );
 }
 
+
+async function searchLoras(
+    keyword,
+    page = currentPage
+) {
+    try {
+        const normalizedKeyword =
+            keyword.trim();
+
+        if (
+            normalizedKeyword.length <
+            MINIMUM_SEARCH_LENGTH
+        ) {
+            return;
+        }
+
+        const parameters = {
+            keyword: normalizedKeyword,
+            ...buildFilterParameters(),
+            ...buildSortParameters()
+        };
+
+        if (
+            appliedCategoryFilter ===
+            "FAVORITES"
+        ) {
+            parameters.favorite = true;
+        }
+
+        const url =
+            buildPaginatedUrl(
+                "/search",
+                page,
+                pageSize,
+                parameters
+            );
+
+        const response =
+            await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(
+                `Search failed. Status: ${response.status}`
+            );
+        }
+
+        const pageResponse =
+            await response.json();
+
+        isSearchActive = true;
+
+        lastSearchKeyword =
+            normalizedKeyword;
+
+        displayPaginatedLoraResponse(
+            pageResponse
+        );
+
+    } catch (error) {
+        console.error(
+            "Search error:",
+            error
+        );
+
+        isSearchActive = false;
+
+        displayGalleryError(
+            error
+        );
+    }
+}
+
+
+/* =========================
+   CURRENT GALLERY VIEW
+========================= */
+
+async function refreshCurrentView() {
+    const searchInput =
+        document.getElementById(
+            "searchInput"
+        );
+
+    const keyword =
+        searchInput?.value.trim() ?? "";
+
+    /*
+     * Search takes priority because the
+     * search request already includes the
+     * currently applied filters and sort.
+     */
+    if (
+        isSearchActive &&
+        keyword.length >=
+        MINIMUM_SEARCH_LENGTH
+    ) {
+        await searchLoras(
+            keyword,
+            currentPage
+        );
+
+        return;
+    }
+
+    /*
+     * Favorites is represented by the
+     * special FAVORITES category value.
+     */
+    if (
+        appliedCategoryFilter ===
+        "FAVORITES"
+    ) {
+        await fetchFavoriteLoras(
+            currentPage
+        );
+
+        return;
+    }
+
+    /*
+     * Normal gallery filters.
+     */
+    if (hasActiveGalleryFilters()) {
+        await fetchFilteredLoras(
+            currentPage
+        );
+
+        return;
+    }
+
+    /*
+     * No search or filters.
+     */
+    await fetchAllLoras(
+        currentPage
+    );
+}
+
+
+/* =========================
+   ACTION MENU
+========================= */
+
 function setupActionMenu() {
-    const openButton = document.getElementById("openActionMenuButton");
-    const overlay = document.getElementById("actionMenuOverlay");
-    const popover = document.getElementById("actionMenuPopover");
-    const addButton = document.getElementById("addLoraActionButton");
-    const importButton = document.getElementById("showImportFolderButton");
-    const importForm = document.getElementById("importFolderForm");
-    const importResult = document.getElementById("importResult");
+    const openButton =
+        document.getElementById(
+            "openActionMenuButton"
+        );
+
+    const overlay =
+        document.getElementById(
+            "actionMenuOverlay"
+        );
+
+    const popover =
+        document.getElementById(
+            "actionMenuPopover"
+        );
+
+    const addButton =
+        document.getElementById(
+            "addLoraActionButton"
+        );
+
+    const importButton =
+        document.getElementById(
+            "showImportFolderButton"
+        );
+
+    const importForm =
+        document.getElementById(
+            "importFolderForm"
+        );
+
+    const importResult =
+        document.getElementById(
+            "importResult"
+        );
 
     if (
         !openButton ||
@@ -390,40 +924,73 @@ function setupActionMenu() {
         return;
     }
 
-    openButton.addEventListener("click", event => {
-        event.stopPropagation();
-        overlay.classList.toggle("hidden");
-    });
+    openButton.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
 
-    popover.addEventListener("click", event => {
-        event.stopPropagation();
-    });
+            overlay.classList.toggle(
+                "hidden"
+            );
+        }
+    );
 
-    overlay.addEventListener("click", closeActionMenu);
+    popover.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+        }
+    );
 
-    addButton.addEventListener("click", () => {
-        window.location.href = "/html/add-lora.html";
-    });
+    overlay.addEventListener(
+        "click",
+        closeActionMenu
+    );
 
-    importButton.addEventListener("click", () => {
-        importForm.classList.toggle("hidden");
+    addButton.addEventListener(
+        "click",
+        () => {
+            window.location.href =
+                "/html/add-lora.html";
+        }
+    );
 
-        if (importResult) {
-            importResult.classList.add("hidden");
+    importButton.addEventListener(
+        "click",
+        () => {
 
-            importResult.classList.remove(
-                "import-result-success",
-                "import-result-error"
+            importForm.classList.toggle(
+                "hidden"
             );
 
-            importResult.innerHTML = "";
-        }
+            if (importResult) {
+                importResult.classList.add(
+                    "hidden"
+                );
 
-        if (!importForm.classList.contains("hidden")) {
-            document.getElementById("importFolderPath")?.focus();
+                importResult.classList.remove(
+                    "import-result-success",
+                    "import-result-error"
+                );
+
+                importResult.innerHTML = "";
+            }
+
+            if (
+                !importForm.classList.contains(
+                    "hidden"
+                )
+            ) {
+                document
+                    .getElementById(
+                        "importFolderPath"
+                    )
+                    ?.focus();
+            }
         }
-    });
+    );
 }
+
 
 function closeActionMenu() {
     const overlay =
@@ -463,77 +1030,56 @@ function closeActionMenu() {
     }
 }
 
+
+/* =========================
+   GO TO TOP
+========================= */
+
 function setupGoToTopButton() {
-    const goTopButton = document.getElementById("goTopButton");
+    const goTopButton =
+        document.getElementById(
+            "goTopButton"
+        );
 
     if (!goTopButton) {
         return;
     }
 
     function updateGoTopVisibility() {
-        if (window.scrollY > 500) {
-            goTopButton.classList.remove("hidden");
-        } else {
-            goTopButton.classList.add("hidden");
-        }
+        const shouldShow =
+            window.scrollY > 500;
+
+        goTopButton.classList.toggle(
+            "hidden",
+            !shouldShow
+        );
     }
 
-    window.addEventListener("scroll", updateGoTopVisibility);
+    window.addEventListener(
+        "scroll",
+        updateGoTopVisibility,
+        {
+            passive: true
+        }
+    );
 
-    goTopButton.addEventListener("click", () => {
-        window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    });
+    goTopButton.addEventListener(
+        "click",
+        () => {
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        }
+    );
 
     updateGoTopVisibility();
 }
 
-async function refreshCurrentView() {
-    const searchInput =
-        document.getElementById(
-            "searchInput"
-        );
 
-    const keyword =
-        searchInput?.value.trim() ?? "";
-
-    if (
-        isSearchActive &&
-        keyword.length >= MINIMUM_SEARCH_LENGTH
-    ) {
-        await searchLoras(
-            keyword,
-            currentPage
-        );
-
-        return;
-    }
-
-    if (
-        appliedCategoryFilter ===
-        "FAVORITES"
-    ) {
-        await fetchFavoriteLoras(
-            currentPage
-        );
-
-        return;
-    }
-
-    if (hasActiveGalleryFilters()) {
-        await fetchFilteredLoras(
-            currentPage
-        );
-
-        return;
-    }
-
-    await fetchAllLoras(
-        currentPage
-    );
-}
+/* =========================
+   FILTER ELEMENTS
+========================= */
 
 function getFilterElements() {
     return {
@@ -588,6 +1134,11 @@ function getFilterElements() {
             )
     };
 }
+
+
+/* =========================
+   FILTER MODAL
+========================= */
 
 function setupFilterModal() {
     const {
@@ -673,6 +1224,7 @@ function setupFilterModal() {
             }
 
             cancelPendingFilterChanges();
+
             closeFilterModal();
         }
     );
@@ -680,77 +1232,6 @@ function setupFilterModal() {
     updateFilterButton();
 }
 
-async function searchLoras(
-    keyword,
-    page = currentPage
-) {
-    try {
-        const normalizedKeyword =
-            keyword.trim();
-
-        if (
-            normalizedKeyword.length <
-            MINIMUM_SEARCH_LENGTH
-        ) {
-            return;
-        }
-
-        const parameters = {
-            keyword:
-            normalizedKeyword,
-
-            ...buildFilterParameters(),
-            ...buildSortParameters()
-        };
-
-        if (
-            appliedCategoryFilter ===
-            "FAVORITES"
-        ) {
-            parameters.favorite = true;
-        }
-
-        const url =
-            buildPaginatedUrl(
-                "/search",
-                page,
-                pageSize,
-                parameters
-            );
-
-        const response =
-            await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(
-                `Search failed. Status: ${response.status}`
-            );
-        }
-
-        const pageResponse =
-            await response.json();
-
-        isSearchActive = true;
-        lastSearchKeyword =
-            normalizedKeyword;
-
-        displayPaginatedLoraResponse(
-            pageResponse
-        );
-
-    } catch (error) {
-        console.error(
-            "Search error:",
-            error
-        );
-
-        isSearchActive = false;
-
-        displayGalleryError(
-            error
-        );
-    }
-}
 
 function openFilterModal() {
     const {
@@ -765,7 +1246,9 @@ function openFilterModal() {
 
     modal.inert = false;
 
-    modal.classList.remove("hidden");
+    modal.classList.remove(
+        "hidden"
+    );
 
     modal.setAttribute(
         "aria-hidden",
@@ -777,10 +1260,13 @@ function openFilterModal() {
         "true"
     );
 
-    window.requestAnimationFrame(() => {
-        baseModelFilter?.focus();
-    });
+    window.requestAnimationFrame(
+        () => {
+            baseModelFilter?.focus();
+        }
+    );
 }
+
 
 function closeFilterModal() {
     const {
@@ -793,11 +1279,14 @@ function closeFilterModal() {
     }
 
     /*
-     * Move focus outside the modal before hiding it.
+     * Move focus outside the modal
+     * before making it inert.
      */
     openButton?.focus();
 
-    modal.classList.add("hidden");
+    modal.classList.add(
+        "hidden"
+    );
 
     modal.setAttribute(
         "aria-hidden",
@@ -812,52 +1301,76 @@ function closeFilterModal() {
     );
 }
 
+
+/* =========================
+   FILTER STATE
+========================= */
+
 function getActiveFilterCount() {
     let activeCount = 0;
 
-    if (appliedBaseModelFilter !== "ALL") {
+    if (
+        appliedBaseModelFilter !==
+        "ALL"
+    ) {
         activeCount += 1;
     }
 
-    if (appliedCategoryFilter !== "ALL") {
+    if (
+        appliedCategoryFilter !==
+        "ALL"
+    ) {
         activeCount += 1;
     }
 
-    if (appliedSubcategoryFilter !== "ALL") {
+    if (
+        appliedSubcategoryFilter !==
+        "ALL"
+    ) {
         activeCount += 1;
     }
-
 
     return activeCount;
 }
+
 
 function hasActiveGalleryFilters() {
     return getActiveFilterCount() > 0;
 }
 
+
 function buildFilterParameters() {
     const parameters = {};
 
-    if (appliedBaseModelFilter !== "ALL") {
+    if (
+        appliedBaseModelFilter !==
+        "ALL"
+    ) {
         parameters.baseModel =
             appliedBaseModelFilter;
     }
 
     if (
-        appliedCategoryFilter !== "ALL" &&
-        appliedCategoryFilter !== "FAVORITES"
+        appliedCategoryFilter !==
+        "ALL" &&
+        appliedCategoryFilter !==
+        "FAVORITES"
     ) {
         parameters.category =
             appliedCategoryFilter;
     }
 
-    if (appliedSubcategoryFilter !== "ALL") {
+    if (
+        appliedSubcategoryFilter !==
+        "ALL"
+    ) {
         parameters.subcategory =
             appliedSubcategoryFilter;
     }
 
     return parameters;
 }
+
 
 function cancelPendingFilterChanges() {
     const {
@@ -881,6 +1394,7 @@ function cancelPendingFilterChanges() {
             appliedSubcategoryFilter;
     }
 }
+
 
 async function applySelectedFilter() {
     const {
@@ -909,10 +1423,12 @@ async function applySelectedFilter() {
     clearSearchForFilterChange();
 
     updateFilterButton();
+
     closeFilterModal();
 
     await refreshCurrentView();
 }
+
 
 function clearSearchForFilterChange() {
     const searchInput =
@@ -924,6 +1440,8 @@ function clearSearchForFilterChange() {
         searchInput.value = "";
     }
 
+    clearSearchDebounceTimer();
+
     lastSearchKeyword = "";
     currentSearchResults = [];
     isSearchActive = false;
@@ -932,13 +1450,17 @@ function clearSearchForFilterChange() {
     pageBeforeSearch = 0;
 }
 
+
 function updateFilterButton() {
     const {
         openButton,
         countBadge
     } = getFilterElements();
 
-    if (!openButton || !countBadge) {
+    if (
+        !openButton ||
+        !countBadge
+    ) {
         return;
     }
 
@@ -962,6 +1484,7 @@ function updateFilterButton() {
         String(activeFilterCount);
 }
 
+
 async function resetFilterSelection() {
     const {
         baseModelFilter,
@@ -970,85 +1493,42 @@ async function resetFilterSelection() {
     } = getFilterElements();
 
     if (baseModelFilter) {
-        baseModelFilter.value = "ALL";
+        baseModelFilter.value =
+            "ALL";
     }
 
     if (categoryFilter) {
-        categoryFilter.value = "ALL";
+        categoryFilter.value =
+            "ALL";
     }
 
     if (subcategoryFilter) {
-        subcategoryFilter.value = "ALL";
+        subcategoryFilter.value =
+            "ALL";
     }
 
-    appliedBaseModelFilter = "ALL";
-    appliedCategoryFilter = "ALL";
-    appliedSubcategoryFilter = "ALL";
+    appliedBaseModelFilter =
+        "ALL";
+
+    appliedCategoryFilter =
+        "ALL";
+
+    appliedSubcategoryFilter =
+        "ALL";
 
     clearSearchForFilterChange();
 
     updateFilterButton();
+
     closeFilterModal();
 
     await refreshCurrentView();
 }
 
-function renderSearchResultsPage(page) {
-    const resultCount = currentSearchResults.length;
 
-    totalElements = resultCount;
-    pageSize = DEFAULT_PAGE_SIZE;
-    totalPages = Math.ceil(resultCount / pageSize);
-
-    if (totalPages === 0) {
-        currentPage = 0;
-    } else {
-        currentPage = Math.min(
-            Math.max(page,0),
-            totalPages - 1
-        );
-    }
-
-    const startIndex = currentPage * pageSize;
-    const endIndex = startIndex + pageSize;
-
-    const pageResults = currentSearchResults.slice(startIndex, endIndex);
-
-    displayLoras(pageResults);
-    updatePaginationControls();
-}
-
-async function fetchLorasByCategory(
-    category,
-    page = currentPage
-) {
-    isSearchActive = false;
-    currentSearchResults = [];
-
-    try {
-        const encodedCategory =
-            encodeURIComponent(category);
-
-        const url = buildPaginatedUrl(
-            `/category/${encodedCategory}`,
-            page,
-            pageSize
-        );
-
-        await fetchPaginatedLoras(
-            url,
-            "Failed to fetch LoRAs by category"
-        );
-
-    } catch (error) {
-        console.error(
-            "Category filter error:",
-            error
-        );
-
-        displayGalleryError(error);
-    }
-}
+/* =========================
+   FAVORITES / FILTERED DATA
+========================= */
 
 async function fetchFavoriteLoras(
     page = currentPage
@@ -1081,6 +1561,7 @@ async function fetchFavoriteLoras(
         );
     }
 }
+
 
 async function fetchFilteredLoras(
     page = currentPage
@@ -1120,31 +1601,136 @@ async function fetchFilteredLoras(
 }
 
 
-function setupLayoutButtons() {
-    const singleButton = document.getElementById("singleColumnButton");
-    const doubleButton = document.getElementById("doubleColumnButton");
-    const loraList = document.getElementById("loraList");
+/* =========================
+   CATEGORY DATA
+========================= */
 
-    if (!singleButton || !doubleButton || !loraList) {
+async function fetchLorasByCategory(
+    category,
+    page = currentPage
+) {
+    isSearchActive = false;
+    currentSearchResults = [];
+
+    try {
+        const encodedCategory =
+            encodeURIComponent(
+                category
+            );
+
+        const url =
+            buildPaginatedUrl(
+                `/category/${encodedCategory}`,
+                page,
+                pageSize
+            );
+
+        await fetchPaginatedLoras(
+            url,
+            "Failed to fetch LoRAs by category"
+        );
+
+    } catch (error) {
+        console.error(
+            "Category filter error:",
+            error
+        );
+
+        displayGalleryError(
+            error
+        );
+    }
+}
+
+
+/* =========================
+   LEGACY CLIENT-SIDE
+   SEARCH PAGINATION
+========================= */
+
+/*
+ * Kept because it exists in the current
+ * application and may still be referenced
+ * elsewhere. Current server-side search
+ * uses displayPaginatedLoraResponse().
+ */
+
+
+
+/* =========================
+   GALLERY LAYOUT
+========================= */
+
+function setupLayoutButtons() {
+    const singleButton =
+        document.getElementById(
+            "singleColumnButton"
+        );
+
+    const doubleButton =
+        document.getElementById(
+            "doubleColumnButton"
+        );
+
+    const loraList =
+        document.getElementById(
+            "loraList"
+        );
+
+    if (
+        !singleButton ||
+        !doubleButton ||
+        !loraList
+    ) {
         return;
     }
 
-    singleButton.addEventListener("click", () => {
-        loraList.classList.remove("double-column");
-        loraList.classList.add("single-column");
+    singleButton.addEventListener(
+        "click",
+        () => {
+            loraList.classList.remove(
+                "double-column"
+            );
 
-        singleButton.classList.add("active");
-        doubleButton.classList.remove("active");
-    });
+            loraList.classList.add(
+                "single-column"
+            );
 
-    doubleButton.addEventListener("click", () => {
-        loraList.classList.remove("single-column");
-        loraList.classList.add("double-column");
+            singleButton.classList.add(
+                "active"
+            );
 
-        doubleButton.classList.add("active");
-        singleButton.classList.remove("active");
-    });
+            doubleButton.classList.remove(
+                "active"
+            );
+        }
+    );
+
+    doubleButton.addEventListener(
+        "click",
+        () => {
+            loraList.classList.remove(
+                "single-column"
+            );
+
+            loraList.classList.add(
+                "double-column"
+            );
+
+            doubleButton.classList.add(
+                "active"
+            );
+
+            singleButton.classList.remove(
+                "active"
+            );
+        }
+    );
 }
+
+/* =========================
+   LORA DETAILS MODAL
+========================= */
 
 function setupLoraDetailsModal() {
     const closeButton =
@@ -1178,7 +1764,10 @@ function setupLoraDetailsModal() {
     modalOverlay.addEventListener(
         "click",
         event => {
-            if (event.target === modalOverlay) {
+            if (
+                event.target ===
+                modalOverlay
+            ) {
                 closeLoraDetailsModal();
             }
         }
@@ -1190,138 +1779,23 @@ function setupLoraDetailsModal() {
     );
 }
 
-async function saveLoraEdit() {
-    if (!currentLora?.id) {
-        displayEditMessage(
-            "Unable to determine which LoRA is being edited.",
-            true
-        );
-        return;
-    }
 
-    const requestBody = buildLoraUpdateRequest();
-    const validationError =
-        validateLoraUpdate(requestBody);
-
-    if (validationError) {
-        displayEditMessage(validationError, true);
-        return;
-    }
-
-    const saveButton =
-        document.getElementById("saveLoraEditButton");
-
-    if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.textContent = "Saving...";
-    }
-
-    try {
-        const response = await fetch(
-            `${API_BASE_URL}/${currentLora.id}`,
-            {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(requestBody)
-            }
-        );
-
-        if (!response.ok) {
-            const responseText =
-                await response.text();
-
-            throw new Error(
-                responseText ||
-                `Update failed with status ${response.status}`
-            );
-        }
-
-        currentLora = await response.json();
-
-        populateLoraDetailsModal(currentLora);
-        exitLoraEditMode();
-
-        displayEditMessage(
-            "LoRA updated successfully."
-        );
-
-    } catch (error) {
-        console.error("LoRA update error:", error);
-
-        displayEditMessage(
-            "Unable to save the LoRA. Check the backend logs.",
-            true
-        );
-
-        return;
-
-    } finally {
-        if (saveButton) {
-            saveButton.disabled = false;
-            saveButton.textContent = "Save";
-        }
-    }
-
-    try {
-        await refreshCurrentView();
-    } catch (error) {
-        console.error(
-            "Gallery refresh error:",
-            error
-        );
-    }
-}
-
-function displayEditMessage(message, isError = false) {
-    const messageElement =
-        document.getElementById("detailsEditMessage");
-
-    if (!messageElement) {
-        return;
-    }
-
-    messageElement.textContent = message;
-    messageElement.classList.remove(
-        "hidden",
-        "details-edit-message-error",
-        "details-edit-message-success"
-    );
-
-    messageElement.classList.add(
-        isError
-            ? "details-edit-message-error"
-            : "details-edit-message-success"
-    );
-}
-
-function clearEditMessage() {
-    const messageElement =
-        document.getElementById("detailsEditMessage");
-
-    if (!messageElement) {
-        return;
-    }
-
-    messageElement.textContent = "";
-    messageElement.classList.add("hidden");
-    messageElement.classList.remove(
-        "details-edit-message-error",
-        "details-edit-message-success"
-    );
-}
+/* =========================
+   LORA DETAILS HELPERS
+========================= */
 
 function getLoraDetailsModal() {
-    return document.getElementById("loraDetailsModal");
+    return document.getElementById(
+        "loraDetailsModal"
+    );
 }
+
 
 function getLoraDetailsScrollContainer() {
     return document.querySelector(
         "#loraDetailsModal .lora-details-scroll-area"
     );
 }
-
 
 
 function resetLoraDetailsScrollPosition() {
@@ -1334,17 +1808,20 @@ function resetLoraDetailsScrollPosition() {
 
     scrollContainer.scrollTop = 0;
 
-    window.requestAnimationFrame(() => {
-        scrollContainer.scrollTo({
-            top: 0,
-            left: 0,
-            behavior: "auto"
-        });
-    });
+    window.requestAnimationFrame(
+        () => {
+            scrollContainer.scrollTo({
+                top: 0,
+                left: 0,
+                behavior: "auto"
+            });
+        }
+    );
 }
 
+
 /* =========================
-   RETURNED LORA MODAL HELPERS
+   RETURNED LORA MODAL
 ========================= */
 
 function getRequestedLoraId() {
@@ -1375,6 +1852,7 @@ function getRequestedLoraId() {
     return loraId;
 }
 
+
 function removeOpenLoraParameter() {
     const cleanedUrl =
         new URL(
@@ -1392,8 +1870,8 @@ function removeOpenLoraParameter() {
     );
 }
 
-async function reopenRequestedLoraModal() {
 
+async function reopenRequestedLoraModal() {
     const loraId =
         getRequestedLoraId();
 
@@ -1402,7 +1880,6 @@ async function reopenRequestedLoraModal() {
     }
 
     try {
-
         await openLoraDetailsModal(
             loraId
         );
@@ -1410,20 +1887,23 @@ async function reopenRequestedLoraModal() {
         removeOpenLoraParameter();
 
     } catch (error) {
-
         console.error(
             "Unable to reopen LoRA modal:",
             error
         );
 
     } finally {
-
         document.body.classList.remove(
             "returning-to-modal"
         );
-
     }
 }
+
+
+/* =========================
+   MODAL OPENING ANIMATION
+========================= */
+
 function restartLoraModalOpeningAnimation(
     modalSheet
 ) {
@@ -1436,10 +1916,16 @@ function restartLoraModalOpeningAnimation(
         "closing"
     );
 
-    // Force the browser to recognize the class removal.
+    /*
+     * Force the browser to recognize
+     * the class removal before adding
+     * the opening class again.
+     */
     void modalSheet.offsetWidth;
 
-    modalSheet.classList.add("opening");
+    modalSheet.classList.add(
+        "opening"
+    );
 
     modalSheet.addEventListener(
         "animationend",
@@ -1455,53 +1941,98 @@ function restartLoraModalOpeningAnimation(
 }
 
 
-async function openLoraDetailsModal(loraId) {
+/* =========================
+   OPEN LORA DETAILS
+========================= */
+
+async function openLoraDetailsModal(
+    loraId
+) {
     try {
-        const response = await fetch(`${API_BASE_URL}/${loraId}`);
+        const response =
+            await fetch(
+                `${API_BASE_URL}/${loraId}`
+            );
 
         if (!response.ok) {
-            throw new Error("Failed to load LoRA details");
+            throw new Error(
+                "Failed to load LoRA details"
+            );
         }
 
-        currentLora = await response.json();
+        currentLora =
+            await response.json();
 
-        const modal = getLoraDetailsModal();
+        const modal =
+            getLoraDetailsModal();
 
         if (!modal) {
-            throw new Error("LoRA details modal was not found.");
+            throw new Error(
+                "LoRA details modal was not found."
+            );
         }
 
-        populateLoraDetailsModal(currentLora);
+        populateLoraDetailsModal(
+            currentLora
+        );
+
         resetPreviewCarousel();
 
-        const modalSheet = modal.querySelector(".lora-details-sheet");
+        const modalSheet =
+            modal.querySelector(
+                ".lora-details-sheet"
+            );
 
-        modal.classList.remove("hidden", "closing");
+        modal.classList.remove(
+            "hidden",
+            "closing"
+        );
 
-        restartLoraModalOpeningAnimation(modalSheet);
+        restartLoraModalOpeningAnimation(
+            modalSheet
+        );
+
         resetLoraDetailsScrollPosition();
 
-        await loadPreviewCarousel(currentLora.id);
+        await loadPreviewCarousel(
+            currentLora.id
+        );
 
     } catch (error) {
-        console.error("Error loading LoRA details:", error);
-        alert("Unable to load LoRA details.");
+        console.error(
+            "Error loading LoRA details:",
+            error
+        );
+
+        alert(
+            "Unable to load LoRA details."
+        );
     }
 }
+
+
+/* =========================
+   CLOSE LORA DETAILS
+========================= */
 
 function finishClosingLoraDetailsModal(
     modal,
     modalSheet
 ) {
-    modal.classList.add("hidden");
+    modal.classList.add(
+        "hidden"
+    );
 
-    modal.classList.remove("closing");
+    modal.classList.remove(
+        "closing"
+    );
 
     modalSheet.classList.remove(
         "opening",
         "closing"
     );
 }
+
 
 function closeLoraDetailsModal() {
     const modal =
@@ -1519,19 +2050,31 @@ function closeLoraDetailsModal() {
             "#detailsImageContainer video"
         );
 
-    if (!modal || !modalSheet) {
-        return;
-    }
-
     if (
-        modal.classList.contains("hidden") ||
-        modal.classList.contains("closing")
+        !modal ||
+        !modalSheet
     ) {
         return;
     }
 
-    modal.classList.add("closing");
-    modalSheet.classList.add("closing");
+    if (
+        modal.classList.contains(
+            "hidden"
+        ) ||
+        modal.classList.contains(
+            "closing"
+        )
+    ) {
+        return;
+    }
+
+    modal.classList.add(
+        "closing"
+    );
+
+    modalSheet.classList.add(
+        "closing"
+    );
 
     let closingFinished = false;
 
@@ -1556,6 +2099,10 @@ function closeLoraDetailsModal() {
         }
     );
 
+    /*
+     * Fallback in case animationend
+     * does not fire.
+     */
     window.setTimeout(
         finishCloseAnimation,
         250
@@ -1572,24 +2119,49 @@ function closeLoraDetailsModal() {
     }
 }
 
-function populateLoraDetailsModal(lora) {
-    document.getElementById("detailsLoraName").textContent =
-        lora.loraName || "Untitled LoRA";
 
-    document.getElementById("detailsCreator").textContent =
-        lora.creator || "Unknown creator";
+/* =========================
+   POPULATE LORA DETAILS
+========================= */
 
-    document.getElementById("detailsVersion").textContent =
-        lora.version || "N/A";
+function populateLoraDetailsModal(
+    lora
+) {
+    document.getElementById(
+        "detailsLoraName"
+    ).textContent =
+        lora.loraName ||
+        "Untitled LoRA";
 
-    document.getElementById("detailsCategory").textContent =
-        lora.category || "N/A";
+    document.getElementById(
+        "detailsCreator"
+    ).textContent =
+        lora.creator ||
+        "Unknown creator";
 
-    document.getElementById("detailsSubCategory").textContent =
-        lora.subCategory || "N/A";
+    document.getElementById(
+        "detailsVersion"
+    ).textContent =
+        lora.version ||
+        "N/A";
 
-    document.getElementById("detailsBaseModel").textContent =
-        lora.baseModel || "N/A";
+    document.getElementById(
+        "detailsCategory"
+    ).textContent =
+        lora.category ||
+        "N/A";
+
+    document.getElementById(
+        "detailsSubCategory"
+    ).textContent =
+        lora.subCategory ||
+        "N/A";
+
+    document.getElementById(
+        "detailsBaseModel"
+    ).textContent =
+        lora.baseModel ||
+        "N/A";
 
     setCopyableField(
         "detailsPositivePrompt",
@@ -1620,25 +2192,45 @@ function populateLoraDetailsModal(lora) {
     );
 
     const hasNegativePrompt =
-        typeof lora.negativePrompt === "string" &&
+        typeof lora.negativePrompt ===
+        "string" &&
         lora.negativePrompt.trim() !== "";
 
     const hasNotes =
-        typeof lora.notes === "string" &&
+        typeof lora.notes ===
+        "string" &&
         lora.notes.trim() !== "";
+
+    const additionalDetails =
+        document.getElementById(
+            "additionalLoraDetails"
+        );
 
     if (additionalDetails) {
         additionalDetails.hidden =
-            !hasNegativePrompt && !hasNotes;
+            !hasNegativePrompt &&
+            !hasNotes;
 
         additionalDetails.open = false;
     }
-    populateDetailsUrl(lora);
+
+    populateDetailsUrl(
+        lora
+    );
 }
 
-function populateDetailsImage(lora) {
+
+/* =========================
+   DETAILS PREVIEW
+========================= */
+
+function populateDetailsImage(
+    lora
+) {
     const imageContainer =
-        document.getElementById("detailsImageContainer");
+        document.getElementById(
+            "detailsImageContainer"
+        );
 
     if (!imageContainer) {
         return;
@@ -1650,10 +2242,15 @@ function populateDetailsImage(lora) {
                 No Preview
             </div>
         `;
+
         return;
     }
 
-    if (isVideoPreview(lora.filePath)) {
+    if (
+        isVideoPreview(
+            lora.filePath
+        )
+    ) {
         imageContainer.innerHTML = `
             <video
                 src="${lora.filePath}"
@@ -1668,15 +2265,22 @@ function populateDetailsImage(lora) {
             </video>
         `;
 
-        const video = imageContainer.querySelector("video");
+        const video =
+            imageContainer.querySelector(
+                "video"
+            );
 
         if (video) {
-            video.play().catch(error => {
-                console.debug(
-                    "Video autoplay prevented:",
-                    error
+            video
+                .play()
+                .catch(
+                    error => {
+                        console.debug(
+                            "Video autoplay prevented:",
+                            error
+                        );
+                    }
                 );
-            });
         }
 
         return;
@@ -1691,25 +2295,57 @@ function populateDetailsImage(lora) {
     `;
 }
 
-function populateDetailsUrl(lora) {
-    const urlLink = document.getElementById("detailsUrl");
+
+/* =========================
+   DETAILS URL
+========================= */
+
+function populateDetailsUrl(
+    lora
+) {
+    const urlLink =
+        document.getElementById(
+            "detailsUrl"
+        );
 
     if (!urlLink) {
         return;
     }
 
     if (lora.url) {
-        urlLink.href = lora.url;
-        urlLink.textContent = lora.url;
-        urlLink.title = lora.url;
-        urlLink.classList.remove("hidden");
+        urlLink.href =
+            lora.url;
+
+        urlLink.textContent =
+            lora.url;
+
+        urlLink.title =
+            lora.url;
+
+        urlLink.classList.remove(
+            "hidden"
+        );
+
     } else {
         urlLink.href = "#";
-        urlLink.textContent = "N/A";
-        urlLink.removeAttribute("title");
-        urlLink.classList.remove("hidden");
+
+        urlLink.textContent =
+            "N/A";
+
+        urlLink.removeAttribute(
+            "title"
+        );
+
+        urlLink.classList.remove(
+            "hidden"
+        );
     }
 }
+
+
+/* =========================
+   LORA EDIT MODE
+========================= */
 
 function enterLoraEditMode() {
     if (!currentLora) {
@@ -1718,11 +2354,18 @@ function enterLoraEditMode() {
 
     isEditingLora = true;
 
-    populateLoraEditFields(currentLora);
-    setLoraEditVisibility(true);
+    populateLoraEditFields(
+        currentLora
+    );
+
+    setLoraEditVisibility(
+        true
+    );
 
     const nameInput =
-        document.getElementById("editLoraName");
+        document.getElementById(
+            "editLoraName"
+        );
 
     if (nameInput) {
         nameInput.focus({
@@ -1731,23 +2374,54 @@ function enterLoraEditMode() {
     }
 }
 
-function setLoraEditVisibility(editing) {
-    toggleHidden("detailsHeaderView", editing);
-    toggleHidden("detailsHeaderEdit", !editing);
 
-    toggleHidden("detailsInfoView", editing);
-    toggleHidden("detailsInfoEdit", !editing);
+function setLoraEditVisibility(
+    editing
+) {
+    toggleHidden(
+        "detailsHeaderView",
+        editing
+    );
 
-    toggleHidden("detailsPromptView", editing);
-    toggleHidden("detailsPromptEdit", !editing);
+    toggleHidden(
+        "detailsHeaderEdit",
+        !editing
+    );
 
-    toggleHidden("detailsEditActionBar", !editing);
+    toggleHidden(
+        "detailsInfoView",
+        editing
+    );
 
-    const urlLink = document.getElementById("detailsUrl");
+    toggleHidden(
+        "detailsInfoEdit",
+        !editing
+    );
+
+    toggleHidden(
+        "detailsPromptView",
+        editing
+    );
+
+    toggleHidden(
+        "detailsPromptEdit",
+        !editing
+    );
+
+    toggleHidden(
+        "detailsEditActionBar",
+        !editing
+    );
+
+    const urlLink =
+        document.getElementById(
+            "detailsUrl"
+        );
 
     if (urlLink) {
         const shouldHideUrl =
-            editing || !currentLora?.url;
+            editing ||
+            !currentLora?.url;
 
         urlLink.classList.toggle(
             "hidden",
@@ -1756,85 +2430,224 @@ function setLoraEditVisibility(editing) {
     }
 }
 
-function toggleHidden(elementId, shouldHide) {
-    const element = document.getElementById(elementId);
+
+function toggleHidden(
+    elementId,
+    shouldHide
+) {
+    const element =
+        document.getElementById(
+            elementId
+        );
 
     if (!element) {
         return;
     }
 
-    element.classList.toggle("hidden", shouldHide);
+    element.classList.toggle(
+        "hidden",
+        shouldHide
+    );
 }
+
 
 function cancelLoraEdit() {
     if (!currentLora) {
         return;
     }
 
-    populateLoraEditFields(currentLora);
+    populateLoraEditFields(
+        currentLora
+    );
+
     exitLoraEditMode();
 }
 
+
 function exitLoraEditMode() {
     isEditingLora = false;
-    setLoraEditVisibility(false);
+
+    setLoraEditVisibility(
+        false
+    );
+
     clearEditMessage();
 }
 
-function buildEditLoraPageUrl(loraId) {
-    const queryParameters = new URLSearchParams({id: String(loraId)});
 
-    return `/html/edit-lora.html?${queryParameters.toString()}`;
+/* =========================
+   EDIT PAGE NAVIGATION
+========================= */
+
+function buildEditLoraPageUrl(
+    loraId
+) {
+    const queryParameters =
+        new URLSearchParams({
+            id: String(loraId)
+        });
+
+    return (
+        `/html/edit-lora.html?` +
+        queryParameters.toString()
+    );
 }
+
 
 function openEditLoraPage() {
     if (!currentLora?.id) {
-        console.error("Cannot open edit page without a LoRA ID.");
+        console.error(
+            "Cannot open edit page without a LoRA ID."
+        );
 
         return;
     }
 
-    window.location.href = buildEditLoraPageUrl(currentLora.id);
+    window.location.href =
+        buildEditLoraPageUrl(
+            currentLora.id
+        );
 }
+
+
+/* =========================
+   EDIT REQUEST
+========================= */
 
 function buildLoraUpdateRequest() {
     const seedValue =
-        document.getElementById("editSeedNumber")?.value.trim() || "";
+        document
+            .getElementById(
+                "editSeedNumber"
+            )
+            ?.value
+            .trim() || "";
 
     return {
-        loraName: getModalInputValue("editLoraName"),
-        version: getModalInputValue("editVersion"),
-        creator: getModalInputValue("editCreator"),
-        category: getModalInputValue("editCategory"),
-        subCategory: getModalInputValue("editSubCategory"),
-        positivePrompt: getModalInputValue("editPositivePrompt"),
-        negativePrompt: getModalInputValue("editNegativePrompt"),
-        seedNumber: seedValue === "" ? null : Number(seedValue),
-        notes: getModalInputValue("editNotes"),
-        favorite: currentLora?.favorite ?? false
+        loraName:
+            getModalInputValue(
+                "editLoraName"
+            ),
+
+        version:
+            getModalInputValue(
+                "editVersion"
+            ),
+
+        creator:
+            getModalInputValue(
+                "editCreator"
+            ),
+
+        category:
+            getModalInputValue(
+                "editCategory"
+            ),
+
+        subCategory:
+            getModalInputValue(
+                "editSubCategory"
+            ),
+
+        positivePrompt:
+            getModalInputValue(
+                "editPositivePrompt"
+            ),
+
+        negativePrompt:
+            getModalInputValue(
+                "editNegativePrompt"
+            ),
+
+        seedNumber:
+            seedValue === ""
+                ? null
+                : Number(seedValue),
+
+        notes:
+            getModalInputValue(
+                "editNotes"
+            ),
+
+        favorite:
+            currentLora?.favorite ??
+            false
     };
 }
 
-function getModalInputValue(elementId) {
-    const element = document.getElementById(elementId);
 
-    return element ? element.value.trim() : "";
+function getModalInputValue(
+    elementId
+) {
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+    return element
+        ? element.value.trim()
+        : "";
 }
 
-function populateLoraEditFields(lora) {
-    setInputValue("editLoraName", lora.loraName);
-    setInputValue("editCreator", lora.creator);
-    setInputValue("editVersion", lora.version);
-    setInputValue("editCategory", lora.category);
-    setInputValue("editSubCategory", lora.subCategory);
-    setInputValue("editGroupName", lora.groupName);
-    setInputValue("editSeedNumber", lora.seedNumber);
-    setInputValue("editPositivePrompt", lora.positivePrompt);
-    setInputValue("editNegativePrompt", lora.negativePrompt);
-    setInputValue("editNotes", lora.notes);
+
+function populateLoraEditFields(
+    lora
+) {
+    setInputValue(
+        "editLoraName",
+        lora.loraName
+    );
+
+    setInputValue(
+        "editCreator",
+        lora.creator
+    );
+
+    setInputValue(
+        "editVersion",
+        lora.version
+    );
+
+    setInputValue(
+        "editCategory",
+        lora.category
+    );
+
+    setInputValue(
+        "editSubCategory",
+        lora.subCategory
+    );
+
+    setInputValue(
+        "editGroupName",
+        lora.groupName
+    );
+
+    setInputValue(
+        "editSeedNumber",
+        lora.seedNumber
+    );
+
+    setInputValue(
+        "editPositivePrompt",
+        lora.positivePrompt
+    );
+
+    setInputValue(
+        "editNegativePrompt",
+        lora.negativePrompt
+    );
+
+    setInputValue(
+        "editNotes",
+        lora.notes
+    );
 }
 
-function validateLoraUpdate(requestBody) {
+
+function validateLoraUpdate(
+    requestBody
+) {
     if (!requestBody.loraName) {
         return "LoRA name is required.";
     }
@@ -1845,7 +2658,9 @@ function validateLoraUpdate(requestBody) {
 
     if (
         requestBody.seedNumber !== null &&
-        Number.isNaN(requestBody.seedNumber)
+        Number.isNaN(
+            requestBody.seedNumber
+        )
     ) {
         return "Seed must be a valid number.";
     }
@@ -1853,13 +2668,200 @@ function validateLoraUpdate(requestBody) {
     return null;
 }
 
-function setInputValue(elementId, value) {
-    const element = document.getElementById(elementId);
+
+function setInputValue(
+    elementId,
+    value
+) {
+    const element =
+        document.getElementById(
+            elementId
+        );
 
     if (element) {
-        element.value = value ?? "";
+        element.value =
+            value ?? "";
     }
 }
+
+
+/* =========================
+   SAVE LORA EDIT
+========================= */
+
+async function saveLoraEdit() {
+    if (!currentLora?.id) {
+        displayEditMessage(
+            "Unable to determine which LoRA is being edited.",
+            true
+        );
+
+        return;
+    }
+
+    const requestBody =
+        buildLoraUpdateRequest();
+
+    const validationError =
+        validateLoraUpdate(
+            requestBody
+        );
+
+    if (validationError) {
+        displayEditMessage(
+            validationError,
+            true
+        );
+
+        return;
+    }
+
+    const saveButton =
+        document.getElementById(
+            "saveLoraEditButton"
+        );
+
+    if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.textContent =
+            "Saving...";
+    }
+
+    try {
+        const response =
+            await fetch(
+                `${API_BASE_URL}/${currentLora.id}`,
+                {
+                    method: "PUT",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            requestBody
+                        )
+                }
+            );
+
+        if (!response.ok) {
+            const responseText =
+                await response.text();
+
+            throw new Error(
+                responseText ||
+                `Update failed with status ${response.status}`
+            );
+        }
+
+        currentLora =
+            await response.json();
+
+        populateLoraDetailsModal(
+            currentLora
+        );
+
+        exitLoraEditMode();
+
+        displayEditMessage(
+            "LoRA updated successfully."
+        );
+
+    } catch (error) {
+        console.error(
+            "LoRA update error:",
+            error
+        );
+
+        displayEditMessage(
+            "Unable to save the LoRA. Check the backend logs.",
+            true
+        );
+
+        return;
+
+    } finally {
+        if (saveButton) {
+            saveButton.disabled = false;
+
+            saveButton.textContent =
+                "Save";
+        }
+    }
+
+    try {
+        await refreshCurrentView();
+
+    } catch (error) {
+        console.error(
+            "Gallery refresh error:",
+            error
+        );
+    }
+}
+
+
+/* =========================
+   EDIT STATUS MESSAGE
+========================= */
+
+function displayEditMessage(
+    message,
+    isError = false
+) {
+    const messageElement =
+        document.getElementById(
+            "detailsEditMessage"
+        );
+
+    if (!messageElement) {
+        return;
+    }
+
+    messageElement.textContent =
+        message;
+
+    messageElement.classList.remove(
+        "hidden",
+        "details-edit-message-error",
+        "details-edit-message-success"
+    );
+
+    messageElement.classList.add(
+        isError
+            ? "details-edit-message-error"
+            : "details-edit-message-success"
+    );
+}
+
+
+function clearEditMessage() {
+    const messageElement =
+        document.getElementById(
+            "detailsEditMessage"
+        );
+
+    if (!messageElement) {
+        return;
+    }
+
+    messageElement.textContent = "";
+
+    messageElement.classList.add(
+        "hidden"
+    );
+
+    messageElement.classList.remove(
+        "details-edit-message-error",
+        "details-edit-message-success"
+    );
+}
+
+/* =========================
+   SIDE MENU
+========================= */
 
 function setupMenu() {
     const optionsButton =
@@ -1948,74 +2950,134 @@ function setupMenu() {
 }
 
 
+/* =========================
+   IMPORT FOLDER
+========================= */
 
 function setupImportFolderForm() {
-    const importForm = document.getElementById("importFolderForm");
-    const folderPathInput = document.getElementById("importFolderPath");
-    const submitButton = document.getElementById("importFolderSubmitButton");
-    const importResult = document.getElementById("importResult");
+    const importForm =
+        document.getElementById(
+            "importFolderForm"
+        );
 
-    if (!importForm || !folderPathInput || !submitButton || !importResult) {
+    const folderPathInput =
+        document.getElementById(
+            "importFolderPath"
+        );
+
+    const submitButton =
+        document.getElementById(
+            "importFolderSubmitButton"
+        );
+
+    const importResult =
+        document.getElementById(
+            "importResult"
+        );
+
+    if (
+        !importForm ||
+        !folderPathInput ||
+        !submitButton ||
+        !importResult
+    ) {
         return;
     }
 
-    importForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
+    importForm.addEventListener(
+        "submit",
+        async event => {
+            event.preventDefault();
 
-        const folderPath = folderPathInput.value.trim();
+            const folderPath =
+                folderPathInput.value.trim();
 
-        if (folderPath === "") {
-            displayImportError("Enter a LoRA folder path.");
-            return;
-        }
-
-        submitButton.disabled = true;
-        submitButton.textContent = "Importing...";
-
-        importResult.classList.add("hidden");
-        importResult.innerHTML = "";
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/import-folder`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    folderPath: folderPath
-                })
-            });
-
-            if (!response.ok) {
-                const errorMessage = await response.text();
-
-                throw new Error(
-                    errorMessage || `Import failed with status ${response.status}`
+            if (folderPath === "") {
+                displayImportError(
+                    "Enter a LoRA folder path."
                 );
+
+                return;
             }
 
-            const summary = await response.json();
+            submitButton.disabled = true;
+            submitButton.textContent =
+                "Importing...";
 
-            displayImportSummary(summary);
-
-            await refreshCurrentView();
-
-        } catch (error) {
-            console.error("Folder import error:", error);
-
-            displayImportError(
-                "Unable to import the folder. Verify the path and check the backend logs."
+            importResult.classList.add(
+                "hidden"
             );
 
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = "Scan and Import";
+            importResult.innerHTML = "";
+
+            try {
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/import-folder`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify({
+                                    folderPath:
+                                    folderPath
+                                })
+                        }
+                    );
+
+                if (!response.ok) {
+                    const errorMessage =
+                        await response.text();
+
+                    throw new Error(
+                        errorMessage ||
+                        `Import failed with status ${response.status}`
+                    );
+                }
+
+                const summary =
+                    await response.json();
+
+                displayImportSummary(
+                    summary
+                );
+
+                await refreshCurrentView();
+
+            } catch (error) {
+                console.error(
+                    "Folder import error:",
+                    error
+                );
+
+                displayImportError(
+                    "Unable to import the folder. Verify the path and check the backend logs."
+                );
+
+            } finally {
+                submitButton.disabled =
+                    false;
+
+                submitButton.textContent =
+                    "Scan and Import";
+            }
         }
-    });
+    );
 }
 
-function displayImportSummary(summary) {
-    const importResult = document.getElementById("importResult");
+
+function displayImportSummary(
+    summary
+) {
+    const importResult =
+        document.getElementById(
+            "importResult"
+        );
 
     if (!importResult) {
         return;
@@ -2037,31 +3099,44 @@ function displayImportSummary(summary) {
 
             <div class="import-summary-row">
                 <span>📂 Files Scanned</span>
-                <strong>${summary.scannedFiles ?? 0}</strong>
+                <strong>
+                    ${summary.scannedFiles ?? 0}
+                </strong>
             </div>
 
             <div class="import-summary-row">
                 <span>✅ Imported</span>
-                <strong>${summary.importedCount ?? 0}</strong>
+                <strong>
+                    ${summary.importedCount ?? 0}
+                </strong>
             </div>
 
             <div class="import-summary-row">
                 <span>⏭ Already Exists</span>
-                <strong>${summary.skippedCount ?? 0}</strong>
+                <strong>
+                    ${summary.skippedCount ?? 0}
+                </strong>
             </div>
 
             <div class="import-summary-row">
                 <span>❌ Failed</span>
-                <strong>${summary.failedCount ?? 0}</strong>
+                <strong>
+                    ${summary.failedCount ?? 0}
+                </strong>
             </div>
 
         </div>
     `;
 }
 
-function displayImportError(message) {
+
+function displayImportError(
+    message
+) {
     const importResult =
-        document.getElementById("importResult");
+        document.getElementById(
+            "importResult"
+        );
 
     if (!importResult) {
         return;
@@ -2082,54 +3157,117 @@ function displayImportError(message) {
     `;
 }
 
-document.addEventListener("click", async event => {
-    const copyButton = event.target.closest(".copy-field-button");
 
-    if (!copyButton) {
-        return;
+/* =========================
+   COPYABLE FIELDS
+========================= */
+
+document.addEventListener(
+    "click",
+    async event => {
+        const copyButton =
+            event.target.closest(
+                ".copy-field-button"
+            );
+
+        if (!copyButton) {
+            return;
+        }
+
+        const targetId =
+            copyButton.dataset.copyTarget;
+
+        const targetElement =
+            document.getElementById(
+                targetId
+            );
+
+        if (!targetElement) {
+            console.error(
+                `Copy target not found: ${targetId}`
+            );
+
+            return;
+        }
+
+        const textToCopy =
+            targetElement
+                .textContent
+                .trim();
+
+        if (
+            !textToCopy ||
+            textToCopy ===
+            "Not provided"
+        ) {
+            showCopyButtonStatus(
+                copyButton,
+                "Nothing to copy"
+            );
+
+            return;
+        }
+
+        try {
+            await navigator.clipboard.writeText(
+                textToCopy
+            );
+
+            showCopyButtonStatus(
+                copyButton,
+                "Copied"
+            );
+
+        } catch (error) {
+            console.error(
+                "Clipboard copy failed:",
+                error
+            );
+
+            const copied =
+                copyUsingFallback(
+                    textToCopy
+                );
+
+            showCopyButtonStatus(
+                copyButton,
+                copied
+                    ? "Copied"
+                    : "Copy failed"
+            );
+        }
     }
+);
 
-    const targetId = copyButton.dataset.copyTarget;
-    const targetElement = document.getElementById(targetId);
 
-    if (!targetElement) {
-        console.error(`Copy target not found: ${targetId}`);
-        return;
-    }
-
-    const textToCopy = targetElement.textContent.trim();
-
-    if (!textToCopy || textToCopy === "Not provided") {
-        showCopyButtonStatus(copyButton, "Nothing to copy");
-        return;
-    }
-
-    try {
-        await navigator.clipboard.writeText(textToCopy);
-        showCopyButtonStatus(copyButton, "Copied");
-    } catch (error) {
-        console.error("Clipboard copy failed:", error);
-
-        const copied = copyUsingFallback(textToCopy);
-
-        showCopyButtonStatus(
-            copyButton,
-            copied ? "Copied" : "Copy failed"
+function copyUsingFallback(
+    text
+) {
+    const temporaryTextArea =
+        document.createElement(
+            "textarea"
         );
-    }
-});
 
-function copyUsingFallback(text) {
-    const temporaryTextArea = document.createElement("textarea");
+    temporaryTextArea.value =
+        text;
 
-    temporaryTextArea.value = text;
-    temporaryTextArea.setAttribute("readonly", "");
-    temporaryTextArea.style.position = "fixed";
-    temporaryTextArea.style.opacity = "0";
+    temporaryTextArea.setAttribute(
+        "readonly",
+        ""
+    );
 
-    document.body.appendChild(temporaryTextArea);
+    temporaryTextArea.style.position =
+        "fixed";
+
+    temporaryTextArea.style.opacity =
+        "0";
+
+    document.body.appendChild(
+        temporaryTextArea
+    );
 
     temporaryTextArea.select();
+
     temporaryTextArea.setSelectionRange(
         0,
         temporaryTextArea.value.length
@@ -2138,23 +3276,22 @@ function copyUsingFallback(text) {
     let copied = false;
 
     try {
-        copied = document.execCommand("copy");
+        copied =
+            document.execCommand(
+                "copy"
+            );
+
     } catch (error) {
-        console.error("Fallback copy failed:", error);
+        console.error(
+            "Fallback copy failed:",
+            error
+        );
     }
 
     temporaryTextArea.remove();
 
     return copied;
 }
-
-const additionalDetails =
-    document.getElementById("additionalLoraDetails");
-
-if (additionalDetails) {
-    additionalDetails.open = false;
-}
-
 
 
 function setCopyableField(
@@ -2163,11 +3300,15 @@ function setCopyableField(
     value,
     emptyMessage
 ) {
-    const target = document.getElementById(targetId);
+    const target =
+        document.getElementById(
+            targetId
+        );
 
-    const button = document.querySelector(
-        `[data-copy-target="${buttonTarget}"]`
-    );
+    const button =
+        document.querySelector(
+            `[data-copy-target="${buttonTarget}"]`
+        );
 
     if (!target) {
         return;
@@ -2184,35 +3325,61 @@ function setCopyableField(
             : emptyMessage;
 
     if (button) {
-        button.disabled = !hasValue;
+        button.disabled =
+            !hasValue;
     }
 }
 
-function showCopyButtonStatus(button, message) {
-    if (!button.dataset.originalText) {
+
+function showCopyButtonStatus(
+    button,
+    message
+) {
+    if (
+        !button.dataset.originalText
+    ) {
         button.dataset.originalText =
             button.textContent.trim();
     }
 
     window.clearTimeout(
-        Number(button.dataset.resetTimer)
+        Number(
+            button.dataset.resetTimer
+        )
     );
 
-    button.textContent = message;
+    button.textContent =
+        message;
+
     button.disabled = true;
 
-    const timer = window.setTimeout(() => {
-        button.textContent =
-            button.dataset.originalText;
+    const timer =
+        window.setTimeout(
+            () => {
+                button.textContent =
+                    button.dataset.originalText;
 
-        button.disabled = false;
-        delete button.dataset.resetTimer;
-    }, 1200);
+                button.disabled =
+                    false;
 
-    button.dataset.resetTimer = String(timer);
+                delete button.dataset
+                    .resetTimer;
+            },
+            1200
+        );
+
+    button.dataset.resetTimer =
+        String(timer);
 }
 
-function isVideoPreview(filePath) {
+
+/* =========================
+   VIDEO HELPERS
+========================= */
+
+function isVideoPreview(
+    filePath
+) {
     if (!filePath) {
         return false;
     }
@@ -2223,68 +3390,113 @@ function isVideoPreview(filePath) {
         .endsWith(".mp4");
 }
 
-const galleryVideoObserver = new IntersectionObserver(
-    entries => {
-        entries.forEach(entry => {
-            if (!window.matchMedia("(hover: none)").matches) {
-                return;
-            }
 
-            const video = entry.target;
+const galleryVideoObserver =
+    new IntersectionObserver(
+        entries => {
+            entries.forEach(
+                entry => {
+                    if (
+                        !window.matchMedia(
+                            "(hover: none)"
+                        ).matches
+                    ) {
+                        return;
+                    }
 
-            if (entry.isIntersecting) {
-                playGalleryVideo(video);
-            } else {
-                resetGalleryVideo(video);
-            }
-        });
-    },
-    {
-        threshold: 0.7
+                    const video =
+                        entry.target;
+
+                    if (
+                        entry.isIntersecting
+                    ) {
+                        playGalleryVideo(
+                            video
+                        );
+
+                    } else {
+                        resetGalleryVideo(
+                            video
+                        );
+                    }
+                }
+            );
+        },
+        {
+            threshold: 0.65
+        }
+    );
+
+
+function playGalleryVideo(
+    video
+) {
+    if (!video) {
+        return;
     }
-);
 
-function playGalleryVideo(video) {
-    pauseOtherGalleryVideos(video);
+    pauseOtherGalleryVideos(
+        video
+    );
 
-    video.play().catch(error => {
-        console.debug("Gallery preview playback prevented:", error);
-    });
-}
+    const playPromise =
+        video.play();
 
-function setupGalleryVideoPreview(card, video) {
-    card.addEventListener("pointerenter", event => {
-        if (event.pointerType === "mouse") {
-            playGalleryVideo(video);
-        }
-    });
-
-    card.addEventListener("pointerleave", event => {
-        if (event.pointerType === "mouse") {
-            resetGalleryVideo(video);
-        }
-    });
-
-    galleryVideoObserver.observe(video);
-}
-
-function pauseOtherGalleryVideos(activeVideo) {
-    document
-        .querySelectorAll("video.lora-card-image")
-        .forEach(video => {
-            if (video !== activeVideo) {
-                resetGalleryVideo(video);
+    if (
+        playPromise &&
+        typeof playPromise.catch ===
+        "function"
+    ) {
+        playPromise.catch(
+            () => {
+                // Autoplay may be blocked.
             }
-        });
+        );
+    }
 }
 
-function resetGalleryVideo(video) {
+
+function pauseOtherGalleryVideos(
+    activeVideo
+) {
+    document
+        .querySelectorAll(
+            ".lora-card video.lora-card-image"
+        )
+        .forEach(
+            video => {
+                if (
+                    video !==
+                    activeVideo
+                ) {
+                    resetGalleryVideo(
+                        video
+                    );
+                }
+            }
+        );
+}
+
+
+function resetGalleryVideo(
+    video
+) {
+    if (!video) {
+        return;
+    }
+
     video.pause();
 
-    if (video.readyState >= 1) {
+    try {
         video.currentTime = 0;
+    } catch {
+        // Ignore videos that are not ready.
     }
 }
+
+/* =========================
+   PAGINATED URL HELPERS
+========================= */
 
 function buildLoraPageUrl(
     page,
@@ -2298,134 +3510,142 @@ function buildLoraPageUrl(
     );
 }
 
-function validateLoraPageResponse(pageResponse) {
-    if (!pageResponse || typeof pageResponse !== "object") {
-        throw new Error("The LoRA API returned an invalid response.");
-    }
-
-    if (!Array.isArray(pageResponse.content)) {
-        throw new Error("The LoRA API response does not contain a content array.");
-    }
-}
-
-function updatePaginationState(pageResponse) {
-    currentPage = pageResponse.number ?? 0;
-    pageSize = pageResponse.size ?? DEFAULT_PAGE_SIZE;
-    totalPages = pageResponse.totalPages ?? 0;
-    totalElements = pageResponse.totalElements ?? 0;
-}
-
-function getLoraGallery() {
-    const gallery = document.getElementById("loraList");
-
-    if (!gallery) {
-        throw new Error("The LoRA gallery element with ID 'loraList' was not found.");
-    }
-
-    return gallery;
-}
-
-function clearLoraGallery() {
-    const gallery = getLoraGallery();
-    gallery.replaceChildren();
-}
-
-function renderLoraPage(loras) {
-    const gallery = getLoraGallery();
-
-    clearLoraGallery();
-
-    loras.forEach(lora => {
-        const card = createLoraCard(lora);
-        gallery.appendChild(card);
-    })
-}
-
-function displayEmptyGalleryMessage() {
-    const gallery = getLoraGallery();
-
-    const message = document.createElement("p");
-    message.className = "empty-message";
-    message.textContent = "No LoRAs found.";
-
-    gallery.replaceChildren(message);
-}
-
-function displayGalleryError(error) {
-    console.error("Error loading paginated LoRAs:", error);
-
-    const gallery = document.getElementById("loraList");
-
-    if (!gallery) {
-        return;
-    }
-
-    const message = document.createElement("p");
-    message.className = "empty-message";
-    message.textContent = "Unable to load LoRAs. Check the browser console and backend logs.";
-
-    gallery.replaceChildren(message);
-}
 
 function buildPaginatedUrl(
-    path,
+    endpoint,
     page,
     size,
     parameters = {}
 ) {
     const queryParameters =
-        new URLSearchParams({
-            page: String(page),
-            size: String(size)
-        });
+        new URLSearchParams();
 
-    Object.entries(parameters).forEach(
+    queryParameters.set(
+        "page",
+        String(page)
+    );
+
+    queryParameters.set(
+        "size",
+        String(size)
+    );
+
+    Object.entries(
+        parameters
+    ).forEach(
         ([key, value]) => {
             if (
-                value !== null &&
-                value !== undefined &&
-                String(value).trim() !== ""
+                value === null ||
+                value === undefined ||
+                value === ""
             ) {
-                queryParameters.set(
-                    key,
-                    String(value)
-                );
+                return;
             }
+
+            queryParameters.set(
+                key,
+                String(value)
+            );
         }
     );
 
     return (
-        `${API_BASE_URL}${path}` +
-        `?${queryParameters.toString()}`
+        `${API_BASE_URL}${endpoint}?` +
+        queryParameters.toString()
     );
 }
+
+
+/* =========================
+   PAGINATED RESPONSE
+========================= */
+
+function validateLoraPageResponse(
+    pageResponse
+) {
+    if (
+        !pageResponse ||
+        !Array.isArray(
+            pageResponse.content
+        )
+    ) {
+        throw new Error(
+            "Invalid paginated LoRA response."
+        );
+    }
+}
+
+
+function updatePaginationState(
+    pageResponse
+) {
+    currentPage =
+        Number.isInteger(
+            pageResponse.number
+        )
+            ? pageResponse.number
+            : 0;
+
+    pageSize =
+        Number.isInteger(
+            pageResponse.size
+        )
+            ? pageResponse.size
+            : DEFAULT_PAGE_SIZE;
+
+    totalPages =
+        Number.isInteger(
+            pageResponse.totalPages
+        )
+            ? pageResponse.totalPages
+            : 0;
+
+    totalElements =
+        Number.isInteger(
+            pageResponse.totalElements
+        )
+            ? pageResponse.totalElements
+            : 0;
+}
+
 
 function displayPaginatedLoraResponse(
     pageResponse
 ) {
-    validateLoraPageResponse(pageResponse);
+    validateLoraPageResponse(
+        pageResponse
+    );
 
-    updatePaginationState(pageResponse);
-    updatePaginationControls();
+    updatePaginationState(
+        pageResponse
+    );
 
-    if (pageResponse.content.length === 0) {
+    if (
+        pageResponse.content.length ===
+        0
+    ) {
         displayEmptyGalleryMessage();
-        return;
+
+    } else {
+        renderLoraPage(
+            pageResponse.content
+        );
     }
 
-    renderLoraPage(pageResponse.content);
+    updatePaginationControls();
 }
+
 
 async function fetchPaginatedLoras(
     url,
     errorMessage
 ) {
-    const response = await fetch(url);
+    const response =
+        await fetch(url);
 
     if (!response.ok) {
         throw new Error(
-            `${errorMessage}. ` +
-            `Status: ${response.status}`
+            `${errorMessage}. Status: ${response.status}`
         );
     }
 
@@ -2435,7 +3655,14 @@ async function fetchPaginatedLoras(
     displayPaginatedLoraResponse(
         pageResponse
     );
+
+    return pageResponse;
 }
+
+
+/* =========================
+   PAGINATION CONTROLS
+========================= */
 
 function setupPaginationControls() {
     const previousButton =
@@ -2448,21 +3675,27 @@ function setupPaginationControls() {
             "nextPageButton"
         );
 
-    if (!previousButton || !nextButton) {
+    if (
+        !previousButton ||
+        !nextButton
+    ) {
         return;
     }
 
     previousButton.addEventListener(
         "click",
         async () => {
-            if (currentPage <= 0) {
+            if (
+                currentPage <= 0
+            ) {
                 return;
             }
 
             currentPage -= 1;
 
             await refreshCurrentView();
-            await scrollToLoraGalleryControls();
+
+            scrollToLoraGalleryControls();
         }
     );
 
@@ -2471,7 +3704,8 @@ function setupPaginationControls() {
         async () => {
             if (
                 totalPages === 0 ||
-                currentPage >= totalPages - 1
+                currentPage >=
+                totalPages - 1
             ) {
                 return;
             }
@@ -2479,53 +3713,84 @@ function setupPaginationControls() {
             currentPage += 1;
 
             await refreshCurrentView();
-            await scrollToLoraGalleryControls();
+
+            scrollToLoraGalleryControls();
         }
     );
+
+    updatePaginationControls();
 }
 
-function updatePaginationControls() {
-    const controls = document.getElementById("paginationControls");
-    const previousButton = document.getElementById("previousPageButton");
-    const nextButton = document.getElementById("nextPageButton");
-    const pageIndicator = document.getElementById("pageIndicator");
 
-    if (!controls || !previousButton || !nextButton || !pageIndicator) {
+function updatePaginationControls() {
+    const paginationControls =
+        document.getElementById(
+            "paginationControls"
+        );
+
+    const previousButton =
+        document.getElementById(
+            "previousPageButton"
+        );
+
+    const nextButton =
+        document.getElementById(
+            "nextPageButton"
+        );
+
+    const pageIndicator =
+        document.getElementById(
+            "pageIndicator"
+        );
+
+    if (
+        !paginationControls ||
+        !previousButton ||
+        !nextButton ||
+        !pageIndicator
+    ) {
         return;
     }
 
-    const hasMultiplePages = totalPages > 1;
+    if (
+        totalElements === 0 ||
+        totalPages <= 1
+    ) {
+        paginationControls.classList.add(
+            "hidden"
+        );
 
-    controls.classList.toggle(
-        "hidden",
-        !hasMultiplePages
-    );
+        previousButton.disabled =
+            true;
 
-    if (totalPages === 0) {
-        pageIndicator.textContent = "Page 0 of 0";
-    } else {
+        nextButton.disabled =
+            true;
+
         pageIndicator.textContent =
-            `Page ${currentPage + 1} of ${totalPages}`;
+            totalElements === 0
+                ? "Page 0 of 0"
+                : "Page 1 of 1";
+
+        return;
     }
+
+    paginationControls.classList.remove(
+        "hidden"
+    );
 
     previousButton.disabled =
         currentPage <= 0;
 
     nextButton.disabled =
-        totalPages === 0 ||
-        currentPage >= totalPages - 1;
+        currentPage >=
+        totalPages - 1;
+
+    pageIndicator.textContent =
+        `Page ${currentPage + 1} of ${totalPages}`;
 }
 
-async function scrollToLoraGalleryControls() {
-    await new Promise(resolve => {
-        window.requestAnimationFrame(() => {
-            window.requestAnimationFrame(resolve);
-        });
-    });
 
-    stickyNavigationOffset = 0;
-    updateStickyNavigationPosition();
-
+function scrollToLoraGalleryControls() {
     window.scrollTo({
         top: 0,
         left: 0,
@@ -2533,29 +3798,1506 @@ async function scrollToLoraGalleryControls() {
     });
 }
 
-function getMaximumScrollTop() {
-    return Math.max(
-        0,
-        document.documentElement.scrollHeight -
-        window.innerHeight
+
+
+
+
+
+/* =========================
+   SHARED BOTTOM SHEET SWIPE
+========================= */
+
+function setupBottomSheetSwipe({
+                                   sheet,
+                                   canStart,
+                                   onDismiss
+                               }) {
+    if (!sheet) {
+        return;
+    }
+
+    let activePointerId = null;
+
+    let startY = 0;
+
+    let currentY = 0;
+
+    let dragging = false;
+
+
+    function resetSheetPosition() {
+        sheet.style.transition =
+            `transform ${SHEET_RESET_DURATION}ms ease`;
+
+        sheet.style.transform =
+            "translateY(0)";
+
+        window.setTimeout(
+            () => {
+                sheet.style.removeProperty(
+                    "transition"
+                );
+
+                sheet.style.removeProperty(
+                    "transform"
+                );
+
+                sheet.classList.remove(
+                    "dragging"
+                );
+            },
+            SHEET_RESET_DURATION
+        );
+    }
+
+
+    function finishDismiss() {
+        sheet.style.removeProperty(
+            "transition"
+        );
+
+        sheet.style.removeProperty(
+            "transform"
+        );
+
+        sheet.classList.remove(
+            "dragging"
+        );
+
+        onDismiss?.();
+    }
+
+
+    sheet.addEventListener(
+        "pointerdown",
+        event => {
+            if (
+                event.pointerType ===
+                "mouse" &&
+                event.button !== 0
+            ) {
+                return;
+            }
+
+            if (
+                typeof canStart ===
+                "function" &&
+                !canStart(event)
+            ) {
+                return;
+            }
+
+            activePointerId =
+                event.pointerId;
+
+            startY =
+                event.clientY;
+
+            currentY =
+                startY;
+
+            dragging = true;
+
+            sheet.classList.add(
+                "dragging"
+            );
+
+            sheet.style.transition =
+                "none";
+
+            try {
+                sheet.setPointerCapture(
+                    activePointerId
+                );
+            } catch {
+                // Pointer capture may not
+                // be available in every browser.
+            }
+        }
+    );
+
+
+    sheet.addEventListener(
+        "pointermove",
+        event => {
+            if (
+                !dragging ||
+                event.pointerId !==
+                activePointerId
+            ) {
+                return;
+            }
+
+            currentY =
+                event.clientY;
+
+            const distance =
+                Math.max(
+                    0,
+                    currentY - startY
+                );
+
+            sheet.style.transform =
+                `translateY(${distance}px)`;
+        }
+    );
+
+
+    function endDrag(
+        event
+    ) {
+        if (
+            !dragging ||
+            event.pointerId !==
+            activePointerId
+        ) {
+            return;
+        }
+
+        const distance =
+            Math.max(
+                0,
+                currentY - startY
+            );
+
+        dragging = false;
+
+        try {
+            if (
+                sheet.hasPointerCapture(
+                    activePointerId
+                )
+            ) {
+                sheet.releasePointerCapture(
+                    activePointerId
+                );
+            }
+        } catch {
+            // Safe fallback.
+        }
+
+        activePointerId = null;
+
+        if (
+            distance >=
+            SHEET_DISMISS_DISTANCE
+        ) {
+            sheet.style.transition =
+                `transform ${SHEET_RESET_DURATION}ms ease`;
+
+            sheet.style.transform =
+                "translateY(100%)";
+
+            window.setTimeout(
+                finishDismiss,
+                SHEET_RESET_DURATION
+            );
+
+            return;
+        }
+
+        resetSheetPosition();
+    }
+
+
+    sheet.addEventListener(
+        "pointerup",
+        endDrag
+    );
+
+    sheet.addEventListener(
+        "pointercancel",
+        endDrag
     );
 }
 
-function clampScrollPosition(scrollPosition) {
-    const maximumScrollTop =
-        getMaximumScrollTop();
 
-    return Math.min(
-        Math.max(scrollPosition, 0),
-        maximumScrollTop
+/* =========================
+   PREVIEW CAROUSEL
+========================= */
+
+function setupPreviewCarousel() {
+    const previousButton =
+        document.getElementById(
+            "previousPreviewButton"
+        );
+
+    const nextButton =
+        document.getElementById(
+            "nextPreviewButton"
+        );
+
+    if (previousButton) {
+        previousButton.addEventListener(
+            "click",
+            () => {
+                showPreviousPreview();
+            }
+        );
+    }
+
+    if (nextButton) {
+        nextButton.addEventListener(
+            "click",
+            () => {
+                showNextPreview();
+            }
+        );
+    }
+}
+
+
+function resetPreviewCarousel() {
+    currentPreviewImages = [];
+    currentPreviewIndex = 0;
+
+    const indicators =
+        document.getElementById(
+            "previewIndicators"
+        );
+
+    if (indicators) {
+        indicators.innerHTML = "";
+    }
+
+    updatePreviewNavigation();
+}
+
+
+async function loadPreviewCarousel(
+    loraId
+) {
+    if (!loraId) {
+        return;
+    }
+
+    try {
+        const response =
+            await fetch(
+                `${API_BASE_URL}/${loraId}/previews`
+            );
+
+        if (!response.ok) {
+            /*
+             * Older LoRAs or backend
+             * configurations may not have
+             * the preview endpoint.
+             * Fall back to the main preview.
+             */
+            currentPreviewImages =
+                currentLora?.filePath
+                    ? [
+                        currentLora.filePath
+                    ]
+                    : [];
+
+            currentPreviewIndex = 0;
+
+            renderCurrentPreview();
+
+            return;
+        }
+
+        const previewResponse =
+            await response.json();
+
+        currentPreviewImages =
+            normalizePreviewResponse(
+                previewResponse
+            );
+
+        if (
+            currentPreviewImages.length ===
+            0 &&
+            currentLora?.filePath
+        ) {
+            currentPreviewImages = [
+                currentLora.filePath
+            ];
+        }
+
+        currentPreviewIndex = 0;
+
+        renderCurrentPreview();
+
+    } catch (error) {
+        console.error(
+            "Unable to load preview carousel:",
+            error
+        );
+
+        currentPreviewImages =
+            currentLora?.filePath
+                ? [
+                    currentLora.filePath
+                ]
+                : [];
+
+        currentPreviewIndex = 0;
+
+        renderCurrentPreview();
+    }
+}
+
+
+function normalizePreviewResponse(
+    previewResponse
+) {
+    if (
+        Array.isArray(
+            previewResponse
+        )
+    ) {
+        return previewResponse
+            .map(
+                preview => {
+                    if (
+                        typeof preview ===
+                        "string"
+                    ) {
+                        return preview;
+                    }
+
+                    return (
+                        preview?.filePath ??
+                        preview?.url ??
+                        preview?.path ??
+                        null
+                    );
+                }
+            )
+            .filter(Boolean);
+    }
+
+    if (
+        Array.isArray(
+            previewResponse?.previews
+        )
+    ) {
+        return normalizePreviewResponse(
+            previewResponse.previews
+        );
+    }
+
+    return [];
+}
+
+
+function renderCurrentPreview() {
+    if (
+        currentPreviewImages.length ===
+        0
+    ) {
+        if (currentLora) {
+            populateDetailsImage(
+                currentLora
+            );
+        }
+
+        renderPreviewIndicators();
+
+        updatePreviewNavigation();
+
+        return;
+    }
+
+    const previewPath =
+        currentPreviewImages[
+            currentPreviewIndex
+            ];
+
+    renderPreviewPath(
+        previewPath
+    );
+
+    renderPreviewIndicators();
+
+    updatePreviewNavigation();
+}
+
+
+function renderPreviewPath(
+    previewPath
+) {
+    const imageContainer =
+        document.getElementById(
+            "detailsImageContainer"
+        );
+
+    if (!imageContainer) {
+        return;
+    }
+
+    if (!previewPath) {
+        imageContainer.innerHTML = `
+            <div class="lora-card-placeholder">
+                No Preview
+            </div>
+        `;
+
+        return;
+    }
+
+    if (
+        isVideoPreview(
+            previewPath
+        )
+    ) {
+        imageContainer.innerHTML = `
+            <video
+                src="${previewPath}"
+                class="details-image"
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+            >
+                Your browser cannot play this video preview.
+            </video>
+        `;
+
+        const video =
+            imageContainer.querySelector(
+                "video"
+            );
+
+        if (video) {
+            video
+                .play()
+                .catch(
+                    () => {
+                        // Autoplay may be blocked.
+                    }
+                );
+        }
+
+        return;
+    }
+
+    imageContainer.innerHTML = `
+        <img
+            src="${previewPath}"
+            alt="${currentLora?.loraName || "LoRA Preview"}"
+            class="details-image"
+        >
+    `;
+}
+
+
+function showPreviousPreview() {
+    if (
+        currentPreviewImages.length <=
+        1
+    ) {
+        return;
+    }
+
+    currentPreviewIndex =
+        (
+            currentPreviewIndex -
+            1 +
+            currentPreviewImages.length
+        ) %
+        currentPreviewImages.length;
+
+    renderCurrentPreview();
+}
+
+
+function showNextPreview() {
+    if (
+        currentPreviewImages.length <=
+        1
+    ) {
+        return;
+    }
+
+    currentPreviewIndex =
+        (
+            currentPreviewIndex +
+            1
+        ) %
+        currentPreviewImages.length;
+
+    renderCurrentPreview();
+}
+
+
+function updatePreviewNavigation() {
+    const previousButton =
+        document.getElementById(
+            "previousPreviewButton"
+        );
+
+    const nextButton =
+        document.getElementById(
+            "nextPreviewButton"
+        );
+
+    const hasMultiplePreviews =
+        currentPreviewImages.length > 1;
+
+    previousButton?.classList.toggle(
+        "hidden",
+        !hasMultiplePreviews
+    );
+
+    nextButton?.classList.toggle(
+        "hidden",
+        !hasMultiplePreviews
+    );
+
+    if (previousButton) {
+        previousButton.disabled =
+            !hasMultiplePreviews;
+    }
+
+    if (nextButton) {
+        nextButton.disabled =
+            !hasMultiplePreviews;
+    }
+}
+
+
+function renderPreviewIndicators() {
+    const indicatorContainer =
+        document.getElementById(
+            "previewIndicators"
+        );
+
+    if (!indicatorContainer) {
+        return;
+    }
+
+    indicatorContainer.innerHTML = "";
+
+    if (
+        currentPreviewImages.length <=
+        1
+    ) {
+        indicatorContainer.classList.add(
+            "hidden"
+        );
+
+        return;
+    }
+
+    indicatorContainer.classList.remove(
+        "hidden"
+    );
+
+    currentPreviewImages.forEach(
+        (_, index) => {
+            const indicator =
+                document.createElement(
+                    "button"
+                );
+
+            indicator.type =
+                "button";
+
+            indicator.className =
+                "preview-indicator-button";
+
+            indicator.setAttribute(
+                "aria-label",
+                `Show preview ${index + 1}`
+            );
+
+            indicator.classList.toggle(
+                "active",
+                index ===
+                currentPreviewIndex
+            );
+
+            indicator.addEventListener(
+                "click",
+                () => {
+                    currentPreviewIndex =
+                        index;
+
+                    renderCurrentPreview();
+                }
+            );
+
+            indicatorContainer.appendChild(
+                indicator
+            );
+        }
     );
 }
+
+/* =========================
+   BACKUP EXPORT
+========================= */
+
+function setupBackupExport() {
+    const exportButton =
+        document.getElementById(
+            "exportBackupButton"
+        );
+
+    if (!exportButton) {
+        return;
+    }
+
+    exportButton.addEventListener(
+        "click",
+        async () => {
+            const originalText =
+                exportButton.textContent;
+
+            exportButton.disabled =
+                true;
+
+            exportButton.textContent =
+                "Exporting...";
+
+            try {
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/backup/export`
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        `Backup export failed. Status: ${response.status}`
+                    );
+                }
+
+                const backupBlob =
+                    await response.blob();
+
+                const contentDisposition =
+                    response.headers.get(
+                        "Content-Disposition"
+                    );
+
+                const fileName =
+                    getBackupFileName(
+                        contentDisposition
+                    );
+
+                const downloadUrl =
+                    URL.createObjectURL(
+                        backupBlob
+                    );
+
+                const downloadLink =
+                    document.createElement(
+                        "a"
+                    );
+
+                downloadLink.href =
+                    downloadUrl;
+
+                downloadLink.download =
+                    fileName;
+
+                document.body.appendChild(
+                    downloadLink
+                );
+
+                downloadLink.click();
+
+                downloadLink.remove();
+
+                URL.revokeObjectURL(
+                    downloadUrl
+                );
+
+            } catch (error) {
+                console.error(
+                    "Backup export error:",
+                    error
+                );
+
+                window.alert(
+                    "Unable to export the backup."
+                );
+
+            } finally {
+                exportButton.disabled =
+                    false;
+
+                exportButton.textContent =
+                    originalText;
+            }
+        }
+    );
+}
+
+
+function getBackupFileName(
+    contentDisposition
+) {
+    if (!contentDisposition) {
+        return (
+            "comfy-model-library-backup.json"
+        );
+    }
+
+    const utfMatch =
+        contentDisposition.match(
+            /filename\*=UTF-8''([^;]+)/i
+        );
+
+    if (utfMatch?.[1]) {
+        try {
+            return decodeURIComponent(
+                utfMatch[1]
+            );
+        } catch {
+            return utfMatch[1];
+        }
+    }
+
+    const regularMatch =
+        contentDisposition.match(
+            /filename="?([^";]+)"?/i
+        );
+
+    if (regularMatch?.[1]) {
+        return regularMatch[1];
+    }
+
+    return (
+        "comfy-model-library-backup.json"
+    );
+}
+
+
+/* =========================
+   BACKUP IMPORT
+========================= */
+
+function setupBackupImport() {
+    const importButton =
+        document.getElementById(
+            "importBackupButton"
+        );
+
+    const fileInput =
+        document.getElementById(
+            "backupFileInput"
+        );
+
+    if (
+        !importButton ||
+        !fileInput
+    ) {
+        return;
+    }
+
+    importButton.addEventListener(
+        "click",
+        () => {
+            fileInput.value = "";
+
+            fileInput.click();
+        }
+    );
+
+    fileInput.addEventListener(
+        "change",
+        async () => {
+            const backupFile =
+                fileInput.files?.[0];
+
+            if (!backupFile) {
+                return;
+            }
+
+            const confirmed =
+                window.confirm(
+                    "Import this backup? Existing LoRAs will remain and duplicate name/version entries will be skipped."
+                );
+
+            if (!confirmed) {
+                fileInput.value = "";
+
+                return;
+            }
+
+            const originalText =
+                importButton.textContent;
+
+            importButton.disabled =
+                true;
+
+            importButton.textContent =
+                "Importing...";
+
+            try {
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "file",
+                    backupFile
+                );
+
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/backup/import`,
+                        {
+                            method: "POST",
+                            body: formData
+                        }
+                    );
+
+                if (!response.ok) {
+                    const errorMessage =
+                        await response.text();
+
+                    throw new Error(
+                        errorMessage ||
+                        `Backup import failed. Status: ${response.status}`
+                    );
+                }
+
+                let result = null;
+
+                const contentType =
+                    response.headers.get(
+                        "Content-Type"
+                    );
+
+                if (
+                    contentType?.includes(
+                        "application/json"
+                    )
+                ) {
+                    result =
+                        await response.json();
+
+                } else {
+                    result =
+                        await response.text();
+                }
+
+                console.log(
+                    "Backup import result:",
+                    result
+                );
+
+                currentPage = 0;
+
+                await refreshCurrentView();
+
+                window.alert(
+                    buildBackupImportMessage(
+                        result
+                    )
+                );
+
+            } catch (error) {
+                console.error(
+                    "Backup import error:",
+                    error
+                );
+
+                window.alert(
+                    "Unable to import the backup."
+                );
+
+            } finally {
+                importButton.disabled =
+                    false;
+
+                importButton.textContent =
+                    originalText;
+
+                fileInput.value = "";
+            }
+        }
+    );
+}
+
+
+function buildBackupImportMessage(
+    result
+) {
+    if (
+        !result ||
+        typeof result !== "object"
+    ) {
+        if (
+            typeof result === "string" &&
+            result.trim() !== ""
+        ) {
+            return result;
+        }
+
+        return "Backup imported successfully.";
+    }
+
+    const imported =
+        result.importedCount ??
+        result.imported ??
+        0;
+
+    const skipped =
+        result.skippedCount ??
+        result.skipped ??
+        0;
+
+    const failed =
+        result.failedCount ??
+        result.failed ??
+        0;
+
+    return (
+        "Backup import complete.\n\n" +
+        `Imported: ${imported}\n` +
+        `Skipped: ${skipped}\n` +
+        `Failed: ${failed}`
+    );
+}
+
+
+/* =========================
+   EXPANDED TEXT MODAL
+========================= */
+
+function setupExpandedTextModal() {
+    const modal =
+        document.getElementById(
+            "expandedTextModal"
+        );
+
+    const closeButton =
+        document.getElementById(
+            "closeExpandedTextButton"
+        );
+
+    if (
+        !modal ||
+        !closeButton
+    ) {
+        return;
+    }
+
+    closeButton.addEventListener(
+        "click",
+        closeExpandedTextModal
+    );
+
+    modal.addEventListener(
+        "click",
+        event => {
+            if (
+                event.target === modal
+            ) {
+                closeExpandedTextModal();
+            }
+        }
+    );
+
+    document.addEventListener(
+        "click",
+        event => {
+            const expandButton =
+                event.target.closest(
+                    ".expand-field-button"
+                );
+
+            if (!expandButton) {
+                return;
+            }
+
+            const targetId =
+                expandButton.dataset
+                    .expandTarget;
+
+            if (!targetId) {
+                return;
+            }
+
+            const target =
+                document.getElementById(
+                    targetId
+                );
+
+            if (!target) {
+                return;
+            }
+
+            const title =
+                expandButton.dataset
+                    .expandTitle ||
+                "Details";
+
+            openExpandedTextModal(
+                title,
+                target.textContent.trim()
+            );
+        }
+    );
+}
+
+
+function openExpandedTextModal(
+    title,
+    text
+) {
+    const modal =
+        document.getElementById(
+            "expandedTextModal"
+        );
+
+    const titleElement =
+        document.getElementById(
+            "expandedTextTitle"
+        );
+
+    const contentElement =
+        document.getElementById(
+            "expandedTextContent"
+        );
+
+    if (
+        !modal ||
+        !titleElement ||
+        !contentElement
+    ) {
+        return;
+    }
+
+    titleElement.textContent =
+        title || "Details";
+
+    contentElement.textContent =
+        text || "Not provided";
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+    modal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+}
+
+
+function closeExpandedTextModal() {
+    const modal =
+        document.getElementById(
+            "expandedTextModal"
+        );
+
+    if (!modal) {
+        return;
+    }
+
+    modal.classList.add(
+        "hidden"
+    );
+
+    modal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    /*
+     * Keep body scrolling disabled if the
+     * LoRA details modal is still open.
+     */
+    const detailsModal =
+        document.getElementById(
+            "loraDetailsModal"
+        );
+
+    if (
+        !detailsModal ||
+        detailsModal.classList.contains(
+            "hidden"
+        )
+    ) {
+        document.body.style.overflow =
+            "";
+    }
+}
+
+
+/* =========================
+   SORT PARAMETERS
+========================= */
+
+function buildSortParameters() {
+    if (
+        !appliedSortBy ||
+        !appliedSortDirection
+    ) {
+        return {};
+    }
+
+    return {
+        sortBy:
+        appliedSortBy,
+
+        sortDirection:
+        appliedSortDirection
+    };
+}
+
+
+/* =========================
+   SORT MODAL
+========================= */
+
+function setupSortModal() {
+    const sortButton =
+        document.getElementById(
+            "sortButton"
+        );
+
+    const sortModal =
+        document.getElementById(
+            "sortModal"
+        );
+
+    const closeButton =
+        document.getElementById(
+            "closeSortButton"
+        );
+
+    const backdrop =
+        sortModal?.querySelector(
+            ".sort-modal-backdrop"
+        );
+
+    if (
+        !sortButton ||
+        !sortModal
+    ) {
+        return;
+    }
+
+    sortButton.addEventListener(
+        "click",
+        openSortModal
+    );
+
+    closeButton?.addEventListener(
+        "click",
+        closeSortModal
+    );
+
+    backdrop?.addEventListener(
+        "click",
+        closeSortModal
+    );
+
+    sortModal
+        .querySelectorAll(
+            "[data-sort-field]"
+        )
+        .forEach(
+            button => {
+                button.addEventListener(
+                    "click",
+                    async () => {
+                        const sortField =
+                            button.dataset
+                                .sortField;
+
+                        if (!sortField) {
+                            return;
+                        }
+
+                        await applySort(
+                            sortField
+                        );
+                    }
+                );
+            }
+        );
+
+    updateSortDisplay();
+}
+
+
+function openSortModal() {
+    const sortModal =
+        document.getElementById(
+            "sortModal"
+        );
+
+    if (!sortModal) {
+        return;
+    }
+
+    sortModal.classList.remove(
+        "hidden"
+    );
+
+    sortModal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
+
+    updateSortDisplay();
+}
+
+
+function closeSortModal() {
+    const sortModal =
+        document.getElementById(
+            "sortModal"
+        );
+
+    if (!sortModal) {
+        return;
+    }
+
+    sortModal.classList.add(
+        "hidden"
+    );
+
+    sortModal.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    const detailsModal =
+        document.getElementById(
+            "loraDetailsModal"
+        );
+
+    const filterModal =
+        document.getElementById(
+            "filterModal"
+        );
+
+    const expandedTextModal =
+        document.getElementById(
+            "expandedTextModal"
+        );
+
+    const anotherModalOpen =
+        (
+            detailsModal &&
+            !detailsModal.classList.contains(
+                "hidden"
+            )
+        ) ||
+        (
+            filterModal &&
+            !filterModal.classList.contains(
+                "hidden"
+            )
+        ) ||
+        (
+            expandedTextModal &&
+            !expandedTextModal.classList.contains(
+                "hidden"
+            )
+        );
+
+    if (!anotherModalOpen) {
+        document.body.style.overflow =
+            "";
+    }
+}
+
+
+/* =========================
+   APPLY SORT
+========================= */
+
+async function applySort(
+    sortField
+) {
+    if (!sortField) {
+        return;
+    }
+
+    /*
+     * Clicking the currently selected field
+     * toggles its direction.
+     *
+     * Selecting a different field always
+     * begins ascending.
+     */
+    if (
+        appliedSortBy === sortField
+    ) {
+        appliedSortDirection =
+            appliedSortDirection === "asc"
+                ? "desc"
+                : "asc";
+
+    } else {
+        appliedSortBy =
+            sortField;
+
+        appliedSortDirection =
+            "asc";
+    }
+
+    currentPage = 0;
+
+    updateSortDisplay();
+
+    closeSortModal();
+
+    try {
+        await refreshCurrentView();
+
+        scrollToLoraGalleryControls();
+
+    } catch (error) {
+        console.error(
+            "Unable to apply sort:",
+            error
+        );
+    }
+}
+
+
+/* =========================
+   SORT DISPLAY
+========================= */
+
+function updateSortDisplay() {
+    const sortButton =
+        document.getElementById(
+            "sortButton"
+        );
+
+    const sortOptions =
+        document.querySelectorAll(
+            "[data-sort-field]"
+        );
+
+    sortOptions.forEach(
+        option => {
+            const optionField =
+                option.dataset.sortField;
+
+            const isActive =
+                optionField ===
+                appliedSortBy;
+
+            option.classList.toggle(
+                "active",
+                isActive
+            );
+
+            option.setAttribute(
+                "aria-pressed",
+                String(isActive)
+            );
+
+            const arrow =
+                option.querySelector(
+                    ".sort-option-arrow"
+                );
+
+            if (arrow) {
+                arrow.textContent =
+                    isActive
+                        ? (
+                            appliedSortDirection ===
+                            "desc"
+                                ? "↓"
+                                : "↑"
+                        )
+                        : "";
+            }
+        }
+    );
+
+    if (!sortButton) {
+        return;
+    }
+
+    if (
+        !appliedSortBy ||
+        !appliedSortDirection
+    ) {
+        sortButton.classList.remove(
+            "active"
+        );
+
+        sortButton.removeAttribute(
+            "data-sort-direction"
+        );
+
+        sortButton.setAttribute(
+            "aria-label",
+            "Sort LoRAs"
+        );
+
+        return;
+    }
+
+    sortButton.classList.add(
+        "active"
+    );
+
+    sortButton.dataset.sortDirection =
+        appliedSortDirection;
+
+    const readableField =
+        getSortFieldLabel(
+            appliedSortBy
+        );
+
+    const readableDirection =
+        appliedSortDirection === "desc"
+            ? "descending"
+            : "ascending";
+
+    sortButton.setAttribute(
+        "aria-label",
+        `Sort: ${readableField}, ${readableDirection}`
+    );
+}
+
+
+function getSortFieldLabel(
+    sortField
+) {
+    switch (sortField) {
+        case "loraName":
+            return "Name";
+
+        case "creator":
+            return "Creator";
+
+        case "createdDate":
+            return "Created Date";
+
+        default:
+            return "LoRAs";
+    }
+}
+
+
+
+
+/* =========================
+   BOTTOM SHEET SWIPE HELPERS
+========================= */
 
 function isInteractiveSheetElement(target) {
     return Boolean(
-        target.closest(`button, a, input, select, textarea, video, [role="button"]`)
+        target.closest(
+            'button, a, input, select, textarea, video, [role="button"]'
+        )
     );
 }
+
 
 function canStartSheetDrag(
     event,
@@ -2574,8 +5316,9 @@ function canStartSheetDrag(
     }
 
     /*
-     * Allow a tiny tolerance because mobile browsers
-     * may report a fractional scroll position at the top.
+     * Allow a tiny tolerance because mobile
+     * browsers may report a fractional scroll
+     * position even when visually at the top.
      */
     if (
         scrollContainer &&
@@ -2587,6 +5330,7 @@ function canStartSheetDrag(
     return true;
 }
 
+
 function moveSheetDown(
     sheet,
     distance
@@ -2595,11 +5339,13 @@ function moveSheetDown(
         "dragging"
     );
 
-    sheet.style.transition = "none";
+    sheet.style.transition =
+        "none";
 
     sheet.style.transform =
         `translateY(${distance}px)`;
 }
+
 
 function resetDraggedSheet(
     sheet
@@ -2622,6 +5368,7 @@ function resetDraggedSheet(
         SHEET_RESET_DURATION
     );
 }
+
 
 function dismissDraggedSheet(
     sheet,
@@ -2648,6 +5395,11 @@ function dismissDraggedSheet(
     );
 }
 
+
+/* =========================
+   SWIPE DOWN TO CLOSE
+========================= */
+
 function setupSwipeDownToClose(
     sheet,
     scrollContainer,
@@ -2659,8 +5411,10 @@ function setupSwipeDownToClose(
 
     let startY = 0;
     let currentDistance = 0;
+
     let isTracking = false;
     let isDragging = false;
+
 
     sheet.addEventListener(
         "touchstart",
@@ -2678,6 +5432,7 @@ function setupSwipeDownToClose(
                 event.touches[0].clientY;
 
             currentDistance = 0;
+
             isTracking = true;
             isDragging = false;
         },
@@ -2685,6 +5440,7 @@ function setupSwipeDownToClose(
             passive: true
         }
     );
+
 
     sheet.addEventListener(
         "touchmove",
@@ -2707,8 +5463,9 @@ function setupSwipeDownToClose(
             }
 
             /*
-             * Wait for a small amount of movement before
-             * taking control away from normal scrolling.
+             * Wait for a small amount of movement
+             * before taking control away from
+             * normal scrolling.
              */
             if (
                 !isDragging &&
@@ -2718,7 +5475,9 @@ function setupSwipeDownToClose(
             }
 
             isDragging = true;
-            currentDistance = distance;
+
+            currentDistance =
+                distance;
 
             moveSheetDown(
                 sheet,
@@ -2731,6 +5490,7 @@ function setupSwipeDownToClose(
             passive: false
         }
     );
+
 
     sheet.addEventListener(
         "touchend",
@@ -2765,6 +5525,7 @@ function setupSwipeDownToClose(
         }
     );
 
+
     sheet.addEventListener(
         "touchcancel",
         () => {
@@ -2788,6 +5549,10 @@ function setupSwipeDownToClose(
 }
 
 
+/* =========================
+   FILTER SHEET SWIPE
+========================= */
+
 function setupFilterSheetSwipe() {
     const filterModal =
         document.getElementById(
@@ -2806,6 +5571,11 @@ function setupFilterSheetSwipe() {
     );
 }
 
+
+/* =========================
+   LORA DETAILS DRAG CLOSE
+========================= */
+
 function finishDraggedLoraDetailsClose() {
     const modal =
         document.getElementById(
@@ -2822,7 +5592,10 @@ function finishDraggedLoraDetailsClose() {
             "#detailsImageContainer video"
         );
 
-    if (!modal || !modalSheet) {
+    if (
+        !modal ||
+        !modalSheet
+    ) {
         return;
     }
 
@@ -2841,6 +5614,11 @@ function finishDraggedLoraDetailsClose() {
         video.currentTime = 0;
     }
 }
+
+
+/* =========================
+   LORA DETAILS SWIPE
+========================= */
 
 function setupLoraDetailsSwipe() {
     const modal =
@@ -2861,1087 +5639,4 @@ function setupLoraDetailsSwipe() {
         scrollContainer,
         finishDraggedLoraDetailsClose
     );
-}
-
-function getPreviewCarouselElements() {
-    return {
-        imageContainer:
-            document.getElementById(
-                "detailsImageContainer"
-            ),
-
-        previousButton:
-            document.getElementById(
-                "previousPreviewButton"
-            ),
-
-        nextButton:
-            document.getElementById(
-                "nextPreviewButton"
-            ),
-
-        indicators:
-            document.getElementById(
-                "previewIndicators"
-            )
-    };
-}
-
-function renderCarouselPreview(preview) {
-    const {
-        imageContainer
-    } = getPreviewCarouselElements();
-
-    if (!imageContainer) {
-        return;
-    }
-
-    if (!preview?.filePath) {
-        imageContainer.innerHTML = `
-            <div class="lora-card-placeholder">
-                No Preview
-            </div>
-        `;
-
-        return;
-    }
-
-    if (isVideoPreview(preview.filePath)) {
-        imageContainer.innerHTML = `
-            <video
-                src="${preview.filePath}"
-                class="details-image"
-                controls
-                muted
-                loop
-                playsinline
-                preload="metadata">
-            </video>
-        `;
-
-        return;
-    }
-
-    imageContainer.innerHTML = `
-        <img
-            src="${preview.filePath}"
-            class="details-image"
-            alt="LoRA preview ${currentPreviewIndex + 1}">
-    `;
-}
-
-function updatePreviewNavigationButtons() {
-    const {
-        previousButton,
-        nextButton
-    } = getPreviewCarouselElements();
-
-    const hasMultiplePreviews =
-        currentPreviewImages.length > 1;
-
-    previousButton?.classList.toggle(
-        "hidden",
-        !hasMultiplePreviews
-    );
-
-    nextButton?.classList.toggle(
-        "hidden",
-        !hasMultiplePreviews
-    );
-}
-
-function renderPreviewIndicators() {
-    const {
-        indicators
-    } = getPreviewCarouselElements();
-
-    if (!indicators) {
-        return;
-    }
-
-    indicators.replaceChildren();
-
-    const hasMultiplePreviews =
-        currentPreviewImages.length > 1;
-
-    indicators.classList.toggle(
-        "hidden",
-        !hasMultiplePreviews
-    );
-
-    if (!hasMultiplePreviews) {
-        return;
-    }
-
-    currentPreviewImages.forEach(
-        (preview, index) => {
-            const button =
-                document.createElement(
-                    "button"
-                );
-
-            button.type = "button";
-            button.className =
-                "preview-indicator-button";
-
-            button.setAttribute(
-                "aria-label",
-                `Show preview ${index + 1}`
-            );
-
-            button.classList.toggle(
-                "active",
-                index === currentPreviewIndex
-            );
-
-            button.addEventListener(
-                "click",
-                () => {
-                    showPreviewAtIndex(index);
-                }
-            );
-
-            indicators.appendChild(button);
-        }
-    );
-}
-
-function showPreviewAtIndex(index) {
-    if (
-        index < 0 ||
-        index >= currentPreviewImages.length
-    ) {
-        return;
-    }
-
-    currentPreviewIndex = index;
-
-    const selectedPreview =
-        currentPreviewImages[
-            currentPreviewIndex
-            ];
-
-    renderCarouselPreview(
-        selectedPreview
-    );
-
-    renderPreviewIndicators();
-}
-
-function showPreviousPreview() {
-    if (currentPreviewImages.length <= 1) {
-        return;
-    }
-
-    let previousIndex =
-        currentPreviewIndex - 1;
-
-    if (previousIndex < 0) {
-        previousIndex =
-            currentPreviewImages.length - 1;
-    }
-
-    showPreviewAtIndex(previousIndex);
-}
-
-function showNextPreview() {
-    if (currentPreviewImages.length <= 1) {
-        return;
-    }
-
-    let nextIndex =
-        currentPreviewIndex + 1;
-
-    if (
-        nextIndex >=
-        currentPreviewImages.length
-    ) {
-        nextIndex = 0;
-    }
-
-    showPreviewAtIndex(nextIndex);
-}
-
-function resetPreviewCarousel() {
-    currentPreviewImages = [];
-    currentPreviewIndex = 0;
-
-    const {
-        imageContainer,
-        previousButton,
-        nextButton,
-        indicators
-    } = getPreviewCarouselElements();
-
-    if (imageContainer) {
-        imageContainer.innerHTML = `
-            <div class="lora-card-placeholder">
-                No Preview
-            </div>
-        `;
-    }
-
-    previousButton?.classList.add("hidden");
-    nextButton?.classList.add("hidden");
-
-    if (indicators) {
-        indicators.classList.add("hidden");
-        indicators.replaceChildren();
-    }
-}
-
-async function fetchLoraPreviewImages(loraId) {
-    const response = await fetch(
-        `${API_BASE_URL}/${loraId}/images`
-    );
-
-    if (!response.ok) {
-        throw new Error(
-            `Unable to load previews. Status: ${response.status}`
-        );
-    }
-
-    return response.json();
-}
-
-async function loadPreviewCarousel(loraId) {
-    resetPreviewCarousel();
-
-    try {
-        const previews =
-            await fetchLoraPreviewImages(
-                loraId
-            );
-
-        currentPreviewImages =
-            Array.isArray(previews)
-                ? previews
-                : [];
-
-        currentPreviewIndex = 0;
-
-        if (
-            currentPreviewImages.length === 0
-        ) {
-            return;
-        }
-
-        showPreviewAtIndex(0);
-        updatePreviewNavigationButtons();
-
-    } catch (error) {
-        console.error(
-            "Preview carousel error:",
-            error
-        );
-
-        resetPreviewCarousel();
-    }
-}
-
-function setupPreviewCarousel() {
-    const {
-        previousButton,
-        nextButton
-    } = getPreviewCarouselElements();
-
-    if (!previousButton || !nextButton) {
-        return;
-    }
-
-    previousButton.addEventListener(
-        "click",
-        event => {
-            event.stopPropagation();
-            showPreviousPreview();
-        }
-    );
-
-    nextButton.addEventListener(
-        "click",
-        event => {
-            event.stopPropagation();
-            showNextPreview();
-        }
-    );
-}
-
-function getStickyNavigation() {
-    return document.querySelector(".sticky-navigation");
-}
-
-function updateStickyNavigationPosition() {
-    const navigation = getStickyNavigation();
-
-    if (!navigation) {
-        return;
-    }
-
-    navigation.style.transform =
-        `translateY(-${stickyNavigationOffset}px)`;
-}
-
-function setupStickyNavigationScroll() {
-    const navigation = getStickyNavigation();
-
-    if (!navigation) {
-        return;
-    }
-
-    let previousScrollY = window.scrollY;
-
-    window.addEventListener("scroll", () => {
-        const currentScrollY = window.scrollY;
-
-        if (currentScrollY <= 0) {
-            stickyNavigationOffset = 0;
-
-            updateStickyNavigationPosition();
-
-            previousScrollY = currentScrollY;
-
-            return;
-        }
-
-        const scrollDifference =
-            currentScrollY - previousScrollY;
-
-        const navigationHeight =
-            navigation.offsetHeight;
-
-        stickyNavigationOffset +=
-            scrollDifference;
-
-        stickyNavigationOffset =
-            Math.max(
-                0,
-                Math.min(
-                    stickyNavigationOffset,
-                    navigationHeight
-                )
-            );
-
-        updateStickyNavigationPosition();
-
-        previousScrollY = currentScrollY;
-    });
-
-}
-
-function setupBackupExport() {
-    const exportButton =
-        document.getElementById(
-            "exportBackupButton"
-        );
-
-    if (!exportButton) {
-        return;
-    }
-
-    exportButton.addEventListener(
-        "click",
-        () => {
-            window.location.href =
-                "/api/backup/export";
-        }
-    );
-}
-
-function setupBackupImport() {
-    const importButton =
-        document.getElementById(
-            "importBackupButton"
-        );
-
-    const fileInput =
-        document.getElementById(
-            "backupFileInput"
-        );
-
-    const importResult =
-        document.getElementById(
-            "importResult"
-        );
-
-    if (
-        !importButton ||
-        !fileInput ||
-        !importResult
-    ) {
-        return;
-    }
-
-    importButton.addEventListener(
-        "click",
-        event => {
-            event.stopPropagation();
-
-            fileInput.value = "";
-
-            fileInput.click();
-        }
-    );
-
-    fileInput.addEventListener(
-        "change",
-        async () => {
-
-            const file =
-                fileInput.files?.[0];
-
-            if (!file) {
-                return;
-            }
-
-            showBackupImportLoading(
-                importResult,
-                file.name
-            );
-
-            try {
-
-                const fileText =
-                    await file.text();
-
-                const backup =
-                    JSON.parse(fileText);
-
-                const response =
-                    await fetch(
-                        "/api/backup/import",
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/json"
-                            },
-
-                            body:
-                                JSON.stringify(
-                                    backup
-                                )
-                        }
-                    );
-
-                if (!response.ok) {
-
-                    const errorText =
-                        await response.text();
-
-                    throw new Error(
-                        errorText ||
-                        `Import failed with status ${response.status}`
-                    );
-                }
-
-                const result =
-                    await response.json();
-
-                displayBackupImportSuccess(
-                    importResult,
-                    result
-                );
-
-                currentPage = 0;
-
-                await refreshCurrentView();
-
-            } catch (error) {
-
-                console.error(
-                    "Backup import error:",
-                    error
-                );
-
-                displayBackupImportError(
-                    importResult,
-                    error
-                );
-
-            } finally {
-
-                fileInput.value = "";
-            }
-        }
-    );
-}
-
-function escapeHtml(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-function displayBackupImportSuccess(
-    importResult,
-    result
-) {
-    importResult.classList.remove(
-        "hidden",
-        "import-result-error"
-    );
-
-    importResult.classList.add(
-        "import-result-success"
-    );
-
-    importResult.innerHTML = `
-        <h3>Backup Import Complete</h3>
-
-        <div class="import-summary-list">
-
-            <div class="import-summary-row">
-                <span>Imported</span>
-
-                <strong>
-                    ${result.importedCount ?? 0}
-                </strong>
-            </div>
-
-            <div class="import-summary-row">
-                <span>Skipped</span>
-
-                <strong>
-                    ${result.skippedCount ?? 0}
-                </strong>
-            </div>
-
-        </div>
-    `;
-}
-
-function displayBackupImportError(
-    importResult,
-    error
-) {
-    importResult.classList.remove(
-        "hidden",
-        "import-result-success"
-    );
-
-    importResult.classList.add(
-        "import-result-error"
-    );
-
-    importResult.innerHTML = `
-        <h3>Backup Import Failed</h3>
-
-        <p>
-            ${
-        escapeHtml(
-            error?.message ||
-            "Unable to import backup."
-        )
-    }
-        </p>
-    `;
-}
-
-function showBackupImportLoading(
-    importResult,
-    fileName
-) {
-    importResult.classList.remove(
-        "hidden",
-        "import-result-success",
-        "import-result-error"
-    );
-
-    importResult.innerHTML = `
-        <h3>Importing Backup</h3>
-
-        <div class="import-summary-list">
-
-            <div class="import-summary-row">
-                <span>File</span>
-
-                <strong>
-                    ${escapeHtml(fileName)}
-                </strong>
-            </div>
-
-            <div class="import-summary-row">
-                <span>Status</span>
-
-                <strong>
-                    Importing...
-                </strong>
-            </div>
-
-        </div>
-    `;
-}
-
-function setupExpandedTextModal() {
-    const modal =
-        document.getElementById(
-            "expandedTextModal"
-        );
-
-    const title =
-        document.getElementById(
-            "expandedTextTitle"
-        );
-
-    const content =
-        document.getElementById(
-            "expandedTextContent"
-        );
-
-    const closeButton =
-        document.getElementById(
-            "closeExpandedTextButton"
-        );
-
-    const expandButtons =
-        document.querySelectorAll(
-            ".expand-field-button"
-        );
-
-    if (
-        !modal ||
-        !title ||
-        !content ||
-        !closeButton
-    ) {
-        return;
-    }
-
-    expandButtons.forEach(button => {
-
-        button.addEventListener(
-            "click",
-            event => {
-                event.stopPropagation();
-
-                const targetId =
-                    button.dataset.expandTarget;
-
-                const fieldTitle =
-                    button.dataset.expandTitle ??
-                    "Text";
-
-                const target =
-                    document.getElementById(
-                        targetId
-                    );
-
-                if (!target) {
-                    return;
-                }
-
-                title.textContent =
-                    fieldTitle;
-
-                content.textContent =
-                    target.textContent.trim();
-
-                modal.classList.remove(
-                    "hidden"
-                );
-
-                modal.setAttribute(
-                    "aria-hidden",
-                    "false"
-                );
-            }
-        );
-    });
-
-    function closeExpandedTextModal() {
-        modal.classList.add(
-            "hidden"
-        );
-
-        modal.setAttribute(
-            "aria-hidden",
-            "true"
-        );
-
-        content.textContent = "";
-    }
-
-    closeButton.addEventListener(
-        "click",
-        closeExpandedTextModal
-    );
-
-    modal.addEventListener(
-        "click",
-        event => {
-            if (event.target === modal) {
-                closeExpandedTextModal();
-            }
-        }
-    );
-
-    document.addEventListener(
-        "keydown",
-        event => {
-            if (
-                event.key === "Escape" &&
-                !modal.classList.contains(
-                    "hidden"
-                )
-            ) {
-                closeExpandedTextModal();
-            }
-        }
-    );
-}
-
-// =========================
-// SORT
-// =========================
-
-function getSortElements() {
-    return {
-        modal:
-            document.getElementById(
-                "sortModal"
-            ),
-
-        backdrop:
-            document.getElementById(
-                "sortModalBackdrop"
-            ),
-
-        openButton:
-            document.getElementById(
-                "sortButton"
-            ),
-
-        closeButton:
-            document.getElementById(
-                "closeSortButton"
-            ),
-
-        buttonText:
-            document.getElementById(
-                "sortButtonText"
-            ),
-
-        buttonArrow:
-            document.getElementById(
-                "sortButtonArrow"
-            ),
-
-        optionButtons:
-            document.querySelectorAll(
-                ".sort-option-button"
-            )
-    };
-}
-
-
-function setupSortModal() {
-    const {
-        modal,
-        backdrop,
-        openButton,
-        closeButton,
-        optionButtons
-    } = getSortElements();
-
-    if (
-        !modal ||
-        !backdrop ||
-        !openButton ||
-        !closeButton ||
-        optionButtons.length === 0
-    ) {
-        return;
-    }
-
-    openButton.addEventListener(
-        "click",
-        openSortModal
-    );
-
-    closeButton.addEventListener(
-        "click",
-        closeSortModal
-    );
-
-    backdrop.addEventListener(
-        "click",
-        closeSortModal
-    );
-
-    optionButtons.forEach(
-        button => {
-            button.addEventListener(
-                "click",
-                async () => {
-                    const sortField =
-                        button.dataset.sortField;
-
-                    const sortLabel =
-                        button.dataset.sortLabel;
-
-                    await applySort(
-                        sortField,
-                        sortLabel
-                    );
-                }
-            );
-        }
-    );
-
-    document.addEventListener(
-        "keydown",
-        event => {
-            if (
-                event.key !== "Escape" ||
-                modal.classList.contains(
-                    "hidden"
-                )
-            ) {
-                return;
-            }
-
-            closeSortModal();
-        }
-    );
-
-    updateSortDisplay();
-}
-
-
-function openSortModal() {
-    const {
-        modal,
-        openButton
-    } = getSortElements();
-
-    if (!modal) {
-        return;
-    }
-
-    modal.inert = false;
-
-    modal.classList.remove(
-        "hidden"
-    );
-
-    modal.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-
-    openButton?.setAttribute(
-        "aria-expanded",
-        "true"
-    );
-
-    updateSortDisplay();
-}
-
-
-function closeSortModal() {
-    const {
-        modal,
-        openButton
-    } = getSortElements();
-
-    if (!modal) {
-        return;
-    }
-
-    openButton?.focus();
-
-    modal.classList.add(
-        "hidden"
-    );
-
-    modal.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-    modal.inert = true;
-
-    openButton?.setAttribute(
-        "aria-expanded",
-        "false"
-    );
-}
-
-
-async function applySort(
-    sortField,
-    sortLabel
-) {
-    if (!sortField) {
-        return;
-    }
-
-    if (appliedSortBy === sortField) {
-        appliedSortDirection =
-            appliedSortDirection === "asc"
-                ? "desc"
-                : "asc";
-    } else {
-        appliedSortBy =
-            sortField;
-
-        appliedSortDirection =
-            "asc";
-    }
-
-    currentPage = 0;
-
-    updateSortDisplay(
-        sortLabel
-    );
-
-    closeSortModal();
-
-    await refreshCurrentView();
-}
-
-
-function buildSortParameters() {
-    if (
-        !appliedSortBy ||
-        !appliedSortDirection
-    ) {
-        return {};
-    }
-
-    return {
-        sortBy:
-        appliedSortBy,
-
-        sortDirection:
-        appliedSortDirection
-    };
-}
-
-
-function getSortLabel(
-    sortField
-) {
-    switch (sortField) {
-        case "loraName":
-            return "Name";
-
-        case "creator":
-            return "Creator";
-
-        case "createdDate":
-            return "Created";
-
-        default:
-            return "Sort";
-    }
-}
-
-
-function getSortArrow() {
-    if (
-        !appliedSortBy ||
-        !appliedSortDirection
-    ) {
-        return "";
-    }
-
-    return appliedSortDirection === "asc"
-        ? "↑"
-        : "↓";
-}
-
-
-function updateSortDisplay() {
-    const {
-        openButton,
-        buttonText,
-        buttonArrow,
-        optionButtons
-    } = getSortElements();
-
-    if (
-        !openButton ||
-        !buttonText ||
-        !buttonArrow
-    ) {
-        return;
-    }
-
-    const hasActiveSort =
-        Boolean(
-            appliedSortBy &&
-            appliedSortDirection
-        );
-
-    const label =
-        getSortLabel(
-            appliedSortBy
-        );
-
-    const arrow =
-        getSortArrow();
-
-    buttonText.textContent =
-        hasActiveSort
-            ? label
-            : "Sort";
-
-    buttonArrow.textContent =
-        arrow;
-
-    buttonArrow.classList.toggle(
-        "hidden",
-        !hasActiveSort
-    );
-
-    openButton.classList.toggle(
-        "active",
-        hasActiveSort
-    );
-
-
-    optionButtons.forEach(
-        button => {
-            const isActive =
-                button.dataset.sortField ===
-                appliedSortBy;
-
-            button.classList.toggle(
-                "active",
-                isActive
-            );
-
-            const arrowElement =
-                button.querySelector(
-                    ".sort-direction-arrow"
-                );
-
-            if (!arrowElement) {
-                return;
-            }
-
-            arrowElement.textContent =
-                isActive
-                    ? arrow
-                    : "";
-        }
-    );
-}
-
-if (appliedSortBy === sortField) {
-    appliedSortDirection =
-        appliedSortDirection === "asc"
-            ? "desc"
-            : "asc";
-} else {
-    appliedSortBy =
-        sortField;
-
-    appliedSortDirection =
-        "asc";
 }

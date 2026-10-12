@@ -1,6 +1,6 @@
 package com.comfy.library.controller;
 
-import com.comfy.library.dto.*;
+import com.comfy.library.dto.lora.*;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.service.LoraImageService;
 import com.comfy.library.service.LoraService;

@@ -1,7 +1,6 @@
-package com.comfy.library.dto;
+package com.comfy.library.dto.lora;
 
 import com.comfy.library.entity.LoraImageEntity;
-import com.comfy.library.repository.LoraImageRepository;
 
 public class LoraImageResponse {
 

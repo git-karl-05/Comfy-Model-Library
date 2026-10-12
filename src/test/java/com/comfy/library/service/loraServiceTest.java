@@ -1,18 +1,16 @@
 package com.comfy.library.service;
 
-import com.comfy.library.dto.CreateLoraRequest;
-import com.comfy.library.dto.LoraResponse;
+import com.comfy.library.dto.lora.CreateLoraRequest;
+import com.comfy.library.dto.lora.LoraResponse;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraImageRepository;
 import com.comfy.library.repository.LoraRepository;
-import org.aspectj.lang.annotation.Before;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import tools.jackson.databind.ObjectMapper;
 
-import javax.swing.text.html.Option;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

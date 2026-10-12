@@ -1,6 +1,6 @@
 package com.comfy.library.service;
 
-import com.comfy.library.dto.LoraImageResponse;
+import com.comfy.library.dto.lora.LoraImageResponse;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.entity.LoraImageEntity;
 import com.comfy.library.repository.LoraImageRepository;
@@ -15,7 +15,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service

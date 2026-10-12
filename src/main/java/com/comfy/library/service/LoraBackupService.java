@@ -1,8 +1,8 @@
 package com.comfy.library.service;
 
-import com.comfy.library.dto.BackupRestoreResponse;
-import com.comfy.library.dto.LoraBackup;
-import com.comfy.library.dto.LoraBackupItem;
+import com.comfy.library.dto.lora.BackupRestoreResponse;
+import com.comfy.library.dto.lora.LoraBackup;
+import com.comfy.library.dto.lora.LoraBackupItem;
 import com.comfy.library.entity.LoraEntity;
 import com.comfy.library.repository.LoraRepository;
 import jakarta.transaction.Transactional;

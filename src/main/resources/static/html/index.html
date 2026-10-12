@@ -17,331 +17,151 @@
 
     <div class="content-container">
 
-        <!-- Main Header -->
-        <section class="top-toolbar">
+        <!-- Persistent Library Navigation -->
+        <div class="library-navigation">
 
-            <button
-                    id="optionsButton"
-                    class="options-button"
-                    type="button"
-                    aria-label="Open options"
-                    aria-controls="sideMenu"
-                    aria-expanded="false"
-            >
-                ☰
-            </button>
-
-            <h1 class="toolbar-title">
-                LoRA Library
-            </h1>
-
-            <div class="toolbar-right-actions">
+            <!-- Main Header -->
+            <section class="top-toolbar">
 
                 <button
-                        id="searchIconButton"
-                        class="search-icon-button"
+                        id="optionsButton"
+                        class="options-button"
                         type="button"
-                        aria-label="Open search"
+                        aria-label="Open options"
+                        aria-controls="sideMenu"
+                        aria-expanded="false"
                 >
-                    🔍
+                    ☰
                 </button>
 
-                <button
-                        id="openActionMenuButton"
-                        class="toolbar-action-button"
-                        type="button"
-                        aria-label="Open LoRA actions"
-                >
-                    ⋮
-                </button>
+                <h1 class="toolbar-title">
+                    LoRA Library
+                </h1>
 
-            </div>
+                <div class="toolbar-right-actions">
 
-            <!-- Search replaces only the main header -->
-            <div
-                    id="searchOverlay"
-                    class="search-overlay hidden"
-            >
-                <input
-                        type="text"
-                        id="searchInput"
-                        placeholder="Search LoRAs..."
-                        class="search-input"
-                >
-
-                <button
-                        id="closeSearchButton"
-                        class="search-close-button"
-                        type="button"
-                        aria-label="Close search"
-                >
-                    ×
-                </button>
-
-            </div>
-
-        </section>
-
-
-        <!-- Side Menu -->
-        <nav
-                id="sideMenu"
-                class="side-menu hidden"
-                aria-label="Main menu"
-        >
-
-            <div class="side-menu-header">
-
-                <h2>Menu</h2>
-
-                <button
-                        id="closeMenuButton"
-                        class="menu-close-button"
-                        type="button"
-                        aria-label="Close menu"
-                >
-                    ×
-                </button>
-
-            </div>
-
-            <a
-                    href="/html/index.html"
-                    class="side-menu-link active"
-            >
-                LoRA Library
-            </a>
-
-            <a
-                    href="/html/add-lora.html"
-                    class="side-menu-link"
-            >
-                Add LoRA
-            </a>
-
-        </nav>
-
-
-        <div
-                id="menuBackdrop"
-                class="menu-backdrop hidden"
-                aria-hidden="true"
-        ></div>
-
-
-        <!-- LoRA Action Menu -->
-        <div
-                id="actionMenuOverlay"
-                class="action-menu-overlay hidden"
-        >
-
-            <section
-                    id="actionMenuPopover"
-                    class="action-menu-popover"
-                    role="dialog"
-                    aria-label="LoRA actions"
-            >
-
-                <button
-                        id="addLoraActionButton"
-                        class="compact-action-button"
-                        type="button"
-                >
-
-                    <span
-                            class="compact-action-icon"
-                            aria-hidden="true"
+                    <button
+                            id="searchIconButton"
+                            class="search-icon-button"
+                            type="button"
+                            aria-label="Open search"
                     >
-                        ＋
-                    </span>
+                        🔍
+                    </button>
 
-                    <span>
-                        Add LoRA
-                    </span>
-
-                </button>
-
-
-                <button
-                        id="showImportFolderButton"
-                        class="compact-action-button"
-                        type="button"
-                >
-
-                    <span
-                            class="compact-action-icon folder-icon"
-                            aria-hidden="true"
+                    <button
+                            id="openActionMenuButton"
+                            class="toolbar-action-button"
+                            type="button"
+                            aria-label="Open LoRA actions"
                     >
-                        📁
-                    </span>
+                        ⋮
+                    </button>
 
-                    <span>
-                        Import LoRA
-                    </span>
+                </div>
 
-                </button>
-
-
-                <form
-                        id="importFolderForm"
-                        class="import-folder-form hidden"
+                <!-- Search replaces only the main header -->
+                <div
+                        id="searchOverlay"
+                        class="search-overlay hidden"
                 >
-
-                    <label for="importFolderPath">
-                        LoRA folder path
-                    </label>
-
                     <input
                             type="text"
-                            id="importFolderPath"
-                            placeholder="C:/Users/.../ComfyUI/models/loras"
-                            required
+                            id="searchInput"
+                            placeholder="Search LoRAs..."
+                            class="search-input"
                     >
 
                     <button
-                            id="importFolderSubmitButton"
-                            class="submit-button"
-                            type="submit"
+                            id="closeSearchButton"
+                            class="search-close-button"
+                            type="button"
+                            aria-label="Close search"
                     >
-                        Scan and Import
+                        ×
                     </button>
 
-                </form>
-
-
-                <div
-                        id="importResult"
-                        class="import-result hidden"
-                        role="status"
-                        aria-live="polite"
-                ></div>
-
-
-                <div class="action-menu-divider"></div>
-
-
-                <button
-                        id="exportBackupButton"
-                        class="compact-action-button"
-                        type="button"
-                >
-
-                    <span class="compact-action-icon">
-                        ↓
-                    </span>
-
-                    <span>
-                        Export Backup
-                    </span>
-
-                </button>
-
-
-                <button
-                        id="importBackupButton"
-                        class="compact-action-button"
-                        type="button"
-                >
-
-                    <span class="compact-action-icon">
-                        ↑
-                    </span>
-
-                    <span>
-                        Import Backup
-                    </span>
-
-                </button>
-
-
-                <input
-                        id="backupFileInput"
-                        class="hidden-file-input"
-                        type="file"
-                        accept=".json,application/json"
-                >
+                </div>
 
             </section>
 
-        </div>
 
+            <!-- Sort, Filter, and Layout Controls -->
+            <section class="gallery-controls">
 
-        <!--
-            Only this row is sticky.
-            The main header above scrolls normally.
-        -->
-        <section class="gallery-controls sticky-navigation">
+                <div class="gallery-action-controls">
 
-            <div class="gallery-action-controls">
-
-                <button
-                        id="sortButton"
-                        class="gallery-chip-button"
-                        type="button"
-                        aria-label="Sort LoRAs"
-                        aria-controls="sortModal"
-                        aria-expanded="false"
-                >
+                    <button
+                            id="sortButton"
+                            class="gallery-chip-button"
+                            type="button"
+                            aria-label="Sort LoRAs"
+                            aria-controls="sortModal"
+                            aria-expanded="false"
+                    >
                     <span id="sortButtonText">
                         Sort
                     </span>
 
-                    <span
-                            id="sortButtonArrow"
-                            class="hidden"
-                            aria-hidden="true"
-                    ></span>
-                </button>
+                        <span
+                                id="sortButtonArrow"
+                                class="hidden"
+                                aria-hidden="true"
+                        ></span>
+                    </button>
 
 
-                <button
-                        id="filterButton"
-                        class="gallery-chip-button"
-                        type="button"
-                        aria-label="Filter LoRAs"
-                        aria-controls="filterModal"
-                        aria-expanded="false"
-                >
+                    <button
+                            id="filterButton"
+                            class="gallery-chip-button"
+                            type="button"
+                            aria-label="Filter LoRAs"
+                            aria-controls="filterModal"
+                            aria-expanded="false"
+                    >
 
                     <span id="filterButtonText">
                         Filter
                     </span>
 
-                    <span
-                            id="filterCountBadge"
-                            class="filter-count-badge hidden"
-                    >
+                        <span
+                                id="filterCountBadge"
+                                class="filter-count-badge hidden"
+                        >
                         0
                     </span>
 
-                </button>
+                    </button>
 
-            </div>
+                </div>
 
 
-            <div class="layout-icon-controls">
+                <div class="layout-icon-controls">
 
-                <button
-                        id="singleColumnButton"
-                        class="layout-icon-button active"
-                        type="button"
-                        aria-label="Single-column layout"
-                >
-                    ☰
-                </button>
+                    <button
+                            id="singleColumnButton"
+                            class="layout-icon-button active"
+                            type="button"
+                            aria-label="Single-column layout"
+                    >
+                        ☰
+                    </button>
 
-                <button
-                        id="doubleColumnButton"
-                        class="layout-icon-button"
-                        type="button"
-                        aria-label="Double-column layout"
-                >
-                    ▦
-                </button>
+                    <button
+                            id="doubleColumnButton"
+                            class="layout-icon-button"
+                            type="button"
+                            aria-label="Double-column layout"
+                    >
+                        ▦
+                    </button>
 
-            </div>
+                </div>
 
-        </section>
+            </section>
+
+
+        </div>
 
 
         <!-- Gallery -->
@@ -387,6 +207,196 @@
         </section>
 
     </div>
+
+
+    <!-- Side Menu -->
+    <nav
+            id="sideMenu"
+            class="side-menu hidden"
+            aria-label="Main menu"
+    >
+
+        <div class="side-menu-header">
+
+            <h2>Menu</h2>
+
+            <button
+                    id="closeMenuButton"
+                    class="menu-close-button"
+                    type="button"
+                    aria-label="Close menu"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <a
+                href="/html/index.html"
+                class="side-menu-link active"
+        >
+            LoRA Library
+        </a>
+
+        <a
+                href="/html/poses.html"
+                class="side-menu-link"
+        >
+            Pose Gallery
+        </a>
+
+    </nav>
+
+
+    <div
+            id="menuBackdrop"
+            class="menu-backdrop hidden"
+            aria-hidden="true"
+    ></div>
+
+
+    <!-- LoRA Action Menu -->
+    <div
+            id="actionMenuOverlay"
+            class="action-menu-overlay hidden"
+    >
+
+        <section
+                id="actionMenuPopover"
+                class="action-menu-popover"
+                role="dialog"
+                aria-label="LoRA actions"
+        >
+
+            <button
+                    id="addLoraActionButton"
+                    class="compact-action-button"
+                    type="button"
+            >
+
+                    <span
+                            class="compact-action-icon"
+                            aria-hidden="true"
+                    >
+                        ＋
+                    </span>
+
+                <span>
+                        Add LoRA
+                    </span>
+
+            </button>
+
+
+            <button
+                    id="showImportFolderButton"
+                    class="compact-action-button"
+                    type="button"
+            >
+
+                    <span
+                            class="compact-action-icon folder-icon"
+                            aria-hidden="true"
+                    >
+                        📁
+                    </span>
+
+                <span>
+                        Import LoRA
+                    </span>
+
+            </button>
+
+
+            <form
+                    id="importFolderForm"
+                    class="import-folder-form hidden"
+            >
+
+                <label for="importFolderPath">
+                    LoRA folder path
+                </label>
+
+                <input
+                        type="text"
+                        id="importFolderPath"
+                        placeholder="C:/Users/.../ComfyUI/models/loras"
+                        required
+                >
+
+                <button
+                        id="importFolderSubmitButton"
+                        class="submit-button"
+                        type="submit"
+                >
+                    Scan and Import
+                </button>
+
+            </form>
+
+
+            <div
+                    id="importResult"
+                    class="import-result hidden"
+                    role="status"
+                    aria-live="polite"
+            ></div>
+
+
+            <div class="action-menu-divider"></div>
+
+
+            <button
+                    id="exportBackupButton"
+                    class="compact-action-button"
+                    type="button"
+            >
+
+                    <span class="compact-action-icon">
+                        ↓
+                    </span>
+
+                <span>
+                        Export Backup
+                    </span>
+
+            </button>
+
+
+            <button
+                    id="importBackupButton"
+                    class="compact-action-button"
+                    type="button"
+            >
+
+                    <span class="compact-action-icon">
+                        ↑
+                    </span>
+
+                <span>
+                        Import Backup
+                    </span>
+
+            </button>
+
+
+            <input
+                    id="backupFileInput"
+                    class="hidden-file-input"
+                    type="file"
+                    accept=".json,application/json"
+            >
+
+        </section>
+
+    </div>
+
+
+    <!--
+        Only this row is sticky.
+        The main header above scrolls normally.
+    -->
+
 
 
     <!-- Go To Top -->
