@@ -53,7 +53,7 @@
                             id="openActionMenuButton"
                             class="toolbar-action-button"
                             type="button"
-                            aria-label="Open LoRA actions"
+                            aria-label="Open Pose actions"
                     >
                         ⋮
                     </button>
@@ -68,7 +68,7 @@
                     <input
                             type="text"
                             id="searchInput"
-                            placeholder="Search LoRAs..."
+                            placeholder="Search poses..."
                             class="search-input"
                     >
 
@@ -95,7 +95,7 @@
                             id="sortButton"
                             class="gallery-chip-button"
                             type="button"
-                            aria-label="Sort LoRAs"
+                            aria-label="Sort poses"
                             aria-controls="sortModal"
                             aria-expanded="false"
                     >
@@ -115,7 +115,7 @@
                             id="filterButton"
                             class="gallery-chip-button"
                             type="button"
-                            aria-label="Filter LoRAs"
+                            aria-label="Filter poses"
                             aria-controls="filterModal"
                             aria-expanded="false"
                     >
@@ -166,10 +166,10 @@
 
         <!-- Gallery -->
         <section
-                id="loraList"
+                id="poseList"
                 class="lora-list single-column"
         >
-            <!-- LoRA cards loaded by JavaScript -->
+            <!-- Pose cards loaded by poses.js -->
         </section>
 
 
@@ -213,7 +213,7 @@
     <nav
             id="sideMenu"
             class="side-menu hidden"
-            aria-label="Main menu"
+            aria-label="Library navigation"
     >
 
         <div class="side-menu-header">
@@ -255,7 +255,7 @@
     ></div>
 
 
-    <!-- LoRA Action Menu -->
+    <!-- Pose Action Menu -->
     <div
             id="actionMenuOverlay"
             class="action-menu-overlay hidden"
@@ -265,11 +265,11 @@
                 id="actionMenuPopover"
                 class="action-menu-popover"
                 role="dialog"
-                aria-label="LoRA actions"
+                aria-label="Pose actions"
         >
 
             <button
-                    id="addLoraActionButton"
+                    id="addPoseActionButton"
                     class="compact-action-button"
                     type="button"
             >
@@ -288,61 +288,6 @@
             </button>
 
 
-            <button
-                    id="showImportFolderButton"
-                    class="compact-action-button"
-                    type="button"
-            >
-
-                    <span
-                            class="compact-action-icon folder-icon"
-                            aria-hidden="true"
-                    >
-                        📁
-                    </span>
-
-                <span>
-                        Import LoRA
-                    </span>
-
-            </button>
-
-
-            <form
-                    id="importFolderForm"
-                    class="import-folder-form hidden"
-            >
-
-                <label for="importFolderPath">
-                    LoRA folder path
-                </label>
-
-                <input
-                        type="text"
-                        id="importFolderPath"
-                        placeholder="C:/Users/.../ComfyUI/models/loras"
-                        required
-                >
-
-                <button
-                        id="importFolderSubmitButton"
-                        class="submit-button"
-                        type="submit"
-                >
-                    Scan and Import
-                </button>
-
-            </form>
-
-
-            <div
-                    id="importResult"
-                    class="import-result hidden"
-                    role="status"
-                    aria-live="polite"
-            ></div>
-
-
             <div class="action-menu-divider"></div>
 
 
@@ -357,7 +302,7 @@
                     </span>
 
                 <span>
-                        Export Backup
+                        Export Poses (JSON)
                     </span>
 
             </button>
@@ -374,7 +319,7 @@
                     </span>
 
                 <span>
-                        Import Backup
+                        Import Poses (JSON)
                     </span>
 
             </button>
@@ -459,7 +404,7 @@
             <button
                     class="compact-action-button sort-option-button"
                     type="button"
-                    data-sort-field="loraName"
+                    data-sort-field="name"
                     data-sort-label="Name"
             >
                 <span>
@@ -476,11 +421,11 @@
             <button
                     class="compact-action-button sort-option-button"
                     type="button"
-                    data-sort-field="creator"
-                    data-sort-label="Creator"
+                    data-sort-field="category"
+                    data-sort-label="Category"
             >
                 <span>
-                    Creator
+                    Category
                 </span>
 
                 <span
@@ -493,11 +438,11 @@
             <button
                     class="compact-action-button sort-option-button"
                     type="button"
-                    data-sort-field="createdDate"
-                    data-sort-label="Created"
+                    data-sort-field="seed"
+                    data-sort-label="Seed"
             >
                 <span>
-                    Created
+                    Seed
                 </span>
 
                 <span
@@ -556,126 +501,15 @@
 
         <div class="filter-sheet-content">
 
-            <label
-                    class="filter-field-label"
-                    for="baseModelFilter"
-            >
-                Base Model
-            </label>
-
-            <select
-                    id="baseModelFilter"
-                    class="category-filter"
-            >
-
-                <option value="ALL">
-                    All Base Models
-                </option>
-
-                <option value="ILLUSTRIOUS">
-                    Illustrious
-                </option>
-
-                <option value="KREA">
-                    Krea 2
-                </option>
-
-                <option value="PONY">
-                    Pony
-                </option>
-
-                <option value="Wan Video 2.2 I2V-A14B">
-                    WAN 2.2
-                </option>
-
+            <label class="filter-field-label" for="categoryFilter">Category</label>
+            <select id="categoryFilter" class="category-filter">
+                <option value="ALL">All Categories</option>
             </select>
-
-
-            <label
-                    class="filter-field-label"
-                    for="categoryFilter"
-            >
-                Category
-            </label>
-
-            <select
-                    id="categoryFilter"
-                    class="category-filter"
-            >
-
-                <option value="ALL">
-                    All Categories
-                </option>
-
-                <option value="FAVORITES">
-                    Favorites
-                </option>
-
-                <option value="BACKGROUND">
-                    Background
-                </option>
-
-                <option value="CHARACTER">
-                    Character
-                </option>
-
-                <option value="CONCEPT">
-                    Concept
-                </option>
-
-                <option value="ENHANCER">
-                    Enhancer
-                </option>
-
-                <option value="OUTFIT">
-                    Outfit
-                </option>
-
-                <option value="POSES">
-                    Poses
-                </option>
-
-                <option value="SLIDER">
-                    Slider
-                </option>
-
-                <option value="STYLE">
-                    Style
-                </option>
-
+            <label class="filter-field-label" for="favoriteFilter">Favorites</label>
+            <select id="favoriteFilter" class="category-filter">
+                <option value="ALL">All Poses</option>
+                <option value="true">Favorites Only</option>
             </select>
-
-
-            <label
-                    class="filter-field-label"
-                    for="subcategoryFilter"
-            >
-                Subcategory
-            </label>
-
-            <select
-                    id="subcategoryFilter"
-                    class="category-filter"
-            >
-
-                <option value="ALL">
-                    All Subcategories
-                </option>
-
-                <option value="ANIME">
-                    Anime
-                </option>
-
-                <option value="HORROR">
-                    Horror
-                </option>
-
-                <option value="REALISTIC">
-                    Realistic
-                </option>
-
-            </select>
-
         </div>
 
 
@@ -704,281 +538,108 @@
 </div>
 
 
-<!-- LoRA Details Modal -->
-<div
-        id="loraDetailsModal"
-        class="modal-overlay hidden"
-        aria-hidden="true"
->
-
-    <section
-            class="lora-details-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="detailsLoraName"
-    >
-
-        <div
-                class="sheet-drag-handle"
-                aria-hidden="true"
-        ></div>
-
-
+<!-- Pose Details Modal: retains existing bottom-sheet CSS and carousel hooks -->
+<div id="poseDetailsModal" class="modal-overlay hidden" aria-hidden="true">
+    <section class="lora-details-sheet" role="dialog" aria-modal="true" aria-labelledby="detailsPoseName">
+        <div class="sheet-drag-handle" aria-hidden="true"></div>
         <div class="lora-details-scroll-area">
-
-            <!-- Details Header -->
             <div class="sheet-header">
-
-                <div
-                        id="detailsHeaderView"
-                        class="details-header-view"
-                >
-
-                    <div class="details-title-container">
-
-                        <h2 id="detailsLoraName">
-                            Pose Title
-                        </h2>
-
-                    </div>
-
-
+                <div id="detailsHeaderView" class="details-header-view">
+                    <div class="details-title-container"><h2 id="detailsPoseName">Pose Title</h2></div>
                     <div class="details-actions">
-
-                        <button
-                                id="editLoraButton"
-                                class="icon-button"
-                                type="button"
-                                aria-label="Edit LoRA"
-                                title="Edit LoRA"
-                        >
-                            ✏
-                        </button>
-
-                        <button
-                                id="closeLoraDetailsButton"
-                                class="close-button"
-                                type="button"
-                                aria-label="Close LoRA details"
-                        >
-                            ×
-                        </button>
-
+                        <button id="editPoseButton" class="icon-button" type="button" aria-label="Edit pose" title="Edit pose">✏</button>
+                        <button id="closePoseDetailsButton" class="close-button" type="button" aria-label="Close pose details">×</button>
                     </div>
-
                 </div>
-
             </div>
-
-
-            <!-- Preview Carousel -->
             <div class="details-carousel">
-
                 <div class="details-carousel-preview">
-
-                    <button
-                            id="previousPreviewButton"
-                            class="carousel-navigation-button carousel-previous-button hidden"
-                            type="button"
-                            aria-label="Previous preview"
-                    >
-                        ‹
-                    </button>
-
-
-                    <div
-                            id="detailsImageContainer"
-                            class="details-image-container"
-                    >
-
-                        <div class="lora-card-placeholder">
-                            No Image
-                        </div>
-
+                    <button id="previousPreviewButton" class="carousel-navigation-button carousel-previous-button hidden" type="button" aria-label="Previous image">‹</button>
+                    <div id="detailsImageContainer" class="details-image-container">
+                        <div class="lora-card-placeholder">No Image</div>
                     </div>
-
-
-                    <button
-                            id="nextPreviewButton"
-                            class="carousel-navigation-button carousel-next-button hidden"
-                            type="button"
-                            aria-label="Next preview"
-                    >
-                        ›
-                    </button>
-
+                    <button id="nextPreviewButton" class="carousel-navigation-button carousel-next-button hidden" type="button" aria-label="Next image">›</button>
                 </div>
-
-
-                <div
-                        id="previewIndicators"
-                        class="preview-indicators hidden"
-                        aria-label="Preview selection"
-                ></div>
-
+                <div id="previewIndicators" class="preview-indicators hidden" aria-label="Image selection"></div>
             </div>
-
-
-            <!-- LoRA Information -->
-            <section
-                    id="detailsInfoView"
-                    class="details-info"
-            >
-
-                <p>
-                    <strong>Creator:</strong>
-                    <span id="detailsCreator">
-                        N/A
-                    </span>
-                </p>
-
-                <p>
-                    <strong>Version:</strong>
-                    <span id="detailsVersion">
-                        N/A
-                    </span>
-                </p>
-
-                <p>
-                    <strong>Category:</strong>
-                    <span id="detailsCategory">
-                        N/A
-                    </span>
-                </p>
-
-                <p>
-                    <strong>Subcategory:</strong>
-                    <span id="detailsSubCategory">
-                        N/A
-                    </span>
-                </p>
-
-                <p>
-                    <strong>Base Model:</strong>
-                    <span id="detailsBaseModel">
-                        N/A
-                    </span>
-                </p>
-
+            <section id="detailsInfoView" class="details-info">
+                <p><strong>Category:</strong> <span id="detailsCategory">N/A</span></p>
+                <p><strong>Seed:</strong> <span id="detailsSeed">N/A</span></p>
             </section>
-
-
-            <!-- Trained Words / Notes -->
-            <section
-                    id="detailsPromptView"
-                    class="details-prompt-view"
-            >
-
-                <!-- Trained Words -->
+            <section id="detailsPromptView" class="details-prompt-view">
                 <div class="details-field">
-
                     <div class="details-field-header">
-
-                        <span class="details-field-label">
-                            Trained Words
-                        </span>
-
-
+                        <span class="details-field-label">LoRAs / Strengths</span>
                         <div class="details-field-actions">
-
-                            <button
-                                    type="button"
-                                    class="expand-field-button"
-                                    data-expand-target="detailsPositivePrompt"
-                                    data-expand-title="Trained Words"
-                                    aria-label="Expand trained words"
-                                    title="Expand"
-                            >
-                                ⛶
-                            </button>
-
-                            <button
-                                    type="button"
-                                    class="copy-field-button"
-                                    data-copy-target="detailsPositivePrompt"
-                                    aria-label="Copy trained words"
-                                    title="Copy trained words"
-                            >
-                                Copy
-                            </button>
-
+                            <button type="button" class="expand-field-button" data-expand-target="detailsLora" data-expand-title="LoRAs / Strengths" aria-label="Expand LoRAs" title="Expand">⛶</button>
+                            <button type="button" class="copy-field-button" data-copy-target="detailsLora" aria-label="Copy LoRAs" title="Copy">Copy</button>
                         </div>
-
                     </div>
-
-
-                    <div
-                            id="detailsPositivePrompt"
-                            class="details-field-value details-long-text"
-                    >
-                        No trained words saved.
-                    </div>
-
+                    <div id="detailsLora" class="details-field-value details-long-text" style="white-space:pre-wrap">No LoRAs saved.</div>
                 </div>
-
-
-                <!-- Notes -->
                 <div class="details-field">
-
                     <div class="details-field-header">
-
-                        <span class="details-field-label">
-                            Notes
-                        </span>
-
-
+                        <span class="details-field-label">Prompt</span>
                         <div class="details-field-actions">
-
-                            <button
-                                    type="button"
-                                    class="expand-field-button"
-                                    data-expand-target="detailsNotes"
-                                    data-expand-title="Notes"
-                                    aria-label="Expand notes"
-                                    title="Expand"
-                            >
-                                ⛶
-                            </button>
-
-                            <button
-                                    type="button"
-                                    class="copy-field-button"
-                                    data-copy-target="detailsNotes"
-                                    aria-label="Copy notes"
-                                    title="Copy notes"
-                            >
-                                Copy
-                            </button>
-
+                            <button type="button" class="expand-field-button" data-expand-target="detailsPrompt" data-expand-title="Prompt" aria-label="Expand prompt" title="Expand">⛶</button>
+                            <button type="button" class="copy-field-button" data-copy-target="detailsPrompt" aria-label="Copy prompt" title="Copy">Copy</button>
                         </div>
-
                     </div>
-
-
-                    <div
-                            id="detailsNotes"
-                            class="details-field-value details-long-text"
-                    >
-                        No notes saved.
-                    </div>
-
+                    <div id="detailsPrompt" class="details-field-value details-long-text" style="white-space:pre-wrap">No prompt saved.</div>
                 </div>
-
+                <div class="details-field">
+                    <div class="details-field-header">
+                        <span class="details-field-label">Notes</span>
+                        <div class="details-field-actions">
+                            <button type="button" class="expand-field-button" data-expand-target="detailsNotes" data-expand-title="Notes" aria-label="Expand notes" title="Expand">⛶</button>
+                            <button type="button" class="copy-field-button" data-copy-target="detailsNotes" aria-label="Copy notes" title="Copy">Copy</button>
+                        </div>
+                    </div>
+                    <div id="detailsNotes" class="details-field-value details-long-text" style="white-space:pre-wrap">No notes saved.</div>
+                </div>
             </section>
-
-
-            <p
-                    id="detailsEditMessage"
-                    class="details-edit-message hidden"
-                    aria-live="polite"
-            ></p>
-
+            <p id="detailsEditMessage" class="details-edit-message hidden" aria-live="polite"></p>
         </div>
-
     </section>
-
 </div>
 
+<!-- Add/Edit Pose: same sheet visual system, separate form and state -->
+<div id="poseFormModal" class="filter-modal hidden" aria-hidden="true" inert>
+    <div id="poseFormBackdrop" class="filter-modal-backdrop"></div>
+    <section class="filter-sheet" role="dialog" aria-modal="true" aria-labelledby="poseFormTitle">
+        <div class="sheet-drag-handle" aria-hidden="true"></div>
+        <div class="filter-sheet-header">
+            <h2 id="poseFormTitle">Add Pose</h2>
+            <button id="closePoseFormButton" class="filter-close-button" type="button" aria-label="Close pose form">×</button>
+        </div>
+        <form id="poseForm" class="filter-sheet-content" enctype="multipart/form-data">
+            <input id="poseIdInput" name="id" type="hidden">
+            <label class="filter-field-label" for="poseNameInput">Name</label>
+            <input id="poseNameInput" name="name" class="category-filter" type="text" maxlength="255" required placeholder="Pose name">
+            <label class="filter-field-label" for="poseCategoryInput">Category</label>
+            <input id="poseCategoryInput" name="category" class="category-filter" type="text" maxlength="255" placeholder="e.g. Standing, Sitting, Action" list="poseCategorySuggestions">
+            <datalist id="poseCategorySuggestions"></datalist>
+            <label class="filter-field-label" for="poseSeedInput">Seed</label>
+            <input id="poseSeedInput" name="seed" class="category-filter" type="number" step="1" min="-2147483648" max="2147483647" placeholder="Optional seed">
+            <label class="filter-field-label" for="poseLoraInput">LoRAs / Strengths</label>
+            <textarea id="poseLoraInput" name="lora" class="category-filter" rows="4" placeholder="Detail Enhancer — 0.80&#10;Character LoRA — 0.65&#10;Clothing LoRA — 0.75" style="width:100%;height:auto;resize:vertical"></textarea>
+            <label class="filter-field-label" for="posePromptInput">Prompt</label>
+            <textarea id="posePromptInput" name="prompt" class="category-filter" rows="5" style="width:100%;height:auto;resize:vertical" placeholder="Generation prompt"></textarea>
+            <label class="filter-field-label" for="poseNotesInput">Notes</label>
+            <textarea id="poseNotesInput" name="notes" class="category-filter" rows="4" style="width:100%;height:auto;resize:vertical" placeholder="Optional notes"></textarea>
+            <label class="filter-field-label" for="poseImagesInput">Images</label>
+            <input id="poseImagesInput" name="images" type="file" accept="image/*" multiple>
+            <p id="poseImagesHelp" class="filter-field-label">Select multiple images. Existing images will be retained when editing unless explicitly removed.</p>
+            <div id="poseSelectedImages" aria-live="polite"></div>
+            <div id="poseExistingImages"></div>
+            <div class="filter-sheet-actions">
+                <button id="cancelPoseFormButton" class="filter-reset-button" type="button">Cancel</button>
+                <button id="savePoseButton" class="filter-apply-button" type="submit">Save Pose</button>
+            </div>
+            <p id="poseFormMessage" class="details-edit-message hidden" role="status" aria-live="polite"></p>
+        </form>
+    </section>
+</div>
 
 <!-- Expanded Text Modal -->
 <div
@@ -1023,3 +684,5 @@
 
 </body>
 </html>
+
+
