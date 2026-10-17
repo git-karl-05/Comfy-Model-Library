@@ -20,6 +20,7 @@ const CATEGORY_OPTIONS = [
 
 let currentLora = null;
 let selectedPreviewFile = null;
+let removeSavedPreview = false;
 let selectedPreviewObjectUrl = null;
 
 
@@ -54,27 +55,11 @@ function getLoraIdFromUrl() {
 }
 
 function buildLibraryReturnUrl(loraId) {
-    const queryParameters =
-        new URLSearchParams();
-
-    if (loraId) {
-        queryParameters.set(
-            "openLora",
-            String(loraId)
-        );
-    }
-
-    const queryString =
-        queryParameters.toString();
-
-    return queryString
-        ? `/html/index.html?${queryString}`
-        : "/html/index.html";
+    return FormNavigation.returnUrl();
 }
 
 function returnToLibrary(loraId) {
-    window.location.href =
-        buildLibraryReturnUrl(loraId);
+    FormNavigation.finish();
 }
 
 
@@ -293,11 +278,11 @@ function createRemovePreviewButton() {
 
     button.setAttribute(
         "aria-label",
-        "Remove selected replacement image"
+        "Remove displayed preview image"
     );
 
     button.title =
-        "Remove selected replacement image";
+        "Remove displayed preview image";
 
     button.textContent = "×";
 
@@ -445,6 +430,7 @@ function hideRemovePreviewButton() {
 }
 
 function getSavedPreviewPath(lora) {
+    if (removeSavedPreview) return "";
     /*
      * filePath is used by the current script.
      *
@@ -456,7 +442,7 @@ function getSavedPreviewPath(lora) {
         lora?.previewUrl ||
         lora?.previewPath ||
         lora?.imageUrl ||
-        lora?.filePath ||
+        (removeSavedPreview ? "" : lora?.filePath) ||
         ""
     );
 }
@@ -491,7 +477,7 @@ function renderSavedPreview(lora) {
         );
     }
 
-    hideRemovePreviewButton();
+    showRemovePreviewButton();
 }
 
 function renderSelectedPreview(file) {
@@ -573,7 +559,12 @@ function setupRemovePreviewButton() {
             event.preventDefault();
             event.stopPropagation();
 
-            clearSelectedReplacementPreview();
+            if (selectedPreviewFile) {
+                clearSelectedReplacementPreview();
+            } else {
+                removeSavedPreview = true;
+                renderPreviewPlaceholder("Click to choose a preview image");
+            }
         }
     );
 }
@@ -941,6 +932,7 @@ async function updateLora(
         }
     );
 
+    formData.append("removePreview", String(removeSavedPreview));
     if (previewFile) {
         formData.append(
             "preview",

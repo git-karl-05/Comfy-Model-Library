@@ -2,254 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Add Pose</title>
-
     <link rel="stylesheet" href="/css/styles.css">
-    <script src="/js/add-lora.js" defer></script>
+    <script src="/js/form-navigation.js" defer></script>
+    <script src="/js/poses.js" defer></script>
 </head>
-
 <body>
-
 <main class="add-lora-page">
-
     <div class="add-lora-container">
-
-
         <header class="add-lora-header">
-
-            <button
-                    type="button"
-                    id="optionsButton"
-                    class="options-button"
-                    aria-label="Open navigation menu"
-                    aria-controls="sideMenu"
-                    aria-expanded="false">
-                ☰
-            </button>
-
-            <h1>Add LoRA</h1>
-
-            <a
-                    href="/html/index.html"
-                    class="page-close-button"
-                    aria-label="Cancel and return to LoRA Library"
-                    title="Cancel">
-                ×
-            </a>
-
+            <button id="optionsButton" class="options-button" type="button" aria-label="Open navigation menu" aria-controls="sideMenu" aria-expanded="false">☰</button>
+            <h1 id="poseFormTitle">Add Pose</h1>
+            <button id="closePoseFormButton" class="page-close-button" type="button" aria-label="Cancel and return" title="Cancel">×</button>
         </header>
-
-        <div
-                id="menuBackdrop"
-                class="menu-backdrop hidden"
-                aria-hidden="true">
-        </div>
-
-        <nav
-                id="sideMenu"
-                class="side-menu hidden"
-                aria-label="Main navigation"
-                aria-hidden="true">
-
-            <div class="side-menu-header">
-                <h2>Menu</h2>
-
-                <button
-                        type="button"
-                        id="closeMenuButton"
-                        class="menu-close-button"
-                        aria-label="Close navigation menu">
-                    ×
-                </button>
-            </div>
-
-            <a href="/html/index.html" class="side-menu-link">
-                LoRA Library
-            </a>
-
-            <a href="/html/add-lora.html" class="side-menu-link active">
-                Add LoRA
-            </a>
-
+        <div id="menuBackdrop" class="menu-backdrop hidden" aria-hidden="true"></div>
+        <nav id="sideMenu" class="side-menu hidden" aria-label="Main navigation" aria-hidden="true">
+            <div class="side-menu-header"><h2>Menu</h2><button id="closeMenuButton" class="menu-close-button" type="button" aria-label="Close navigation menu">×</button></div>
+            <a href="/html/index.html" class="side-menu-link">LoRA Library</a>
+            <a href="/html/poses.html" class="side-menu-link">Pose Gallery</a>
+            <a href="/html/add-pose.html" class="side-menu-link">Add Pose</a>
         </nav>
-
-
-        <form id="addLoraForm" class="add-lora-form">
-
-
+        <form id="poseForm" class="add-lora-form" enctype="multipart/form-data">
+            <input id="poseIdInput" name="id" type="hidden">
             <section class="add-image-section">
-
-                <label
-                        id="addImagePreviewContainer"
-                        class="details-image-container add-image-preview"
-                        for="previewImage">
-
-                    <div class="lora-card-placeholder">
-                        Click to choose a preview image
-                    </div>
-
-                    <button
-                            type="button"
-                            id="removePreviewImageButton"
-                            class="remove-preview-image-button hidden"
-                            aria-label="Remove preview image"
-                            title="Remove preview image">
-                        ×
-                    </button>
-
+                <label id="poseImagePreviewContainer" for="poseImagesInput" class="details-image-container add-image-preview">
+                    <div class="lora-card-placeholder">Click to choose preview images</div>
                 </label>
-
-                <input
-                        type="file"
-                        id="previewImage"
-                        name="previewImage"
-                        class="hidden-file-input"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
-                >
-
-
-
+                <input id="poseImagesInput" name="images" class="hidden-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+                <p id="poseImagesHelp" class="filter-field-label">Existing images are retained unless removed. Select images to add previews.</p>
+                <div id="poseSelectedImages" aria-live="polite"></div>
+                <div id="poseExistingImages"></div>
             </section>
-
-
             <section class="details-edit-grid add-lora-details-grid">
-
-                <label class="details-edit-full-width">
-                    LoRA Name
-
-                    <input
-                            type="text"
-                            id="loraName"
-                            name="loraName"
-                            class="details-edit-input"
-                            required
-                    >
+                <label class="details-edit-full-width">Pose Name
+                    <input id="poseNameInput" name="name" class="details-edit-input" type="text" maxlength="255" required>
                 </label>
-
-                <label class="details-edit-full-width">
-                    Creator
-
-                    <input
-                            type="text"
-                            id="creator"
-                            name="creator"
-                            class="details-edit-input"
-                    >
+                <label>Category
+                    <input id="poseCategoryInput" name="category" class="details-edit-input" type="text" maxlength="255" list="poseCategorySuggestions">
+                    <datalist id="poseCategorySuggestions"></datalist>
                 </label>
-
-                <label>
-                    Version
-
-                    <input
-                            type="text"
-                            id="version"
-                            name="version"
-                            class="details-edit-input"
-                    >
+                <label>Base Model
+                    <input id="poseBaseModelInput" name="baseModel" class="details-edit-input" type="text" maxlength="255">
                 </label>
-
-                <label>
-                    Category
-
-                    <select
-                            id="category"
-                            name="category"
-                            class="details-edit-input"
-                            required>
-
-                        <option value="">
-                            Select category
-                        </option>
-
-                    </select>
+                <label>Seed
+                    <input id="poseSeedInput" name="seed" class="details-edit-input" type="number" step="1" min="-2147483648" max="2147483647">
                 </label>
-
-                <label>
-                    Subcategory
-
-                    <input
-                            type="text"
-                            id="subCategory"
-                            name="subCategory"
-                            class="details-edit-input"
-                    >
-                </label>
-
-                <label>
-                    Base Model
-
-                    <input
-                            type="text"
-                            id="baseModel"
-                            name="baseModel"
-                            class="details-edit-input"
-                    >
-                </label>
-
             </section>
-
-
-
             <section class="details-prompt-section">
-                <h2>Positive Prompt</h2>
-
-                <textarea
-                        id="positivePrompt"
-                        name="positivePrompt"
-                        class="details-edit-textarea"
-                        rows="8"
-                        placeholder="Enter the positive prompt or trigger words..."></textarea>
+                <h2><label for="poseLoraInput">LoRAs / Strengths</label></h2>
+                <textarea id="poseLoraInput" name="lora" class="details-edit-textarea" rows="4"></textarea>
             </section>
-
-
             <section class="details-prompt-section">
-                <h2>Notes</h2>
-
-                <textarea
-                        id="notes"
-                        name="notes"
-                        class="details-edit-textarea"
-                        rows="6"
-                        placeholder="Add notes about this LoRA..."></textarea>
+                <h2><label for="posePromptInput">Prompt</label></h2>
+                <textarea id="posePromptInput" name="prompt" class="details-edit-textarea" rows="8"></textarea>
             </section>
-
-
-            <p
-                    id="addLoraMessage"
-                    class="details-edit-message hidden"
-                    aria-live="polite">
-            </p>
-
-
-
+            <section class="details-prompt-section">
+                <h2><label for="poseNotesInput">Notes</label></h2>
+                <textarea id="poseNotesInput" name="notes" class="details-edit-textarea" rows="6"></textarea>
+            </section>
+            <p id="poseFormMessage" class="details-edit-message hidden" role="status" aria-live="polite"></p>
             <div class="shared-form-action-bar add-lora-action-bar">
-
-                <a
-                        href="/html/index.html"
-                        class="details-cancel-button add-cancel-button">
-                    Cancel
-                </a>
-
-                <button
-                        type="submit"
-                        id="saveLoraButton"
-                        class="details-save-button">
-                    Save LoRA
-                </button>
-
+                <button id="cancelPoseFormButton" class="details-cancel-button" type="button">Cancel</button>
+                <button id="savePoseButton" class="details-save-button" type="submit">Save Pose</button>
             </div>
-
         </form>
-
     </div>
-
 </main>
-
 </body>
 </html>

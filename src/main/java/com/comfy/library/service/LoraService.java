@@ -258,6 +258,8 @@ public class LoraService {
                 existingLora
         );
 
+        if (request.isRemovePreview()) existingLora.setFilePath(null);
+
         if (
                 preview != null &&
                         !preview.isEmpty()

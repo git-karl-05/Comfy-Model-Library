@@ -8,6 +8,10 @@ public class PoseResponse {
     private Long id;
     private String name;
     private String category;
+    private String baseModel;
+
+    public String getBaseModel() { return baseModel; }
+    public void setBaseModel(String baseModel) { this.baseModel = baseModel; }
     private String filePath;
     private boolean favorite;
     private Integer seed;
@@ -22,6 +26,7 @@ public class PoseResponse {
         this.id = entity.getId();
         this.name = entity.getName();
         this.category = entity.getCategory();
+        this.baseModel = entity.getBaseModel();
         this.filePath = entity.getFilePath();
         this.favorite = entity.isFavorite();
         this.seed = entity.getSeed();

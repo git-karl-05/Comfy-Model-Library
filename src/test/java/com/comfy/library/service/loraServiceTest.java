@@ -132,4 +132,21 @@ public class loraServiceTest {
         assertEquals("Test notes", response.getNotes());
         assertFalse(response.isFavorite());
     }
+
+    @Test
+    void removingDefaultPreviewDoesNotDiscardASelectedReplacement() {
+        LoraEntity existing = createSavedLoraEntity();
+        existing.setFilePath("/old.png");
+        com.comfy.library.dto.lora.UpdateLoraRequest request = new com.comfy.library.dto.lora.UpdateLoraRequest();
+        request.setLoraName("Test LoRA");
+        request.setCategory(LoraCategory.CHARACTER);
+        request.setRemovePreview(true);
+        var replacement = new org.springframework.mock.web.MockMultipartFile("preview", "new.png", "image/png", new byte[]{1, 2});
+        when(loraRepository.findById(1L)).thenReturn(Optional.of(existing));
+        when(loraImageService.savePreviewImage(replacement)).thenReturn("/new.png");
+        when(loraRepository.save(any(LoraEntity.class))).thenAnswer(call -> call.getArgument(0));
+        loraService.updateLoraWithPreviewById(1L, request, replacement);
+        assertEquals("/new.png", existing.getFilePath());
+        verify(loraImageService).savePreviewImage(replacement);
+    }
 }

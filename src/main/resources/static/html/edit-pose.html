@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Edit Pose</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/edit-field-tools.js" defer></script>
+    <script src="/js/form-navigation.js" defer></script>
+    <script src="/js/poses.js" defer></script>
+</head>
+<body>
+<main class="edit-lora-page">
+    <div class="edit-lora-container">
+        <header class="edit-lora-header">
+            <button id="optionsButton" class="options-button" type="button" aria-label="Open navigation menu" aria-controls="sideMenu" aria-expanded="false">☰</button>
+            <h1 id="poseFormTitle">Edit Pose</h1>
+            <button id="closePoseFormButton" class="page-close-button" type="button" aria-label="Cancel and return" title="Cancel">×</button>
+        </header>
+        <div id="menuBackdrop" class="menu-backdrop hidden" aria-hidden="true"></div>
+        <nav id="sideMenu" class="side-menu hidden" aria-label="Main navigation" aria-hidden="true">
+            <div class="side-menu-header"><h2>Menu</h2><button id="closeMenuButton" class="menu-close-button" type="button" aria-label="Close navigation menu">×</button></div>
+            <a href="/html/index.html" class="side-menu-link">LoRA Library</a>
+            <a href="/html/poses.html" class="side-menu-link">Pose Gallery</a>
+            <a href="/html/add-pose.html" class="side-menu-link">Add Pose</a>
+        </nav>
+        <form id="poseForm" class="edit-lora-form" enctype="multipart/form-data">
+            <input id="poseIdInput" name="id" type="hidden">
+            <section class="edit-image-section">
+                <label id="poseImagePreviewContainer" for="poseImagesInput" class="details-image-container add-image-preview">
+                    <div class="lora-card-placeholder">Click to choose preview images</div>
+                </label>
+                <input id="poseImagesInput" name="images" class="hidden-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+                <div id="poseSelectedImages" class="hidden" aria-live="polite"></div>
+                <div id="poseExistingImages" class="hidden"></div>
+            </section>
+            <section class="details-edit-grid edit-lora-details-grid">
+                <label class="details-edit-full-width">Pose Name
+                    <input id="poseNameInput" name="name" class="details-edit-input" type="text" maxlength="255" required>
+                </label>
+
+                <label>Base Model
+                    <input id="poseBaseModelInput" name="baseModel" class="details-edit-input" type="text" maxlength="255">
+                </label>
+                <label>Category
+                    <input id="poseCategoryInput" name="category" class="details-edit-input" type="text" maxlength="255" list="poseCategorySuggestions">
+                    <datalist id="poseCategorySuggestions"></datalist>
+                </label>
+                <div class="pose-seed-field"><label for="poseSeedInput">Seed</label>
+                <div class="edit-field-wrapper edit-field-single">
+                    <input id="poseSeedInput" name="seed" class="details-edit-input" type="number" step="1" min="-2147483648" max="2147483647">
+                    <div class="edit-field-tools"><button type="button" class="copy-field-button edit-field-tool" data-edit-copy="poseSeedInput" data-copy-label="Copy Seed" aria-label="Copy Seed" title="Copy">⧉</button></div>
+                </div></div>
+            </section>
+            <section class="details-prompt-section">
+                <h2><label for="poseLoraInput">LoRAs / Strengths</label></h2>
+                <div class="edit-field-wrapper">
+                    <textarea id="poseLoraInput" name="lora" class="details-edit-textarea" rows="4"></textarea>
+                    <div class="edit-field-tools">
+                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="poseLoraInput" data-copy-label="Copy LoRAs / Strengths" aria-label="Copy LoRAs / Strengths" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="poseLoraInput" data-field-label="LoRAs / Strengths" aria-label="Expand LoRAs / Strengths" title="Expand">⛶</button>
+                    </div>
+                </div>
+            </section>
+            <section class="details-prompt-section">
+                <h2><label for="posePromptInput">Prompt</label></h2>
+                <div class="edit-field-wrapper">
+                    <textarea id="posePromptInput" name="prompt" class="details-edit-textarea" rows="8"></textarea>
+                    <div class="edit-field-tools">
+                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="posePromptInput" data-copy-label="Copy Prompt" aria-label="Copy Prompt" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="posePromptInput" data-field-label="Prompt" aria-label="Expand Prompt" title="Expand">⛶</button>
+                    </div>
+                </div>
+            </section>
+            <section class="details-prompt-section">
+                <h2><label for="poseNotesInput">Notes</label></h2>
+                <div class="edit-field-wrapper">
+                    <textarea id="poseNotesInput" name="notes" class="details-edit-textarea" rows="6"></textarea>
+                    <div class="edit-field-tools">
+                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="poseNotesInput" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="poseNotesInput" data-field-label="Notes" aria-label="Expand Notes" title="Expand">⛶</button>
+                    </div>
+                </div>
+            </section>
+            <p id="poseFormMessage" class="details-edit-message hidden" role="status" aria-live="polite"></p>
+            <div class="shared-form-action-bar edit-lora-action-bar">
+                <button id="cancelPoseFormButton" class="details-cancel-button" type="button">Cancel</button>
+                <button id="savePoseButton" class="details-save-button" type="submit">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</main>
+
+<div id="expandedFieldEditor" class="expanded-text-modal hidden" role="dialog" aria-modal="true" aria-labelledby="expandedFieldTitle" aria-hidden="true" inert>
+    <section class="expanded-text-sheet">
+        <header class="expanded-text-header">
+            <h2 id="expandedFieldTitle">Edit text</h2>
+            <button id="closeExpandedFieldEditor" class="close-button" type="button" aria-label="Apply expanded text and close">×</button>
+        </header>
+        <textarea id="expandedFieldValue" class="details-edit-textarea expanded-field-value" aria-label="Expanded text"></textarea>
+    </section>
+</div>
+
+</body>
+</html>

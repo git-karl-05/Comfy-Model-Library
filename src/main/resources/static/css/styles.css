@@ -2802,7 +2802,8 @@ body.returning-to-modal
             rgba(124, 77, 255, 0.12);
 }
 
-.sort-option-arrow {
+.sort-option-arrow,
+.sort-direction-arrow {
     flex: 0 0 auto;
 
     color: var(--primary-hover);
@@ -2922,3 +2923,22 @@ body.returning-to-modal
 .hidden {
     display: none !important;
 }
+/* Pose forms share the LoRA form layout and controls. */
+.pose-form-thumbnail {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin: 8px 8px 8px 0;
+}
+
+/* Identical live-value tools on both edit forms. */
+.edit-field-wrapper { position: relative; min-width: 0; }
+.edit-field-wrapper textarea { padding: 48px 88px 12px 12px; }
+.edit-field-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 2; }
+.edit-field-tools .edit-field-tool { width: 30px; height: 30px; min-width: 30px; padding: 0; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
+.edit-field-single input { padding-right: 48px; }
+.pose-seed-field { display: flex; flex-direction: column; gap: 6px; }
+.expanded-field-value { flex: 1; min-height: min(60dvh, 600px); resize: none; }
+.clipboard-fallback { position: fixed; left: -9999px; }
+.pose-edit-image-nav { position: absolute; bottom: 12px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; z-index: 4; }

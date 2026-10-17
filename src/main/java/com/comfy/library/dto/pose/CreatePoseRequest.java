@@ -6,6 +6,10 @@ public class CreatePoseRequest {
 
     private String name;
     private String category;
+    private String baseModel;
+
+    public String getBaseModel() { return baseModel; }
+    public void setBaseModel(String baseModel) { this.baseModel = baseModel; }
     private String filePath;
     private boolean favorite;
     private Integer seed;

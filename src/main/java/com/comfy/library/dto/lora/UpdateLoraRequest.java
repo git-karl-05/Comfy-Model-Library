@@ -15,6 +15,10 @@ public class UpdateLoraRequest {
     private Long seedNumber;
     private String notes;
     private Boolean favorite;
+    private boolean removePreview;
+
+    public boolean isRemovePreview() { return removePreview; }
+    public void setRemovePreview(boolean removePreview) { this.removePreview = removePreview; }
 
     public UpdateLoraRequest() {
     }

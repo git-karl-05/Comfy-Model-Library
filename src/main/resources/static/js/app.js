@@ -136,9 +136,30 @@ document.addEventListener(
            Initial Gallery Load
         ------------------------- */
 
-        await fetchAllLoras(0);
-
+        const saved = FormNavigation.restoreState();
+        if (saved) {
+            currentPage = Number.isInteger(saved.page) && saved.page >= 0 ? saved.page : 0;
+            appliedSortBy = ["loraName", "creator", "createdDate"].includes(saved.sortBy) ? saved.sortBy : null;
+            appliedSortDirection = saved.sortDirection === "desc" ? "desc" : "asc";
+            appliedBaseModelFilter = saved.baseModel || "ALL";
+            appliedCategoryFilter = saved.category || "ALL";
+            appliedSubcategoryFilter = saved.subcategory || "ALL";
+            document.getElementById("searchInput").value = saved.search || "";
+            isSearchActive = (saved.search || "").trim().length >= MINIMUM_SEARCH_LENGTH;
+            if (saved.search) document.getElementById("searchOverlay")?.classList.remove("hidden");
+            if (saved.doubleColumn) document.getElementById("doubleColumnButton")?.click();
+            updateSortDisplay();
+            updateFilterButton();
+        }
+        FormNavigation.register(() => ({
+            page: currentPage, sortBy: appliedSortBy, sortDirection: appliedSortDirection,
+            baseModel: appliedBaseModelFilter, category: appliedCategoryFilter, subcategory: appliedSubcategoryFilter,
+            search: document.getElementById("searchInput")?.value || "",
+            doubleColumn: document.getElementById("loraList")?.classList.contains("double-column")
+        }));
+        await refreshCurrentView();
         await reopenRequestedLoraModal();
+        if (saved) window.scrollTo(0, saved.scrollY || 0);
     }
 );
 
@@ -950,8 +971,7 @@ function setupActionMenu() {
     addButton.addEventListener(
         "click",
         () => {
-            window.location.href =
-                "/html/add-lora.html";
+            FormNavigation.go("/html/add-lora.html");
         }
     );
 
@@ -1987,6 +2007,7 @@ async function openLoraDetailsModal(
             "hidden",
             "closing"
         );
+        modal.setAttribute("aria-hidden", "false");
 
         restartLoraModalOpeningAnimation(
             modalSheet
@@ -2019,6 +2040,7 @@ function finishClosingLoraDetailsModal(
     modal,
     modalSheet
 ) {
+    modal.setAttribute("aria-hidden", "true");
     modal.classList.add(
         "hidden"
     );
@@ -2487,10 +2509,9 @@ function buildEditLoraPageUrl(
             id: String(loraId)
         });
 
-    return (
-        `/html/edit-lora.html?` +
-        queryParameters.toString()
-    );
+    const returnUrl = new URL(window.location.href);
+    returnUrl.searchParams.set("openLora", String(loraId));
+    return FormNavigation.formUrl(`/html/edit-lora.html?${queryParameters}`, returnUrl.href);
 }
 
 
@@ -4951,163 +4972,15 @@ function buildSortParameters() {
    SORT MODAL
 ========================= */
 
-function setupSortModal() {
-    const sortButton =
-        document.getElementById(
-            "sortButton"
-        );
+const gallerySort = createGallerySort({
+    getState: () => ({field: appliedSortBy, direction: appliedSortDirection}),
+    apply: applySort,
+    label: "Sort LoRAs"
+});
 
-    const sortModal =
-        document.getElementById(
-            "sortModal"
-        );
-
-    const closeButton =
-        document.getElementById(
-            "closeSortButton"
-        );
-
-    const backdrop =
-        sortModal?.querySelector(
-            ".sort-modal-backdrop"
-        );
-
-    if (
-        !sortButton ||
-        !sortModal
-    ) {
-        return;
-    }
-
-    sortButton.addEventListener(
-        "click",
-        openSortModal
-    );
-
-    closeButton?.addEventListener(
-        "click",
-        closeSortModal
-    );
-
-    backdrop?.addEventListener(
-        "click",
-        closeSortModal
-    );
-
-    sortModal
-        .querySelectorAll(
-            "[data-sort-field]"
-        )
-        .forEach(
-            button => {
-                button.addEventListener(
-                    "click",
-                    async () => {
-                        const sortField =
-                            button.dataset
-                                .sortField;
-
-                        if (!sortField) {
-                            return;
-                        }
-
-                        await applySort(
-                            sortField
-                        );
-                    }
-                );
-            }
-        );
-
-    updateSortDisplay();
-}
-
-
-function openSortModal() {
-    const sortModal =
-        document.getElementById(
-            "sortModal"
-        );
-
-    if (!sortModal) {
-        return;
-    }
-
-    sortModal.classList.remove(
-        "hidden"
-    );
-
-    sortModal.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-
-    document.body.style.overflow =
-        "hidden";
-
-    updateSortDisplay();
-}
-
-
-function closeSortModal() {
-    const sortModal =
-        document.getElementById(
-            "sortModal"
-        );
-
-    if (!sortModal) {
-        return;
-    }
-
-    sortModal.classList.add(
-        "hidden"
-    );
-
-    sortModal.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-    const detailsModal =
-        document.getElementById(
-            "loraDetailsModal"
-        );
-
-    const filterModal =
-        document.getElementById(
-            "filterModal"
-        );
-
-    const expandedTextModal =
-        document.getElementById(
-            "expandedTextModal"
-        );
-
-    const anotherModalOpen =
-        (
-            detailsModal &&
-            !detailsModal.classList.contains(
-                "hidden"
-            )
-        ) ||
-        (
-            filterModal &&
-            !filterModal.classList.contains(
-                "hidden"
-            )
-        ) ||
-        (
-            expandedTextModal &&
-            !expandedTextModal.classList.contains(
-                "hidden"
-            )
-        );
-
-    if (!anotherModalOpen) {
-        document.body.style.overflow =
-            "";
-    }
-}
+function setupSortModal() { gallerySort.setup(); }
+function openSortModal() { gallerySort.open(); }
+function closeSortModal() { gallerySort.close(); }
 
 
 /* =========================
@@ -5168,122 +5041,7 @@ async function applySort(
    SORT DISPLAY
 ========================= */
 
-function updateSortDisplay() {
-    const sortButton =
-        document.getElementById(
-            "sortButton"
-        );
-
-    const sortOptions =
-        document.querySelectorAll(
-            "[data-sort-field]"
-        );
-
-    sortOptions.forEach(
-        option => {
-            const optionField =
-                option.dataset.sortField;
-
-            const isActive =
-                optionField ===
-                appliedSortBy;
-
-            option.classList.toggle(
-                "active",
-                isActive
-            );
-
-            option.setAttribute(
-                "aria-pressed",
-                String(isActive)
-            );
-
-            const arrow =
-                option.querySelector(
-                    ".sort-option-arrow"
-                );
-
-            if (arrow) {
-                arrow.textContent =
-                    isActive
-                        ? (
-                            appliedSortDirection ===
-                            "desc"
-                                ? "↓"
-                                : "↑"
-                        )
-                        : "";
-            }
-        }
-    );
-
-    if (!sortButton) {
-        return;
-    }
-
-    if (
-        !appliedSortBy ||
-        !appliedSortDirection
-    ) {
-        sortButton.classList.remove(
-            "active"
-        );
-
-        sortButton.removeAttribute(
-            "data-sort-direction"
-        );
-
-        sortButton.setAttribute(
-            "aria-label",
-            "Sort LoRAs"
-        );
-
-        return;
-    }
-
-    sortButton.classList.add(
-        "active"
-    );
-
-    sortButton.dataset.sortDirection =
-        appliedSortDirection;
-
-    const readableField =
-        getSortFieldLabel(
-            appliedSortBy
-        );
-
-    const readableDirection =
-        appliedSortDirection === "desc"
-            ? "descending"
-            : "ascending";
-
-    sortButton.setAttribute(
-        "aria-label",
-        `Sort: ${readableField}, ${readableDirection}`
-    );
-}
-
-
-function getSortFieldLabel(
-    sortField
-) {
-    switch (sortField) {
-        case "loraName":
-            return "Name";
-
-        case "creator":
-            return "Creator";
-
-        case "createdDate":
-            return "Created Date";
-
-        default:
-            return "LoRAs";
-    }
-}
-
-
+function updateSortDisplay() { gallerySort.update(); }
 
 
 /* =========================
@@ -5640,3 +5398,7 @@ function setupLoraDetailsSwipe() {
         finishDraggedLoraDetailsClose
     );
 }
+// Returning through browser Back may restore a cached document rather than rerun startup.
+window.addEventListener("pageshow", event => {
+    if (event.persisted) refreshCurrentView();
+});

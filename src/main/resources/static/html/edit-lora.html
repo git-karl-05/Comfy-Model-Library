@@ -13,6 +13,8 @@
     <title>Edit LoRA</title>
 
     <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/edit-field-tools.js" defer></script>
+    <script src="/js/form-navigation.js" defer></script>
     <script src="/js/edit-lora.js" defer></script>
 
 </head>
@@ -206,12 +208,18 @@
 
                 <h2>Positive Prompt</h2>
 
-                <textarea
+                <div class="edit-field-wrapper">
+                    <textarea
                         id="editPositivePrompt"
                         name="positivePrompt"
                         class="details-edit-textarea"
                         rows="8"
                         placeholder="Enter the positive prompt or trigger words..."></textarea>
+                    <div class="edit-field-tools">
+                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="editPositivePrompt" data-copy-label="Copy Positive Prompt" aria-label="Copy Positive Prompt" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="editPositivePrompt" data-field-label="Positive Prompt" aria-label="Expand Positive Prompt" title="Expand">⛶</button>
+                    </div>
+                </div>
 
             </section>
 
@@ -222,12 +230,18 @@
 
                 <h2>Notes</h2>
 
-                <textarea
+                <div class="edit-field-wrapper">
+                    <textarea
                         id="editNotes"
                         name="notes"
                         class="details-edit-textarea"
                         rows="6"
                         placeholder="Add notes about this LoRA..."></textarea>
+                    <div class="edit-field-tools">
+                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="editNotes" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="editNotes" data-field-label="Notes" aria-label="Expand Notes" title="Expand">⛶</button>
+                    </div>
+                </div>
 
             </section>
 
@@ -261,6 +275,17 @@
     </div>
 
 </main>
+
+
+<div id="expandedFieldEditor" class="expanded-text-modal hidden" role="dialog" aria-modal="true" aria-labelledby="expandedFieldTitle" aria-hidden="true" inert>
+    <section class="expanded-text-sheet">
+        <header class="expanded-text-header">
+            <h2 id="expandedFieldTitle">Edit text</h2>
+            <button id="closeExpandedFieldEditor" class="close-button" type="button" aria-label="Apply expanded text and close">×</button>
+        </header>
+        <textarea id="expandedFieldValue" class="details-edit-textarea expanded-field-value" aria-label="Expanded text"></textarea>
+    </section>
+</div>
 
 </body>
 

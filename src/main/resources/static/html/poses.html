@@ -8,6 +8,8 @@
     >
     <title>Pose Gallery</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/form-navigation.js" defer></script>
+    <script src="/js/gallery-sort.js" defer></script>
     <script src="/js/poses.js" defer></script>
 </head>
 
@@ -563,6 +565,7 @@
                 <div id="previewIndicators" class="preview-indicators hidden" aria-label="Image selection"></div>
             </div>
             <section id="detailsInfoView" class="details-info">
+                <p><strong>Base Model:</strong> <span id="detailsBaseModel">N/A</span></p>
                 <p><strong>Category:</strong> <span id="detailsCategory">N/A</span></p>
                 <p><strong>Seed:</strong> <span id="detailsSeed">N/A</span></p>
             </section>
@@ -619,6 +622,8 @@
             <label class="filter-field-label" for="poseCategoryInput">Category</label>
             <input id="poseCategoryInput" name="category" class="category-filter" type="text" maxlength="255" placeholder="e.g. Standing, Sitting, Action" list="poseCategorySuggestions">
             <datalist id="poseCategorySuggestions"></datalist>
+            <label class="filter-field-label" for="poseBaseModelInput">Base Model</label>
+            <input id="poseBaseModelInput" name="baseModel" class="details-edit-input" type="text" maxlength="255">
             <label class="filter-field-label" for="poseSeedInput">Seed</label>
             <input id="poseSeedInput" name="seed" class="category-filter" type="number" step="1" min="-2147483648" max="2147483647" placeholder="Optional seed">
             <label class="filter-field-label" for="poseLoraInput">LoRAs / Strengths</label>

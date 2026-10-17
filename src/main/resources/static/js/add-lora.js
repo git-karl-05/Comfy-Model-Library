@@ -259,6 +259,10 @@ function setupAddLoraForm() {
         return;
     }
 
+    document.querySelectorAll(".page-close-button, .add-cancel-button").forEach(link => {
+        link.href = FormNavigation.returnUrl();
+    });
+
     form.addEventListener("submit", async event => {
         event.preventDefault();
 
@@ -293,7 +297,7 @@ function setupAddLoraForm() {
 
             revokeSelectedPreviewUrl();
 
-            window.location.href = "/html/index.html";
+            FormNavigation.finish();
 
         } catch (error) {
             console.error("Error saving LoRA:", error);

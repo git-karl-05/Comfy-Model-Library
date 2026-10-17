@@ -2,6 +2,9 @@ package com.comfy.library.entity;
 
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 public class PoseEntity {
@@ -12,14 +15,30 @@ public class PoseEntity {
 
     private String name;
     private String category;
+    private String baseModel;
+
+    public String getBaseModel() { return baseModel; }
+    public void setBaseModel(String baseModel) { this.baseModel = baseModel; }
     private String filePath;
     private boolean favorite;
     private Integer seed;
     private String lora;
+    @Lob
     private String prompt;
+    @Lob
+    private String notes;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @OrderColumn(name = "image_order")
+    private List<String> images = new ArrayList<>();
+
+    public String getNotes() { return notes; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public List<String> getImages() { return images; }
+    public void setImages(List<String> images) { this.images = images; }
     @Enumerated(EnumType.STRING)
     private PoseType type;
 
+    @JsonCreator
     public PoseEntity(){}
 
     public PoseEntity(Long id, String name, String category, String filePath, boolean favorite, Integer seed, String lora, String prompt, PoseType type) {
