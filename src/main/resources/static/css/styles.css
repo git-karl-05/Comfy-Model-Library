@@ -3053,22 +3053,26 @@ body.returning-to-modal
     padding: 8px 20px 20px;
 }
 
+#sortModal .filter-sheet-content {
+    gap: 0;
+    padding: 12px 20px;
+}
+
 .sort-option-button {
     position: relative;
     width: 100%;
 
-    min-height: 52px;
+    min-height: 56px;
 
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 12px;
 
-    padding: 0 40px;
+    padding: 14px 40px;
 
     border: none;
-    border-bottom:
-            1px solid var(--border);
+    box-shadow: inset 0 -1px 0 var(--border);
 
     background-color: transparent;
     color: var(--text-primary);
@@ -3076,6 +3080,7 @@ body.returning-to-modal
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 600;
+    line-height: 1.5;
 
     text-align: center;
 
@@ -3083,7 +3088,7 @@ body.returning-to-modal
 }
 
 .sort-option-button:last-child {
-    border-bottom: none;
+    box-shadow: none;
 }
 
 .sort-option-button .sort-direction-arrow {
@@ -3135,6 +3140,71 @@ body.returning-to-modal
 
     font-size: 1rem;
     font-weight: 700;
+}
+
+/* Gallery controls share the same typography and field treatment as records. */
+:is(#sortModal, #filterModal) {
+    font-family: inherit;
+    font-size: var(--record-body-size);
+}
+
+:is(#sortModal, #filterModal) .filter-sheet {
+    max-height: 100%;
+}
+
+:is(#sortModal, #filterModal) .filter-sheet-header,
+:is(#sortModal, #filterModal) .filter-sheet-actions,
+:is(#sortModal, #filterModal) .sheet-drag-handle {
+    flex-shrink: 0;
+}
+
+:is(#sortModal, #filterModal) .filter-sheet-header h2 {
+    font-size: var(--record-title-size);
+    line-height: 1.35;
+}
+
+:is(#sortModal, #filterModal) .filter-sheet-content {
+    min-height: 0;
+    overflow-y: auto;
+}
+
+:is(#sortModal, #filterModal) .filter-field-label {
+    padding-inline: 14px;
+    color: var(--text-primary);
+    font-size: var(--record-label-size);
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+:is(#sortModal, #filterModal) .category-filter {
+    padding: var(--record-field-padding);
+    background-color: var(--surface-light);
+    font-size: var(--record-body-size);
+    line-height: 1.65;
+}
+
+:is(#sortModal, #filterModal) .sort-option-button {
+    font-size: var(--record-label-size);
+}
+
+:is(#sortModal, #filterModal) .sort-direction-arrow {
+    font-size: var(--record-label-size);
+}
+
+:is(#sortModal, #filterModal) :is(.filter-reset-button, .filter-apply-button) {
+    font-size: var(--record-body-size);
+    line-height: 1.5;
+}
+
+:is(#sortModal, #filterModal) .filter-close-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    font-size: 2rem;
 }
 
 

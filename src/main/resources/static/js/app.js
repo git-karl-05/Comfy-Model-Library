@@ -46,6 +46,7 @@ let lastSearchKeyword = "";
 let appliedBaseModelFilter = "ALL";
 let appliedCategoryFilter = "ALL";
 let appliedSubcategoryFilter = "ALL";
+let filterMetadata = [];
 
 
 /* =========================
@@ -1191,19 +1192,31 @@ function setupFilterModal() {
 
     openButton.addEventListener(
         "click",
-        () => {
-            baseModelFilter.value =
-                appliedBaseModelFilter;
-
-            categoryFilter.value =
-                appliedCategoryFilter;
-
-            subcategoryFilter.value =
-                appliedSubcategoryFilter;
-
-            openFilterModal();
+        async () => {
+            openButton.disabled = true;
+            try {
+                // Refresh on every open so imports and edits are reflected immediately.
+                const response = await fetch(`${API_BASE_URL}/filter-options`);
+                if (!response.ok) throw new Error(`Unable to load filter metadata (${response.status}).`);
+                const metadata = await response.json();
+                if (!Array.isArray(metadata)) throw new Error("Invalid filter metadata response.");
+                filterMetadata = metadata;
+                populateMetadataFilterOptions({baseModel: appliedBaseModelFilter,
+                    category: appliedCategoryFilter, subCategory: appliedSubcategoryFilter});
+                openFilterModal();
+            } catch (error) {
+                window.alert(error.message);
+            } finally {
+                openButton.disabled = false;
+            }
         }
     );
+
+    const updateDependentOptions = () => populateMetadataFilterOptions({
+        baseModel: baseModelFilter.value, category: categoryFilter.value, subCategory: subcategoryFilter.value
+    });
+    baseModelFilter.addEventListener("change", updateDependentOptions);
+    categoryFilter.addEventListener("change", updateDependentOptions);
 
     closeButton.addEventListener(
         "click",
@@ -1287,6 +1300,35 @@ function openFilterModal() {
             baseModelFilter?.focus();
         }
     );
+}
+
+function setMetadataFilterOptions(select, values, allLabel, selected, special = []) {
+    const unique = [...new Set(values.filter(value => typeof value === "string" && value.trim()))]
+            .sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
+    select.replaceChildren();
+    for (const [value, label] of [["ALL", allLabel], ...special, ...unique.map(value => [value, value])]) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+    }
+    // Older saved filters used uppercase values; the backend compares case-insensitively.
+    const match = selected === "ALL" ? null
+            : unique.find(value => value.toLowerCase() === String(selected).toLowerCase());
+    select.value = special.some(([value]) => value === selected) ? selected : match ?? "ALL";
+}
+
+function populateMetadataFilterOptions(selected) {
+    const {baseModelFilter, categoryFilter, subcategoryFilter} = getFilterElements();
+    setMetadataFilterOptions(baseModelFilter, filterMetadata.map(row => row.baseModel),
+            "All Base Models", selected.baseModel);
+    const models = filterMetadata.filter(row => baseModelFilter.value === "ALL" || row.baseModel === baseModelFilter.value);
+    setMetadataFilterOptions(categoryFilter, models.map(row => row.category),
+            "All Categories", selected.category, [["FAVORITES", "Favorites"]]);
+    const categories = models.filter(row => ["ALL", "FAVORITES"].includes(categoryFilter.value)
+            || row.category === categoryFilter.value);
+    setMetadataFilterOptions(subcategoryFilter, categories.map(row => row.subCategory),
+            "All Subcategories", selected.subCategory);
 }
 
 
@@ -1564,7 +1606,7 @@ async function fetchFavoriteLoras(
                 "/favorites",
                 page,
                 pageSize,
-                buildSortParameters()
+                {...buildFilterParameters(), ...buildSortParameters()}
             );
 
         await fetchPaginatedLoras(

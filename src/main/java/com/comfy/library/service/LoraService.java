@@ -3,6 +3,7 @@ package com.comfy.library.service;
 import com.comfy.library.dto.lora.CreateLoraRequest;
 import com.comfy.library.dto.lora.ImportSummaryResponse;
 import com.comfy.library.dto.lora.LoraResponse;
+import com.comfy.library.dto.lora.LoraFilterMetadata;
 import com.comfy.library.dto.lora.UpdateLoraRequest;
 import com.comfy.library.entity.LoraCategory;
 import com.comfy.library.entity.LoraEntity;
@@ -711,6 +712,10 @@ public class LoraService {
         );
     }
 
+    public List<LoraFilterMetadata> getFilterMetadata() {
+        return loraRepository.findFilterMetadata();
+    }
+
 
     // =========================================================
     // IMPORT
@@ -734,13 +739,9 @@ public class LoraService {
         int skipped = 0;
         int failed = 0;
 
-        try {
+        try (Stream<Path> paths = Files.walk(Paths.get(folderPath))) {
             List<Path> metadataFiles =
-                    Files.walk(
-                                    Paths.get(
-                                            folderPath
-                                    )
-                            )
+                    paths
                             .filter(
                                     Files::isRegularFile
                             )
@@ -884,7 +885,7 @@ public class LoraService {
 
         entity.setSubCategory(
                 resolveSubCategory(
-                        root
+                        root, metadataFile
                 )
         );
 
@@ -1203,33 +1204,21 @@ public class LoraService {
 
 
     private String resolveSubCategory(
-            JsonNode root
+            JsonNode root, Path metadataFile
     ) {
-        String filePath =
-                getText(
-                        root,
-                        "file_path"
-                );
-
-        if (filePath == null) {
-            return null;
+        String filePath = getText(root, "file_path");
+        if (filePath != null) {
+            // Metadata can have been generated on a different operating system.
+            String normalized = filePath.replace('\\', '/');
+            int separator = normalized.lastIndexOf('/');
+            if (separator > 0) {
+                String parent = normalized.substring(0, separator);
+                String folder = parent.substring(parent.lastIndexOf('/') + 1);
+                if (!folder.isBlank() && !folder.endsWith(":")) return folder;
+            }
         }
-
-        Path path =
-                Paths.get(
-                        filePath
-                );
-
-        Path parent =
-                path.getParent();
-
-        if (parent == null) {
-            return null;
-        }
-
-        return parent
-                .getFileName()
-                .toString();
+        Path parent = metadataFile.toAbsolutePath().getParent();
+        return parent == null || parent.getFileName() == null ? null : parent.getFileName().toString();
     }
 
 

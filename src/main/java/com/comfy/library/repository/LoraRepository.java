@@ -8,12 +8,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Query;
+import com.comfy.library.dto.lora.LoraFilterMetadata;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface LoraRepository extends JpaRepository<LoraEntity, Long>, JpaSpecificationExecutor<LoraEntity> {
+    @Query("select distinct new com.comfy.library.dto.lora.LoraFilterMetadata(l.baseModel, l.category, l.subCategory) from LoraEntity l")
+    List<LoraFilterMetadata> findFilterMetadata();
     boolean existsByLoraNameAndVersionAndCreator(String loraName, String version, String creator);
 
 

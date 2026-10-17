@@ -257,3 +257,17 @@ test('Pose modal uses the selected gallery card dimensions, scrollbar gutter and
     assert.equal(modal.style['--preview-card-ratio'], '0.8');
     assert.equal(modal.style['--preview-card-width'], '100%');
 });
+
+test('LoRA Favorites retains the selected model and folder metadata', async () => {
+    const {context} = fixture('index');
+    let request;
+    context.fetch = async url => {
+        request = new URL(url, 'http://localhost');
+        return {ok: true, json: async () => ({content: [], number: 0, totalPages: 0})};
+    };
+    await vm.runInContext('appliedCategoryFilter = "FAVORITES"; appliedBaseModelFilter = "Wan Video 2.2 I2V-A14B"; appliedSubcategoryFilter = "Motion"; fetchFavoriteLoras()', context);
+    assert.equal(request.pathname, '/api/loras/favorites');
+    assert.equal(request.searchParams.get('baseModel'), 'Wan Video 2.2 I2V-A14B');
+    assert.equal(request.searchParams.get('subcategory'), 'Motion');
+    assert.equal(request.searchParams.has('category'), false);
+});
