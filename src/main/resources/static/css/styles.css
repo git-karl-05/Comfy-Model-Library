@@ -2779,16 +2779,17 @@ body.returning-to-modal
 }
 
 .sort-option-button {
+    position: relative;
     width: 100%;
 
     min-height: 52px;
 
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     gap: 12px;
 
-    padding: 0 14px;
+    padding: 0 40px;
 
     border: none;
     border-bottom:
@@ -2801,13 +2802,42 @@ body.returning-to-modal
     font-size: 0.95rem;
     font-weight: 600;
 
-    text-align: left;
+    text-align: center;
 
     cursor: pointer;
 }
 
 .sort-option-button:last-child {
     border-bottom: none;
+}
+
+.sort-option-button .sort-direction-arrow {
+    position: absolute;
+    right: 14px;
+}
+
+#sortModal .filter-sheet-actions {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+}
+
+#resetSortButton {
+    width: 50%;
+    min-width: 140px;
+    max-width: 100%;
+    text-align: center;
+}
+
+#resetSortButton,
+#resetFilterButton {
+    color: var(--text-primary);
+    background-color: #333333;
+    border-color: #555555;
+}
+
+#resetSortButton:hover:not(:disabled),
+#resetFilterButton:hover:not(:disabled) {
+    background-color: #444444;
 }
 
 .sort-option-button:hover {
