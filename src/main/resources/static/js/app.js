@@ -7,6 +7,7 @@ const API_BASE_URL = "/api/loras";
 
 let currentLora = null;
 let isEditingLora = false;
+let loraDetailsSwipe = null;
 
 
 /* =========================
@@ -59,8 +60,7 @@ let appliedSortDirection = null;
    BOTTOM SHEET STATE
 ========================= */
 
-const SHEET_DISMISS_DISTANCE = 120;
-const SHEET_RESET_DURATION = 180;
+// Shared swipe constants and helpers are loaded from sheet-swipe.js.
 
 
 /* =========================
@@ -1985,6 +1985,7 @@ async function openLoraDetailsModal(
 
         const modal =
             getLoraDetailsModal();
+        loraDetailsSwipe?.reset();
 
         if (!modal) {
             throw new Error(
@@ -2040,6 +2041,7 @@ function finishClosingLoraDetailsModal(
     modal,
     modalSheet
 ) {
+    loraDetailsSwipe?.reset();
     modal.setAttribute("aria-hidden", "true");
     modal.classList.add(
         "hidden"
@@ -4975,6 +4977,7 @@ function buildSortParameters() {
 const gallerySort = createGallerySort({
     getState: () => ({field: appliedSortBy, direction: appliedSortDirection}),
     apply: applySort,
+    reset: resetSort,
     label: "Sort LoRAs"
 });
 
@@ -5041,271 +5044,21 @@ async function applySort(
    SORT DISPLAY
 ========================= */
 
+async function resetSort() {
+    appliedSortBy = null;
+    appliedSortDirection = null;
+    currentPage = 0;
+    updateSortDisplay();
+    closeSortModal();
+    await refreshCurrentView();
+}
+
 function updateSortDisplay() { gallerySort.update(); }
 
 
 /* =========================
    BOTTOM SHEET SWIPE HELPERS
 ========================= */
-
-function isInteractiveSheetElement(target) {
-    return Boolean(
-        target.closest(
-            'button, a, input, select, textarea, video, [role="button"]'
-        )
-    );
-}
-
-
-function canStartSheetDrag(
-    event,
-    scrollContainer
-) {
-    if (event.touches.length !== 1) {
-        return false;
-    }
-
-    if (
-        isInteractiveSheetElement(
-            event.target
-        )
-    ) {
-        return false;
-    }
-
-    /*
-     * Allow a tiny tolerance because mobile
-     * browsers may report a fractional scroll
-     * position even when visually at the top.
-     */
-    if (
-        scrollContainer &&
-        scrollContainer.scrollTop > 2
-    ) {
-        return false;
-    }
-
-    return true;
-}
-
-
-function moveSheetDown(
-    sheet,
-    distance
-) {
-    sheet.classList.add(
-        "dragging"
-    );
-
-    sheet.style.transition =
-        "none";
-
-    sheet.style.transform =
-        `translateY(${distance}px)`;
-}
-
-
-function resetDraggedSheet(
-    sheet
-) {
-    sheet.classList.remove(
-        "dragging"
-    );
-
-    sheet.style.transition =
-        `transform ${SHEET_RESET_DURATION}ms ease`;
-
-    sheet.style.transform =
-        "translateY(0)";
-
-    window.setTimeout(
-        () => {
-            sheet.style.transition = "";
-            sheet.style.transform = "";
-        },
-        SHEET_RESET_DURATION
-    );
-}
-
-
-function dismissDraggedSheet(
-    sheet,
-    onDismiss
-) {
-    sheet.classList.remove(
-        "dragging"
-    );
-
-    sheet.style.transition =
-        `transform ${SHEET_RESET_DURATION}ms ease-in`;
-
-    sheet.style.transform =
-        "translateY(100vh)";
-
-    window.setTimeout(
-        () => {
-            sheet.style.transition = "";
-            sheet.style.transform = "";
-
-            onDismiss();
-        },
-        SHEET_RESET_DURATION
-    );
-}
-
-
-/* =========================
-   SWIPE DOWN TO CLOSE
-========================= */
-
-function setupSwipeDownToClose(
-    sheet,
-    scrollContainer,
-    onDismiss
-) {
-    if (!sheet) {
-        return;
-    }
-
-    let startY = 0;
-    let currentDistance = 0;
-
-    let isTracking = false;
-    let isDragging = false;
-
-
-    sheet.addEventListener(
-        "touchstart",
-        event => {
-            if (
-                !canStartSheetDrag(
-                    event,
-                    scrollContainer
-                )
-            ) {
-                return;
-            }
-
-            startY =
-                event.touches[0].clientY;
-
-            currentDistance = 0;
-
-            isTracking = true;
-            isDragging = false;
-        },
-        {
-            passive: true
-        }
-    );
-
-
-    sheet.addEventListener(
-        "touchmove",
-        event => {
-            if (!isTracking) {
-                return;
-            }
-
-            const currentY =
-                event.touches[0].clientY;
-
-            const distance =
-                currentY - startY;
-
-            /*
-             * Ignore upward movement.
-             */
-            if (distance <= 0) {
-                return;
-            }
-
-            /*
-             * Wait for a small amount of movement
-             * before taking control away from
-             * normal scrolling.
-             */
-            if (
-                !isDragging &&
-                distance < 8
-            ) {
-                return;
-            }
-
-            isDragging = true;
-
-            currentDistance =
-                distance;
-
-            moveSheetDown(
-                sheet,
-                currentDistance
-            );
-
-            event.preventDefault();
-        },
-        {
-            passive: false
-        }
-    );
-
-
-    sheet.addEventListener(
-        "touchend",
-        () => {
-            if (!isTracking) {
-                return;
-            }
-
-            isTracking = false;
-
-            if (!isDragging) {
-                return;
-            }
-
-            isDragging = false;
-
-            if (
-                currentDistance >=
-                SHEET_DISMISS_DISTANCE
-            ) {
-                dismissDraggedSheet(
-                    sheet,
-                    onDismiss
-                );
-
-                return;
-            }
-
-            resetDraggedSheet(
-                sheet
-            );
-        }
-    );
-
-
-    sheet.addEventListener(
-        "touchcancel",
-        () => {
-            if (!isTracking) {
-                return;
-            }
-
-            isTracking = false;
-
-            if (!isDragging) {
-                return;
-            }
-
-            isDragging = false;
-
-            resetDraggedSheet(
-                sheet
-            );
-        }
-    );
-}
-
 
 /* =========================
    FILTER SHEET SWIPE
@@ -5392,7 +5145,7 @@ function setupLoraDetailsSwipe() {
     const scrollContainer =
         getLoraDetailsScrollContainer();
 
-    setupSwipeDownToClose(
+    loraDetailsSwipe = setupSwipeDownToClose(
         modalSheet,
         scrollContainer,
         finishDraggedLoraDetailsClose

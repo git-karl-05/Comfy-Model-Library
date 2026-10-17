@@ -8,6 +8,7 @@ let favorites = "ALL";
 let currentPose = null;
 let previews = [];
 let previewIndex = 0;
+let poseDetailsSwipe = null;
 let retainedImages = [];
 let selectedPoseFiles = [];
 let editImageIndex = 0;
@@ -17,6 +18,7 @@ const byId = id => document.getElementById(id);
 const gallerySort = document.getElementById("poseList") ? createGallerySort({
     getState: () => ({field: appliedSortBy, direction: appliedSortDirection}),
     apply: applySort,
+    reset: resetSort,
     label: "Sort poses"
 }) : null;
 
@@ -27,6 +29,15 @@ async function api(path = "", options) {
 }
 function showModal(id, open) {
     const modal = byId(id);
+    if (id === "poseDetailsModal") {
+        poseDetailsSwipe?.reset();
+        if (!open) {
+            modal.querySelectorAll("video").forEach(video => { video.pause(); video.currentTime = 0; });
+            currentPose = null;
+            previews = [];
+            previewIndex = 0;
+        }
+    }
     if (!open && modal.contains(document.activeElement)) document.activeElement.blur();
     modal.inert = !open;
     modal.classList.toggle("hidden", !open);
@@ -117,6 +128,14 @@ async function applySort(field) {
     gallerySort.close();
     await refreshCurrentView();
 }
+async function resetSort() {
+    appliedSortBy = null;
+    appliedSortDirection = null;
+    currentPage = 0;
+    gallerySort.update();
+    gallerySort.close();
+    await refreshCurrentView();
+}
 async function openPoseDetails(id) {
     try {
         currentPose = await api(`/${id}`);
@@ -126,6 +145,7 @@ async function openPoseDetails(id) {
         previews = poseImages(currentPose);
         previewIndex = 0;
         renderPreview();
+        byId("poseDetailsModal").querySelector(".lora-details-scroll-area").scrollTop = 0;
         showModal("poseDetailsModal", true);
     } catch (error) { window.alert(error.message); }
 }
@@ -209,6 +229,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
     }
     gallerySort.setup();
+    const detailsModal = byId("poseDetailsModal");
+    poseDetailsSwipe = setupSwipeDownToClose(detailsModal.querySelector(".lora-details-sheet"),
+        detailsModal.querySelector(".lora-details-scroll-area"), () => showModal("poseDetailsModal", false), {handleWhileScrolled: true});
     const on = (id, action, event = "click") => byId(id).addEventListener(event, action);
     const refreshFromStart = () => { currentPage = 0; return refreshCurrentView(); };
     on("searchInput", () => { clearTimeout(searchTimer); searchTimer = setTimeout(refreshFromStart, 400); }, "input");

@@ -38,6 +38,7 @@ function fixture(page) {
         get(key) { return this.values.get(key); }
     };
     vm.runInContext(fs.readFileSync(`${root}js/form-navigation.js`, 'utf8'), context);
+    vm.runInContext(fs.readFileSync(`${root}js/sheet-swipe.js`, 'utf8'), context);
     vm.runInContext(fs.readFileSync(`${root}js/gallery-sort.js`, 'utf8'), context);
     vm.runInContext(fs.readFileSync(`${root}js/${page === 'index' ? 'app' : 'poses'}.js`, 'utf8'), context);
     return {context, elements, options, listeners};
@@ -173,4 +174,61 @@ test('Edit Pose removal of a pending upload leaves other selected files intact',
     elements.get('poseImagePreviewContainer').children.find(child => child.className === 'remove-preview-image-button').handlers.click({preventDefault() {}, stopPropagation() {}});
     assert.equal(vm.runInContext('JSON.stringify(selectedPoseFiles)', context), '[{"name":"second.png"}]');
     assert.equal(elements.get('poseImagePreviewContainer').children[0].src, 'blob:second');
+});
+
+for (const page of ['index', 'poses']) {
+    test(`${page}: Reset Sort clears parameters, page and indicators while retaining search/filters`, async () => {
+        const {context, elements, options} = fixture(page);
+        const requests = [];
+        context.fetch = async url => { requests.push(new URL(url, 'http://localhost')); return {ok: true, json: async () => ({content: [], number: 0, totalPages: 0, totalElements: 0})}; };
+        elements.get('searchInput').value = 'standing';
+        if (page === 'index') {
+            vm.runInContext('isSearchActive = true; appliedCategoryFilter = "FAVORITES"; appliedBaseModelFilter = "Flux"; displayPaginatedLoraResponse = () => {};', context);
+            await vm.runInContext('applySort("creator")', context);
+        } else {
+            vm.runInContext('category = "Action"; favorites = "true";', context);
+            await vm.runInContext('applySort("seed")', context);
+        }
+        vm.runInContext('gallerySort.setup(); gallerySort.open(); currentPage = 4;', context);
+        assert.equal(elements.get('resetSortButton').disabled, false);
+        await elements.get('resetSortButton').handlers.click();
+        const url = requests.at(-1);
+        assert.equal(url.searchParams.has('sortBy'), false);
+        assert.equal(url.searchParams.has('sortDirection'), false);
+        assert.equal(url.searchParams.get('page'), '0');
+        assert.equal(url.searchParams.get('keyword'), 'standing');
+        assert.equal(url.searchParams.get('favorite'), 'true');
+        assert.equal(url.searchParams.get(page === 'index' ? 'baseModel' : 'category'), page === 'index' ? 'Flux' : 'Action');
+        assert.equal(vm.runInContext('appliedSortBy', context), null);
+        assert.equal(vm.runInContext('appliedSortDirection', context), null);
+        assert.equal(elements.get('sortButtonText').textContent, 'Sort');
+        assert.equal(elements.get('sortButtonArrow').textContent, '');
+        assert.equal(elements.get('sortButton').classList.contains('active'), false);
+        assert.equal(elements.get('resetSortButton').disabled, true);
+        assert.equal(elements.get('sortModal').inert, true);
+        const requestCount = requests.length;
+        await elements.get('resetSortButton').handlers.click();
+        assert.equal(requests.length, requestCount);
+        options.forEach(option => assert.equal(option.attrs['aria-pressed'], 'false'));
+        await vm.runInContext(`applySort("${page === 'index' ? 'loraName' : 'name'}")`, context);
+        assert.equal(vm.runInContext('appliedSortDirection', context), 'asc');
+    });
+}
+
+test('Pose details close resets its swipe state, previews and video playback', () => {
+    const {context, elements} = fixture('poses');
+    let paused = 0, resets = 0;
+    const video = {pause() { paused++; }, currentTime: 30};
+    const modal = elements.get('poseDetailsModal');
+    modal.contains = () => false;
+    modal.querySelectorAll = () => [video];
+    context.swipeStub = {reset() { resets++; }};
+    vm.runInContext('poseDetailsSwipe = swipeStub; currentPose = {id:1}; previews = ["one", "two"]; previewIndex = 1; showModal("poseDetailsModal", false);', context);
+    assert.equal(paused, 1); assert.equal(video.currentTime, 0); assert.equal(resets, 1);
+    assert.equal(vm.runInContext('currentPose', context), null);
+    assert.equal(vm.runInContext('previews.length', context), 0);
+    assert.equal(vm.runInContext('previewIndex', context), 0);
+    assert.equal(modal.inert, true);
+    vm.runInContext('showModal("poseDetailsModal", true)', context);
+    assert.equal(modal.inert, false); assert.equal(resets, 2);
 });

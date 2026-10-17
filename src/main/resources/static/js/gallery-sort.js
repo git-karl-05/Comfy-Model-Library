@@ -1,9 +1,13 @@
 /* Shared by the LoRA and pose galleries. State and data loading stay page-specific. */
-function createGallerySort({getState, apply, label = "Sort"}) {
+function createGallerySort({getState, apply, reset, label = "Sort"}) {
     const modal = document.getElementById("sortModal");
     const button = document.getElementById("sortButton");
+    let initialized = false;
+    let swipe = null;
     function update() {
         const {field, direction} = getState();
+        const resetButton = document.getElementById("resetSortButton");
+        if (resetButton) resetButton.disabled = !field;
         const options = modal?.querySelectorAll("[data-sort-field]") ?? [];
         let fieldLabel = "";
         options.forEach(option => {
@@ -30,6 +34,7 @@ function createGallerySort({getState, apply, label = "Sort"}) {
     }
     function open() {
         if (!modal) return;
+        swipe?.reset();
         modal.inert = false;
         modal.classList.remove("hidden");
         modal.setAttribute("aria-hidden", "false");
@@ -40,6 +45,7 @@ function createGallerySort({getState, apply, label = "Sort"}) {
     }
     function close() {
         if (!modal) return;
+        swipe?.reset();
         button?.focus();
         modal.classList.add("hidden");
         modal.setAttribute("aria-hidden", "true");
@@ -48,6 +54,10 @@ function createGallerySort({getState, apply, label = "Sort"}) {
         if (!document.querySelector('.modal-overlay:not(.hidden), .filter-modal:not(.hidden)')) document.body.style.overflow = "";
     }
     function setup() {
+        if (initialized) return;
+        initialized = true;
+        swipe = setupSwipeDownToClose(modal?.querySelector(".filter-sheet"), modal?.querySelector(".filter-sheet-content"), close);
+        document.getElementById("resetSortButton")?.addEventListener("click", () => { if (getState().field) return reset(); });
         button?.addEventListener("click", open);
         document.getElementById("closeSortButton")?.addEventListener("click", close);
         document.getElementById("sortModalBackdrop")?.addEventListener("click", close);
