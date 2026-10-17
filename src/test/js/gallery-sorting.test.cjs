@@ -232,3 +232,28 @@ test('Pose details close resets its swipe state, previews and video playback', (
     vm.runInContext('showModal("poseDetailsModal", true)', context);
     assert.equal(modal.inert, false); assert.equal(resets, 2);
 });
+
+test('Pose modal uses the selected gallery card dimensions, scrollbar gutter and responsive fallback', () => {
+    const {context, elements} = fixture('poses');
+    const modal = elements.get('poseDetailsModal');
+    modal.style.setProperty = function(key, value) { this[key] = value; };
+    modal.querySelector = () => ({offsetWidth: 415, clientWidth: 400});
+    let bounds = {width: 400, height: 500};
+    const card = {dataset: {poseId: '2'}, getBoundingClientRect: () => bounds};
+    context.document.querySelectorAll = () => [
+        {dataset: {poseId: '1'}, getBoundingClientRect: () => ({width: 600, height: 800})}, card
+    ];
+    vm.runInContext('currentPose = {id: 2}; sizePosePreviewLikeGalleryCard();', context);
+    assert.equal(modal.style['--preview-card-width'], '400px');
+    assert.equal(modal.style['--preview-card-ratio'], '0.8');
+    assert.equal(modal.style['--preview-scrollbar-width'], '15px');
+    bounds = {width: 300, height: 400};
+    vm.runInContext('sizePosePreviewLikeGalleryCard()', context);
+    assert.equal(modal.style['--preview-card-width'], '300px');
+    assert.equal(modal.style['--preview-card-ratio'], '0.75');
+    context.document.querySelectorAll = () => [];
+    elements.get('poseList').classList.add('double-column');
+    vm.runInContext('sizePosePreviewLikeGalleryCard()', context);
+    assert.equal(modal.style['--preview-card-ratio'], '0.8');
+    assert.equal(modal.style['--preview-card-width'], '100%');
+});

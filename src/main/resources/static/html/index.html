@@ -779,7 +779,7 @@
 
 
             <!-- Preview Carousel -->
-            <div class="details-carousel">
+            <div class="details-carousel" role="region" aria-label="LoRA previews" aria-roledescription="carousel" tabindex="0">
 
                 <div class="details-carousel-preview">
 
@@ -788,6 +788,8 @@
                             class="carousel-navigation-button carousel-previous-button hidden"
                             type="button"
                             aria-label="Previous preview"
+                            aria-controls="detailsImageContainer"
+                            title="Previous preview"
                     >
                         ‹
                     </button>
@@ -810,6 +812,8 @@
                             class="carousel-navigation-button carousel-next-button hidden"
                             type="button"
                             aria-label="Next preview"
+                            aria-controls="detailsImageContainer"
+                            title="Next preview"
                     >
                         ›
                     </button>
@@ -821,7 +825,10 @@
                         id="previewIndicators"
                         class="preview-indicators hidden"
                         aria-label="Preview selection"
+                        role="group"
                 ></div>
+
+                <p id="previewStatus" class="preview-status" role="status" aria-live="polite" aria-atomic="true"></p>
 
             </div>
 

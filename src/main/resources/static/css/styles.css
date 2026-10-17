@@ -27,6 +27,12 @@
 
     --border: #2a2a2a;
 
+    --record-body-size: 1rem;
+    --record-label-size: 1.05rem;
+    --record-title-size: 1.45rem;
+    --record-field-padding: 12px 14px;
+    --record-panel-padding: 16px 18px;
+
     --danger: #ff5252;
     --favorite: #ffd54f;
 
@@ -43,6 +49,8 @@
 #loraDetailsModal {
     height: var(--visible-viewport-height);
     max-height: var(--visible-viewport-height);
+    align-items: flex-end;
+    padding-bottom: 0;
     overflow: hidden;
 }
 
@@ -717,7 +725,7 @@ body {
     right: 0;
     bottom: 0;
 
-    padding: 52px 16px 16px;
+    padding: 52px 22px 18px;
 
     background: linear-gradient(
             to top,
@@ -735,9 +743,10 @@ body {
 .lora-card-header h2 {
     margin: 0;
 
-    font-size: 1.08rem;
+    font-size: var(--record-title-size);
     font-weight: 700;
-    line-height: 1.28;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .lora-meta {
@@ -745,22 +754,28 @@ body {
 
     color: rgba(255,255,255,.78);
 
-    font-size: 0.82rem;
+    font-size: var(--record-body-size);
     font-weight: 500;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
 }
 
 .favorite-button {
     position: absolute;
 
-    top: 12px;
-    right: 12px;
+    top: 14px;
+    right: 14px;
 
     width: 40px;
     height: 40px;
 
     font-size: 1.45rem;
 
-    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--border);
     border-radius: 50%;
 
     background-color: rgba(0, 0, 0, 0.6);
@@ -2718,6 +2733,266 @@ body.returning-to-modal
     border-color: var(--primary);
 
     background-color: var(--primary);
+}
+
+/* Keep the preview and all details aligned to the selected gallery card. */
+:is(#loraDetailsModal, #poseDetailsModal) {
+    --preview-inline-padding: 20px;
+    align-items: flex-end;
+    padding-inline: 0;
+    padding-bottom: 0;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .lora-details-sheet {
+    width: calc(var(--preview-card-width, 908px) + 2 * var(--preview-inline-padding) + 2px + var(--preview-scrollbar-width, 0px));
+    max-width: 100%;
+    border-bottom: none;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .lora-details-scroll-area {
+    padding-inline: var(--preview-inline-padding);
+}
+
+@media (max-width: 767px) {
+    :is(#loraDetailsModal, #poseDetailsModal) {
+        --preview-inline-padding: 8px;
+    }
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .lora-details-scroll-area > * {
+    width: 100%;
+    max-width: var(--preview-card-width, 100%);
+    margin-inline: auto;
+    flex-shrink: 0;
+}
+
+/* Inset labels and actions from rounded edges; keep the media width unchanged. */
+:is(#loraDetailsModal, #poseDetailsModal) .sheet-header {
+    padding: 8px 4px;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .sheet-header h2 {
+    font-size: var(--record-title-size);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-info {
+    padding: var(--record-panel-padding);
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-info p {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    font-size: var(--record-body-size);
+    line-height: 1.6;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-info span {
+    min-width: 0;
+    margin-inline-start: auto;
+    overflow-wrap: anywhere;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal, .record-form-page) .details-field-header {
+    padding: 2px 14px;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal, .record-form-page) .details-field-label {
+    font-size: var(--record-label-size);
+    line-height: 1.5;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-field-value {
+    padding: var(--record-field-padding);
+    font-size: var(--record-body-size);
+    line-height: 1.65;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal, .record-form-page) .details-field-actions > button {
+    flex-basis: 40px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .icon-button {
+    font-size: 1.2rem;
+}
+
+/* Add/Edit LoRA and Pose forms use the same readable field styling as details. */
+.record-form-page :is(.add-lora-header, .edit-lora-header) {
+    padding: 12px 4px;
+}
+
+.record-form-page :is(.add-lora-header, .edit-lora-header) h1 {
+    font-size: var(--record-title-size);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.record-form-page .page-close-button {
+    border-radius: 50%;
+    font-size: 2rem;
+}
+
+.record-form-page .details-edit-grid {
+    padding: var(--record-panel-padding);
+    gap: 14px;
+}
+
+.record-form-page .details-edit-grid label,
+.record-form-page .details-prompt-section h2 {
+    color: var(--text-primary);
+    font-size: var(--record-label-size);
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.record-form-page .details-prompt-section > h2 {
+    padding: 2px 14px;
+    margin: 0;
+}
+
+.record-form-page .details-prompt-section h2 {
+    font-weight: 700;
+}
+
+.record-form-page .details-field-header {
+    margin-bottom: 0;
+}
+
+.record-form-page :is(.details-edit-input, .details-edit-textarea) {
+    padding: var(--record-field-padding);
+    font-size: var(--record-body-size);
+    line-height: 1.65;
+}
+
+.record-form-page :is(.details-cancel-button, .details-save-button, .details-edit-message) {
+    font-size: var(--record-body-size);
+    line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+    .lora-list.double-column .lora-card-header {
+        padding: 40px 14px 14px;
+    }
+
+    .lora-list.double-column .lora-card-header h2 {
+        font-size: 1.125rem;
+    }
+
+    .lora-list.double-column .lora-meta {
+        font-size: 0.95rem;
+    }
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .carousel-previous-button {
+    left: 12px;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .carousel-next-button {
+    right: 12px;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-carousel {
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-carousel-preview,
+:is(#loraDetailsModal, #poseDetailsModal) .preview-indicators {
+    width: 100%;
+    margin-inline: auto;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .preview-indicators {
+    justify-content: center;
+    /* Keep overflowing thumbnails reachable from the start of the strip. */
+    justify-content: safe center;
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-image-container {
+    position: relative;
+    aspect-ratio: var(--preview-card-ratio, 0.75);
+}
+
+:is(#loraDetailsModal, #poseDetailsModal) .details-image-container > img,
+:is(#loraDetailsModal, #poseDetailsModal) .details-image-container > video,
+:is(#loraDetailsModal, #poseDetailsModal) .details-image-container > .lora-card-placeholder {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
+}
+
+#loraDetailsModal .preview-indicators {
+    position: relative;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 4px;
+    overscroll-behavior-x: contain;
+}
+
+#loraDetailsModal .preview-indicator-button {
+    position: relative;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background-color: var(--surface-light);
+}
+
+#loraDetailsModal .preview-indicator-button img,
+#loraDetailsModal .preview-indicator-button video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+#loraDetailsModal .preview-indicator-button.active {
+    border-color: var(--primary-hover);
+}
+
+#loraDetailsModal .preview-video-badge,
+#loraDetailsModal .preview-unavailable::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: white;
+    text-shadow: 0 1px 4px black;
+    pointer-events: none;
+}
+
+#loraDetailsModal .preview-unavailable::after {
+    content: "!";
+}
+
+#loraDetailsModal .preview-indicator-button:focus-visible,
+#loraDetailsModal .carousel-navigation-button:focus-visible,
+#loraDetailsModal .details-carousel:focus-visible {
+    outline: 2px solid var(--primary-hover);
+    outline-offset: 2px;
+}
+
+.preview-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 

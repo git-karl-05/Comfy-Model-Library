@@ -26,7 +26,7 @@ for (const page of ['edit-lora', 'edit-pose']) {
         vm.runInContext(fs.readFileSync('src/main/resources/static/js/edit-field-tools.js', 'utf8'), context);
         startup();
         const copies = buttons.filter(button => button.dataset.editCopy);
-        assert.equal(copies.length, page === 'edit-pose' ? 4 : 2);
+        assert.equal(copies.length, page === 'edit-pose' ? 4 : 3);
         for (const button of copies) {
             const target = elements.get(button.dataset.editCopy);
             target.value = 'unsaved first line\nsecond line';
@@ -45,7 +45,7 @@ for (const page of ['edit-lora', 'edit-pose']) {
             assert.equal(target.value, 'expanded edit\nkept');
             assert.equal(target.inputDispatched, true);
         }
-        for (const field of page === 'edit-pose' ? ['poseLoraInput', 'posePromptInput', 'poseNotesInput'] : ['editPositivePrompt', 'editNotes']) {
+        for (const field of page === 'edit-pose' ? ['poseLoraInput', 'posePromptInput', 'poseNotesInput'] : ['editPositivePrompt', 'editNegativePrompt', 'editNotes']) {
             assert.ok(html.indexOf(`data-edit-copy="${field}"`) < html.indexOf(`data-edit-expand="${field}"`));
         }
     });

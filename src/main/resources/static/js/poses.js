@@ -83,6 +83,7 @@ async function refreshCurrentView() {
 function createPoseCard(pose) {
     const card = document.createElement("article");
     card.className = "lora-card";
+    card.dataset.poseId = String(pose.id);
     const image = poseImages(pose)[0];
     if (image) {
         const img = document.createElement("img");
@@ -147,7 +148,23 @@ async function openPoseDetails(id) {
         renderPreview();
         byId("poseDetailsModal").querySelector(".lora-details-scroll-area").scrollTop = 0;
         showModal("poseDetailsModal", true);
+        sizePosePreviewLikeGalleryCard();
     } catch (error) { window.alert(error.message); }
+}
+function sizePosePreviewLikeGalleryCard() {
+    const modal = byId("poseDetailsModal");
+    if (!modal) return;
+    const cards = document.querySelectorAll("#poseList .lora-card");
+    const card = [...cards].find(item => item.dataset.poseId === String(currentPose?.id)) ?? cards[0];
+    const bounds = card?.getBoundingClientRect();
+    const doubleColumn = byId("poseList")?.classList.contains("double-column");
+    const ratio = bounds?.width > 0 && bounds?.height > 0
+            ? bounds.width / bounds.height : doubleColumn ? 4 / 5 : 3 / 4;
+    modal.style.setProperty("--preview-card-ratio", String(ratio));
+    modal.style.setProperty("--preview-card-width", bounds?.width > 0 ? `${bounds.width}px` : "100%");
+    const scrollArea = modal.querySelector(".lora-details-scroll-area");
+    const scrollbarWidth = Math.max(0, (scrollArea?.offsetWidth ?? 0) - (scrollArea?.clientWidth ?? 0));
+    modal.style.setProperty("--preview-scrollbar-width", `${scrollbarWidth}px`);
 }
 function renderPreview() {
     const container = byId("detailsImageContainer");
@@ -336,6 +353,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     on("goTopButton", () => window.scrollTo({top: 0, behavior: "smooth"}));
     window.addEventListener("scroll", () => byId("goTopButton").classList.toggle("hidden", window.scrollY < 300), {passive: true});
+    window.addEventListener("resize", () => {
+        if (currentPose) sizePosePreviewLikeGalleryCard();
+    });
     const saved = FormNavigation.restoreState();
     if (saved) {
         currentPage = Number.isInteger(saved.page) && saved.page >= 0 ? saved.page : 0;

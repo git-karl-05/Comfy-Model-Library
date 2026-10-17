@@ -69,6 +69,7 @@ let appliedSortDirection = null;
 
 let currentPreviewImages = [];
 let currentPreviewIndex = 0;
+let detailsRequestSequence = 0;
 
 
 /* =========================
@@ -269,6 +270,7 @@ function createLoraCard(
 
     card.className =
         "lora-card";
+    card.dataset.loraId = String(lora.id);
 
 
     const imageHtml =
@@ -1968,6 +1970,7 @@ function restartLoraModalOpeningAnimation(
 async function openLoraDetailsModal(
     loraId
 ) {
+    const requestSequence = ++detailsRequestSequence;
     try {
         const response =
             await fetch(
@@ -1980,8 +1983,9 @@ async function openLoraDetailsModal(
             );
         }
 
-        currentLora =
-            await response.json();
+        const lora = await response.json();
+        if (requestSequence !== detailsRequestSequence) return;
+        currentLora = lora;
 
         const modal =
             getLoraDetailsModal();
@@ -1993,11 +1997,10 @@ async function openLoraDetailsModal(
             );
         }
 
+        resetPreviewCarousel();
         populateLoraDetailsModal(
             currentLora
         );
-
-        resetPreviewCarousel();
 
         const modalSheet =
             modal.querySelector(
@@ -2009,6 +2012,7 @@ async function openLoraDetailsModal(
             "closing"
         );
         modal.setAttribute("aria-hidden", "false");
+        sizePreviewLikeGalleryCard();
 
         restartLoraModalOpeningAnimation(
             modalSheet
@@ -2017,10 +2021,11 @@ async function openLoraDetailsModal(
         resetLoraDetailsScrollPosition();
 
         await loadPreviewCarousel(
-            currentLora.id
+            currentLora.id, requestSequence
         );
 
     } catch (error) {
+        if (requestSequence !== detailsRequestSequence) return;
         console.error(
             "Error loading LoRA details:",
             error
@@ -2041,6 +2046,7 @@ function finishClosingLoraDetailsModal(
     modal,
     modalSheet
 ) {
+    detailsRequestSequence++;
     loraDetailsSwipe?.reset();
     modal.setAttribute("aria-hidden", "true");
     modal.classList.add(
@@ -2100,10 +2106,11 @@ function closeLoraDetailsModal() {
         "closing"
     );
 
+    const closingRequestSequence = detailsRequestSequence;
     let closingFinished = false;
 
     function finishCloseAnimation() {
-        if (closingFinished) {
+        if (closingFinished || closingRequestSequence !== detailsRequestSequence) {
             return;
         }
 
@@ -2248,75 +2255,8 @@ function populateLoraDetailsModal(
    DETAILS PREVIEW
 ========================= */
 
-function populateDetailsImage(
-    lora
-) {
-    const imageContainer =
-        document.getElementById(
-            "detailsImageContainer"
-        );
-
-    if (!imageContainer) {
-        return;
-    }
-
-    if (!lora.filePath) {
-        imageContainer.innerHTML = `
-            <div class="lora-card-placeholder">
-                No Preview
-            </div>
-        `;
-
-        return;
-    }
-
-    if (
-        isVideoPreview(
-            lora.filePath
-        )
-    ) {
-        imageContainer.innerHTML = `
-            <video
-                src="${lora.filePath}"
-                class="details-image"
-                controls
-                muted
-                loop
-                playsinline
-                preload="metadata"
-            >
-                Your browser cannot play this video preview.
-            </video>
-        `;
-
-        const video =
-            imageContainer.querySelector(
-                "video"
-            );
-
-        if (video) {
-            video
-                .play()
-                .catch(
-                    error => {
-                        console.debug(
-                            "Video autoplay prevented:",
-                            error
-                        );
-                    }
-                );
-        }
-
-        return;
-    }
-
-    imageContainer.innerHTML = `
-        <img
-            src="${lora.filePath}"
-            alt="${lora.loraName || "LoRA Preview"}"
-            class="details-image"
-        >
-    `;
+function populateDetailsImage(lora) {
+    renderPreviewPath(lora.filePath);
 }
 
 
@@ -4046,6 +3986,18 @@ function setupBottomSheetSwipe({
 ========================= */
 
 function setupPreviewCarousel() {
+    const carousel = document.querySelector("#loraDetailsModal .details-carousel");
+    carousel?.addEventListener("keydown", event => {
+        if (event.target.tagName === "VIDEO" || currentPreviewImages.length <= 1) return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+            event.preventDefault();
+            if (event.key === "ArrowLeft") showPreviousPreview();
+            else showNextPreview();
+        }
+    });
+    window.addEventListener("resize", () => {
+        if (currentLora) sizePreviewLikeGalleryCard();
+    });
     const previousButton =
         document.getElementById(
             "previousPreviewButton"
@@ -4087,85 +4039,57 @@ function resetPreviewCarousel() {
 
     if (indicators) {
         indicators.innerHTML = "";
+        indicators.classList.add("hidden");
+        indicators.scrollLeft = 0;
     }
+    const status = document.getElementById("previewStatus");
+    if (status) status.textContent = "";
 
     updatePreviewNavigation();
 }
 
 
-async function loadPreviewCarousel(
-    loraId
-) {
-    if (!loraId) {
-        return;
-    }
-
+async function loadPreviewCarousel(loraId, requestSequence = detailsRequestSequence) {
+    if (!loraId) return;
+    const primaryPath = currentLora?.filePath;
+    const isCurrentRequest = () => requestSequence === detailsRequestSequence
+            && String(currentLora?.id) === String(loraId)
+            && !getLoraDetailsModal()?.classList.contains("closing");
     try {
-        const response =
-            await fetch(
-                `${API_BASE_URL}/${loraId}/previews`
-            );
-
-        if (!response.ok) {
-            /*
-             * Older LoRAs or backend
-             * configurations may not have
-             * the preview endpoint.
-             * Fall back to the main preview.
-             */
-            currentPreviewImages =
-                currentLora?.filePath
-                    ? [
-                        currentLora.filePath
-                    ]
-                    : [];
-
-            currentPreviewIndex = 0;
-
-            renderCurrentPreview();
-
-            return;
-        }
-
-        const previewResponse =
-            await response.json();
-
-        currentPreviewImages =
-            normalizePreviewResponse(
-                previewResponse
-            );
-
-        if (
-            currentPreviewImages.length ===
-            0 &&
-            currentLora?.filePath
-        ) {
-            currentPreviewImages = [
-                currentLora.filePath
-            ];
-        }
-
-        currentPreviewIndex = 0;
-
-        renderCurrentPreview();
-
+        const response = await fetch(`${API_BASE_URL}/${loraId}/images`);
+        if (!response.ok) throw new Error(`Unable to load previews (${response.status})`);
+        const previews = normalizePreviewResponse(await response.json());
+        if (!isCurrentRequest()) return;
+        // Historical LoRAs may only have a primary path; keep it first.
+        currentPreviewImages = [...new Set([primaryPath, ...previews]
+                .filter(path => typeof path === "string" && path.trim()))];
     } catch (error) {
-        console.error(
-            "Unable to load preview carousel:",
-            error
-        );
-
-        currentPreviewImages =
-            currentLora?.filePath
-                ? [
-                    currentLora.filePath
-                ]
-                : [];
-
-        currentPreviewIndex = 0;
-
-        renderCurrentPreview();
+        if (!isCurrentRequest()) return;
+        console.debug("Unable to load preview carousel; using main preview:", error);
+        currentPreviewImages = primaryPath ? [primaryPath] : [];
     }
+    currentPreviewIndex = 0;
+    renderCurrentPreview();
+}
+
+
+function sizePreviewLikeGalleryCard() {
+    const modal = getLoraDetailsModal();
+    const carousel = document.querySelector("#loraDetailsModal .details-carousel");
+    if (!modal || !carousel) return;
+    const cards = document.querySelectorAll("#loraList .lora-card");
+    const card = [...cards].find(item => item.dataset.loraId === String(currentLora?.id))
+            ?? cards[0];
+    const bounds = card?.getBoundingClientRect();
+    const doubleColumn = document.getElementById("loraList")?.classList.contains("double-column");
+    const ratio = bounds?.width > 0 && bounds?.height > 0
+            ? bounds.width / bounds.height : doubleColumn ? 4 / 5 : 3 / 4;
+    modal.style.setProperty("--preview-card-ratio", String(ratio));
+    modal.style.setProperty("--preview-card-width", bounds?.width > 0 ? `${bounds.width}px` : "100%");
+    // Include the scroll area's gutter so it does not steal width from the image.
+    const scrollArea = modal.querySelector(".lora-details-scroll-area");
+    const scrollbarWidth = Math.max(0, (scrollArea?.offsetWidth ?? 0) - (scrollArea?.clientWidth ?? 0));
+    modal.style.setProperty("--preview-scrollbar-width", `${scrollbarWidth}px`);
 }
 
 
@@ -4245,72 +4169,40 @@ function renderCurrentPreview() {
 }
 
 
-function renderPreviewPath(
-    previewPath
-) {
-    const imageContainer =
-        document.getElementById(
-            "detailsImageContainer"
-        );
-
-    if (!imageContainer) {
-        return;
-    }
-
+function renderPreviewPath(previewPath) {
+    const imageContainer = document.getElementById("detailsImageContainer");
+    if (!imageContainer) return;
+    imageContainer.querySelector("video")?.pause();
+    imageContainer.replaceChildren();
+    const placeholder = message => {
+        const empty = document.createElement("div");
+        empty.className = "lora-card-placeholder";
+        empty.textContent = message;
+        imageContainer.replaceChildren(empty);
+    };
     if (!previewPath) {
-        imageContainer.innerHTML = `
-            <div class="lora-card-placeholder">
-                No Preview
-            </div>
-        `;
-
+        placeholder("No Preview");
         return;
     }
-
-    if (
-        isVideoPreview(
-            previewPath
-        )
-    ) {
-        imageContainer.innerHTML = `
-            <video
-                src="${previewPath}"
-                class="details-image"
-                controls
-                muted
-                loop
-                playsinline
-                preload="metadata"
-            >
-                Your browser cannot play this video preview.
-            </video>
-        `;
-
-        const video =
-            imageContainer.querySelector(
-                "video"
-            );
-
-        if (video) {
-            video
-                .play()
-                .catch(
-                    () => {
-                        // Autoplay may be blocked.
-                    }
-                );
-        }
-
-        return;
+    const isVideo = isVideoPreview(previewPath);
+    const media = document.createElement(isVideo ? "video" : "img");
+    media.className = "details-image";
+    media.addEventListener("error", () => {
+        // A late error from the previous preview must not replace the current one.
+        if (media.parentElement === imageContainer) placeholder("Preview unavailable");
+    }, {once: true});
+    if (isVideo) {
+        media.controls = true;
+        media.muted = true;
+        media.loop = true;
+        media.playsInline = true;
+        media.preload = "metadata";
+    } else {
+        media.alt = `${currentLora?.loraName || "LoRA"} — preview ${currentPreviewIndex + 1}`;
     }
-
-    imageContainer.innerHTML = `
-        <img
-            src="${previewPath}"
-            alt="${currentLora?.loraName || "LoRA Preview"}"
-            class="details-image"
-        >
-    `;
+    media.src = previewPath;
+    imageContainer.appendChild(media);
+    if (isVideo) media.play().catch(() => { /* Autoplay may be blocked. */ });
 }
 
 
@@ -4390,71 +4282,66 @@ function updatePreviewNavigation() {
 
 
 function renderPreviewIndicators() {
-    const indicatorContainer =
-        document.getElementById(
-            "previewIndicators"
-        );
-
-    if (!indicatorContainer) {
-        return;
+    const container = document.getElementById("previewIndicators");
+    if (!container) return;
+    container.classList.toggle("hidden", currentPreviewImages.length <= 1);
+    // Retain the buttons during navigation so keyboard focus and scroll stay put.
+    const needsRebuild = container.children.length !== currentPreviewImages.length
+            || currentPreviewImages.some((path, index) => container.children[index]?.dataset.path !== path);
+    if (needsRebuild) {
+        container.replaceChildren();
+        currentPreviewImages.forEach((path, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "preview-indicator-button";
+            button.dataset.path = path;
+            button.title = `Show ${isVideoPreview(path) ? "video" : "image"} ${index + 1}`;
+            button.setAttribute("aria-label", button.title);
+            button.setAttribute("aria-controls", "detailsImageContainer");
+            const thumbnail = document.createElement(isVideoPreview(path) ? "video" : "img");
+            if (isVideoPreview(path)) {
+                thumbnail.muted = true;
+                thumbnail.playsInline = true;
+                thumbnail.preload = "metadata";
+                thumbnail.tabIndex = -1;
+                const badge = document.createElement("span");
+                badge.className = "preview-video-badge";
+                badge.textContent = "▶";
+                badge.setAttribute("aria-hidden", "true");
+                button.appendChild(badge);
+            } else {
+                thumbnail.alt = "";
+                thumbnail.loading = "lazy";
+            }
+            thumbnail.setAttribute("aria-hidden", "true");
+            thumbnail.addEventListener("error", () => {
+                thumbnail.remove();
+                button.classList.add("preview-unavailable");
+            }, {once: true});
+            thumbnail.src = path;
+            button.appendChild(thumbnail);
+            button.addEventListener("click", () => {
+                currentPreviewIndex = index;
+                renderCurrentPreview();
+            });
+            container.appendChild(button);
+        });
     }
-
-    indicatorContainer.innerHTML = "";
-
-    if (
-        currentPreviewImages.length <=
-        1
-    ) {
-        indicatorContainer.classList.add(
-            "hidden"
-        );
-
-        return;
-    }
-
-    indicatorContainer.classList.remove(
-        "hidden"
-    );
-
-    currentPreviewImages.forEach(
-        (_, index) => {
-            const indicator =
-                document.createElement(
-                    "button"
-                );
-
-            indicator.type =
-                "button";
-
-            indicator.className =
-                "preview-indicator-button";
-
-            indicator.setAttribute(
-                "aria-label",
-                `Show preview ${index + 1}`
-            );
-
-            indicator.classList.toggle(
-                "active",
-                index ===
-                currentPreviewIndex
-            );
-
-            indicator.addEventListener(
-                "click",
-                () => {
-                    currentPreviewIndex =
-                        index;
-
-                    renderCurrentPreview();
-                }
-            );
-
-            indicatorContainer.appendChild(
-                indicator
-            );
+    [...container.children].forEach((button, index) => {
+        const active = index === currentPreviewIndex;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+        if (active && !container.classList.contains("hidden")) {
+            // Scroll only the thumbnail strip, without moving the modal's content.
+            if (button.offsetLeft < container.scrollLeft) container.scrollLeft = button.offsetLeft;
+            else if (button.offsetLeft + button.offsetWidth > container.scrollLeft + container.clientWidth) {
+                container.scrollLeft = button.offsetLeft + button.offsetWidth - container.clientWidth;
+            }
         }
-    );
+    });
+    const status = document.getElementById("previewStatus");
+    if (status) status.textContent = currentPreviewImages.length
+            ? `Preview ${currentPreviewIndex + 1} of ${currentPreviewImages.length}` : "No previews";
 }
 
 /* =========================
