@@ -282,8 +282,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     on("exportBackupButton", async () => {
         closeActions();
         try {
-            const data = await api("/backup/export");
-            const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: "application/json"}));
+            const response = await fetch(API_BASE_URL + "/backup/export");
+            if (!response.ok) throw new Error((await response.text()) || "Backup export failed");
+            const url = URL.createObjectURL(await response.blob());
             const link = document.createElement("a"); link.href = url; link.download = "poses-backup.json"; link.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (error) { window.alert(error.message); }
@@ -293,8 +294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const file = byId("backupFileInput").files[0];
         if (!file) return;
         try {
-            const parsed = JSON.parse(await file.text());
-            await api("/backup/import", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(parsed)});
+            await api("/backup/import", {method: "POST", headers: {"Content-Type": "application/json"}, body: file});
             await loadCategories(); await refreshFromStart();
         } catch (error) { window.alert(`Unable to import poses: ${error.message}`); }
         finally { byId("backupFileInput").value = ""; }
@@ -302,9 +302,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.addEventListener("click", async event => {
         const copy = event.target.closest("[data-copy-target]");
         if (copy) {
-            try { await navigator.clipboard.writeText(byId(copy.dataset.copyTarget).textContent); copy.textContent = "Copied"; }
-            catch { copy.textContent = "Copy failed"; }
-            setTimeout(() => { copy.textContent = "Copy"; }, 1500);
+            const label = copy.getAttribute("aria-label");
+            const title = copy.title;
+            copy.disabled = true;
+            let message;
+            try { await navigator.clipboard.writeText(byId(copy.dataset.copyTarget).textContent); message = "Copied"; }
+            catch { message = "Copy failed"; }
+            copy.textContent = message === "Copied" ? "✓" : "!";
+            copy.setAttribute("aria-label", message);
+            copy.title = message;
+            setTimeout(() => {
+                copy.textContent = "⧉";
+                copy.setAttribute("aria-label", label);
+                copy.title = title;
+                copy.disabled = false;
+            }, 1500);
         }
         const expand = event.target.closest("[data-expand-target]");
         if (expand) {

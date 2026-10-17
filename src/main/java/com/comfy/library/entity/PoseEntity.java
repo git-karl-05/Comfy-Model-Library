@@ -21,7 +21,7 @@ public class PoseEntity {
     public void setBaseModel(String baseModel) { this.baseModel = baseModel; }
     private String filePath;
     private boolean favorite;
-    private Integer seed;
+    private Long seed;
     private String lora;
     @Lob
     private String prompt;
@@ -41,7 +41,7 @@ public class PoseEntity {
     @JsonCreator
     public PoseEntity(){}
 
-    public PoseEntity(Long id, String name, String category, String filePath, boolean favorite, Integer seed, String lora, String prompt, PoseType type) {
+    public PoseEntity(Long id, String name, String category, String filePath, boolean favorite, Long seed, String lora, String prompt, PoseType type) {
         this.id = id;
         this.name = name;
         this.category = category;
@@ -93,11 +93,11 @@ public class PoseEntity {
         this.favorite = favorite;
     }
 
-    public Integer getSeed() {
+    public Long getSeed() {
         return seed;
     }
 
-    public void setSeed(Integer seed) {
+    public void setSeed(Long seed) {
         this.seed = seed;
     }
 

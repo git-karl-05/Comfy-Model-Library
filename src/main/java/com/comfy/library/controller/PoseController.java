@@ -45,7 +45,7 @@ public class PoseController {
     public PoseEntity save(@PathVariable(required = false) Long id,
                            @RequestParam String name,
                            @RequestParam(defaultValue = "") String category,
-                           @RequestParam(required = false) Integer seed,
+                           @RequestParam(required = false) Long seed,
                            @RequestParam(defaultValue = "") String lora,
                            @RequestParam(defaultValue = "") String prompt,
                            @RequestParam(defaultValue = "") String notes,
@@ -60,5 +60,12 @@ public class PoseController {
     public List<PoseEntity> exportBackup() { return service.exportBackup(); }
 
     @PostMapping("/backup/import")
-    public Map<String, Integer> importBackup(@RequestBody List<PoseEntity> poses) { return service.importBackup(poses); }
+    public Map<String, Integer> importBackup(jakarta.servlet.http.HttpServletRequest request) throws IOException {
+        List<PoseEntity> poses = mapper.readerForListOf(PoseEntity.class)
+                .with(tools.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS,
+                        tools.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .without(tools.jackson.databind.DeserializationFeature.ACCEPT_FLOAT_AS_INT)
+                .readValue(request.getInputStream());
+        return service.importBackup(poses);
+    }
 }

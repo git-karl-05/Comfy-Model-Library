@@ -65,7 +65,7 @@ public class PoseService {
     }
 
     @Transactional
-    public PoseEntity save(Long id, String name, String category, Integer seed, String lora,
+    public PoseEntity save(Long id, String name, String category, Long seed, String lora,
                            String prompt, String notes, String baseModel, List<String> retained, List<MultipartFile> files) throws IOException {
         if (name == null || name.isBlank() || name.length() > 255) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pose name is required (maximum 255 characters)");
@@ -112,14 +112,32 @@ public class PoseService {
 
     @Transactional
     public Map<String, Integer> importBackup(List<PoseEntity> poses) {
+        if (poses == null) throw new IllegalArgumentException("Pose backup must be an array.");
+        int index = 0;
         for (PoseEntity pose : poses) {
-            if (pose.getName() == null || pose.getName().isBlank()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Every pose requires a name");
+            String prefix = "poses[" + index++ + "]";
+            if (pose == null || pose.getName() == null || pose.getName().isBlank()) {
+                throw new IllegalArgumentException(prefix + ".name is required.");
             }
+            validateBackupLength(prefix + ".name", pose.getName());
+            validateBackupLength(prefix + ".category", pose.getCategory());
+            validateBackupLength(prefix + ".baseModel", pose.getBaseModel());
+            validateBackupLength(prefix + ".filePath", pose.getFilePath());
+            validateBackupLength(prefix + ".lora", pose.getLora());
+            if (pose.getImages() != null) for (String image : pose.getImages()) {
+                if (image == null) throw new IllegalArgumentException(prefix + ".images must not contain null.");
+                validateBackupLength(prefix + ".images", image);
+            }
+        }
+        for (PoseEntity pose : poses) {
             pose.setId(null);
             if (pose.getImages() == null) pose.setImages(new ArrayList<>());
         }
-        repository.saveAll(poses);
+        repository.saveAllAndFlush(poses);
         return Map.of("importedCount", poses.size());
+    }
+
+    private void validateBackupLength(String field, String value) {
+        if (value != null && value.length() > 255) throw new IllegalArgumentException(field + " exceeds 255 characters.");
     }
 }

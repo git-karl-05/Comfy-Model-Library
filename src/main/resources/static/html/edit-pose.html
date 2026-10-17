@@ -45,41 +45,43 @@
                     <input id="poseCategoryInput" name="category" class="details-edit-input" type="text" maxlength="255" list="poseCategorySuggestions">
                     <datalist id="poseCategorySuggestions"></datalist>
                 </label>
-                <div class="pose-seed-field"><label for="poseSeedInput">Seed</label>
-                <div class="edit-field-wrapper edit-field-single">
+                <div class="pose-seed-field">
+                    <div class="details-field-header">
+                        <label for="poseSeedInput">Seed</label>
+                        <div class="details-field-actions"><button type="button" class="copy-field-button" data-edit-copy="poseSeedInput" data-copy-label="Copy Seed" aria-label="Copy Seed" title="Copy">⧉</button></div>
+                    </div>
                     <input id="poseSeedInput" name="seed" class="details-edit-input" type="number" step="1" min="-2147483648" max="2147483647">
-                    <div class="edit-field-tools"><button type="button" class="copy-field-button edit-field-tool" data-edit-copy="poseSeedInput" data-copy-label="Copy Seed" aria-label="Copy Seed" title="Copy">⧉</button></div>
-                </div></div>
-            </section>
-            <section class="details-prompt-section">
-                <h2><label for="poseLoraInput">LoRAs / Strengths</label></h2>
-                <div class="edit-field-wrapper">
-                    <textarea id="poseLoraInput" name="lora" class="details-edit-textarea" rows="4"></textarea>
-                    <div class="edit-field-tools">
-                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="poseLoraInput" data-copy-label="Copy LoRAs / Strengths" aria-label="Copy LoRAs / Strengths" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="poseLoraInput" data-field-label="LoRAs / Strengths" aria-label="Expand LoRAs / Strengths" title="Expand">⛶</button>
-                    </div>
                 </div>
             </section>
             <section class="details-prompt-section">
-                <h2><label for="posePromptInput">Prompt</label></h2>
-                <div class="edit-field-wrapper">
-                    <textarea id="posePromptInput" name="prompt" class="details-edit-textarea" rows="8"></textarea>
-                    <div class="edit-field-tools">
-                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="posePromptInput" data-copy-label="Copy Prompt" aria-label="Copy Prompt" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="posePromptInput" data-field-label="Prompt" aria-label="Expand Prompt" title="Expand">⛶</button>
+                <div class="details-field-header">
+                    <h2 class="details-field-label"><label for="poseLoraInput">LoRAs / Strengths</label></h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="poseLoraInput" data-copy-label="Copy LoRAs / Strengths" aria-label="Copy LoRAs / Strengths" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="poseLoraInput" data-field-label="LoRAs / Strengths" aria-label="Expand LoRAs / Strengths" title="Expand">⛶</button>
                     </div>
                 </div>
+                <textarea id="poseLoraInput" name="lora" class="details-edit-textarea" rows="4"></textarea>
             </section>
             <section class="details-prompt-section">
-                <h2><label for="poseNotesInput">Notes</label></h2>
-                <div class="edit-field-wrapper">
-                    <textarea id="poseNotesInput" name="notes" class="details-edit-textarea" rows="6"></textarea>
-                    <div class="edit-field-tools">
-                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="poseNotesInput" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="poseNotesInput" data-field-label="Notes" aria-label="Expand Notes" title="Expand">⛶</button>
+                <div class="details-field-header">
+                    <h2 class="details-field-label"><label for="posePromptInput">Prompt</label></h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="posePromptInput" data-copy-label="Copy Prompt" aria-label="Copy Prompt" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="posePromptInput" data-field-label="Prompt" aria-label="Expand Prompt" title="Expand">⛶</button>
                     </div>
                 </div>
+                <textarea id="posePromptInput" name="prompt" class="details-edit-textarea" rows="8"></textarea>
+            </section>
+            <section class="details-prompt-section">
+                <div class="details-field-header">
+                    <h2 class="details-field-label"><label for="poseNotesInput">Notes</label></h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="poseNotesInput" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="poseNotesInput" data-field-label="Notes" aria-label="Expand Notes" title="Expand">⛶</button>
+                    </div>
+                </div>
+                <textarea id="poseNotesInput" name="notes" class="details-edit-textarea" rows="6"></textarea>
             </section>
             <p id="poseFormMessage" class="details-edit-message hidden" role="status" aria-live="polite"></p>
             <div class="shared-form-action-bar edit-lora-action-bar">

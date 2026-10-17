@@ -32,7 +32,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             button.textContent = copied ? "✓" : "!";
             button.setAttribute("aria-label", copied ? "Copied" : "Copy failed");
-            setTimeout(() => { button.textContent = "⧉"; button.setAttribute("aria-label", button.dataset.copyLabel); }, 1400);
+            button.title = copied ? "Copied" : "Copy failed";
+            setTimeout(() => {
+                button.textContent = "⧉";
+                button.setAttribute("aria-label", button.dataset.copyLabel);
+                button.title = button.dataset.copyLabel;
+            }, 1400);
         });
     });
     document.querySelectorAll("[data-edit-expand]").forEach(button => {

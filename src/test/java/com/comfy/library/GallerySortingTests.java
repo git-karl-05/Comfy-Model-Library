@@ -101,15 +101,15 @@ class GallerySortingTests {
             pose.setName("Pose " + seed);
             pose.setCategory(seed == 100 ? "Sitting" : "Standing");
             pose.setFavorite(seed != 100);
-            pose.setSeed(seed);
+            pose.setSeed((long) seed);
             poses.save(pose);
         }
-        assertEquals(List.of(2, 10), poseService.find(null, null, null, 0, 2, "seed", "asc")
+        assertEquals(List.of(2L, 10L), poseService.find(null, null, null, 0, 2, "seed", "asc")
                 .map(PoseEntity::getSeed).getContent());
-        assertEquals(100, poseService.find(null, null, null, 1, 2, "seed", "asc").getContent().getFirst().getSeed());
-        assertEquals(List.of(100, 10, 2), poseService.find(null, null, null, 0, 12, "seed", "desc")
+        assertEquals(100L, poseService.find(null, null, null, 1, 2, "seed", "asc").getContent().getFirst().getSeed());
+        assertEquals(List.of(100L, 10L, 2L), poseService.find(null, null, null, 0, 12, "seed", "desc")
                 .map(PoseEntity::getSeed).getContent());
-        assertEquals(List.of(10, 2), poseService.find("Pose", "Standing", true, 0, 12, "seed", "desc")
+        assertEquals(List.of(10L, 2L), poseService.find("Pose", "Standing", true, 0, 12, "seed", "desc")
                 .map(PoseEntity::getSeed).getContent());
         assertEquals(List.of("Pose 10", "Pose 100", "Pose 2"), poseService.find(null, null, null, 0, 12, "name", "asc")
                 .map(PoseEntity::getName).getContent());
@@ -141,16 +141,16 @@ class GallerySortingTests {
 
     @Test
     void poseCreateEditFavoriteAndBackupPreserveFields() throws Exception {
-        PoseEntity pose = poseService.save(null, "Standing", "Action", 10, "LoRA 0.8", "prompt", "notes", "Flux", List.of(), List.of());
+        PoseEntity pose = poseService.save(null, "Standing", "Action", 10L, "LoRA 0.8", "prompt", "notes", "Flux", List.of(), List.of());
         Long id = pose.getId();
         poseService.favorite(id);
-        PoseEntity updated = poseService.save(id, "Updated", "Action", 20, "LoRA 0.5", "new prompt", "new notes", "SDXL", List.of(), List.of());
+        PoseEntity updated = poseService.save(id, "Updated", "Action", 20L, "LoRA 0.5", "new prompt", "new notes", "SDXL", List.of(), List.of());
         assertTrue(updated.isFavorite());
         assertEquals("SDXL", updated.getBaseModel());
         entityManager.flush();
         entityManager.clear();
         assertEquals("SDXL", poseService.get(id).getBaseModel());
-        poseService.save(id, "Updated", "Action", 20, "LoRA", "prompt", "new notes", null, List.of(), List.of());
+        poseService.save(id, "Updated", "Action", 20L, "LoRA", "prompt", "new notes", null, List.of(), List.of());
         entityManager.flush();
         entityManager.clear();
         assertEquals("SDXL", poseService.get(id).getBaseModel());

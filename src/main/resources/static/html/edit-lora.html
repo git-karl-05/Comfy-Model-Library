@@ -206,20 +206,20 @@
 
             <section class="details-prompt-section">
 
-                <h2>Positive Prompt</h2>
-
-                <div class="edit-field-wrapper">
-                    <textarea
+                <div class="details-field-header">
+                    <h2 class="details-field-label" id="editPositivePromptLabel">Positive Prompt</h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="editPositivePrompt" data-copy-label="Copy Positive Prompt" aria-label="Copy Positive Prompt" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="editPositivePrompt" data-field-label="Positive Prompt" aria-label="Expand Positive Prompt" title="Expand">⛶</button>
+                    </div>
+                </div>
+                <textarea
                         id="editPositivePrompt"
+                        aria-labelledby="editPositivePromptLabel"
                         name="positivePrompt"
                         class="details-edit-textarea"
                         rows="8"
                         placeholder="Enter the positive prompt or trigger words..."></textarea>
-                    <div class="edit-field-tools">
-                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="editPositivePrompt" data-copy-label="Copy Positive Prompt" aria-label="Copy Positive Prompt" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="editPositivePrompt" data-field-label="Positive Prompt" aria-label="Expand Positive Prompt" title="Expand">⛶</button>
-                    </div>
-                </div>
 
             </section>
 
@@ -228,20 +228,39 @@
 
             <section class="details-prompt-section">
 
-                <h2>Notes</h2>
+                <div class="details-field-header">
+                    <h2 class="details-field-label" id="editNegativePromptLabel">Negative Prompt</h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="editNegativePrompt" data-copy-label="Copy Negative Prompt" aria-label="Copy Negative Prompt" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="editNegativePrompt" data-field-label="Negative Prompt" aria-label="Expand Negative Prompt" title="Expand">⛶</button>
+                    </div>
+                </div>
+                <textarea
+                        id="editNegativePrompt"
+                        aria-labelledby="editNegativePromptLabel"
+                        name="negativePrompt"
+                        class="details-edit-textarea"
+                        rows="8"
+                        placeholder="Enter the negative prompt..."></textarea>
 
-                <div class="edit-field-wrapper">
-                    <textarea
+            </section>
+
+            <section class="details-prompt-section">
+
+                <div class="details-field-header">
+                    <h2 class="details-field-label" id="editNotesLabel">Notes</h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="editNotes" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="editNotes" data-field-label="Notes" aria-label="Expand Notes" title="Expand">⛶</button>
+                    </div>
+                </div>
+                <textarea
                         id="editNotes"
+                        aria-labelledby="editNotesLabel"
                         name="notes"
                         class="details-edit-textarea"
                         rows="6"
                         placeholder="Add notes about this LoRA..."></textarea>
-                    <div class="edit-field-tools">
-                        <button type="button" class="copy-field-button edit-field-tool" data-edit-copy="editNotes" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button edit-field-tool" data-edit-expand="editNotes" data-field-label="Notes" aria-label="Expand Notes" title="Expand">⛶</button>
-                    </div>
-                </div>
 
             </section>
 

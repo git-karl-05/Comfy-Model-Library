@@ -1,14 +1,13 @@
 package com.comfy.library.dto.lora;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 public class LoraBackup {
 
     private int backupVersion;
     private LocalDateTime exportedAt;
-    private List<LoraBackupItem> loras = new ArrayList<>();
+    private List<LoraBackupItem> loras;
 
     public int getBackupVersion() {
         return backupVersion;

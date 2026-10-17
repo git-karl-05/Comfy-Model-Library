@@ -12,7 +12,7 @@ public class CreatePoseRequest {
     public void setBaseModel(String baseModel) { this.baseModel = baseModel; }
     private String filePath;
     private boolean favorite;
-    private Integer seed;
+    private Long seed;
     private String lora;
     private String prompt;
     private PoseType type;
@@ -51,11 +51,11 @@ public class CreatePoseRequest {
         this.favorite = favorite;
     }
 
-    public Integer getSeed() {
+    public Long getSeed() {
         return seed;
     }
 
-    public void setSeed(Integer seed) {
+    public void setSeed(Long seed) {
         this.seed = seed;
     }
 

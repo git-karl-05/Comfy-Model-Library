@@ -39,6 +39,22 @@ public class LoraBackupItem {
 
     private String url;
     private String filePath;
+    private String modelFilePath;
+    private String sha256;
+    private java.time.LocalDateTime createdDate;
+    private java.time.LocalDateTime lastUpdated;
+    private java.util.List<String> images;
+
+    public String getModelFilePath() { return modelFilePath; }
+    public void setModelFilePath(String value) { modelFilePath = value; }
+    public String getSha256() { return sha256; }
+    public void setSha256(String value) { sha256 = value; }
+    public java.time.LocalDateTime getCreatedDate() { return createdDate; }
+    public void setCreatedDate(java.time.LocalDateTime value) { createdDate = value; }
+    public java.time.LocalDateTime getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(java.time.LocalDateTime value) { lastUpdated = value; }
+    public java.util.List<String> getImages() { return images; }
+    public void setImages(java.util.List<String> value) { images = value; }
 
     public String getLoraName() {
         return loraName;

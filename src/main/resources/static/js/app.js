@@ -3363,6 +3363,8 @@ function showCopyButtonStatus(
     ) {
         button.dataset.originalText =
             button.textContent.trim();
+        button.dataset.originalLabel = button.getAttribute("aria-label");
+        button.dataset.originalTitle = button.title;
     }
 
     window.clearTimeout(
@@ -3372,7 +3374,9 @@ function showCopyButtonStatus(
     );
 
     button.textContent =
-        message;
+        message === "Copied" ? "✓" : "!";
+    button.setAttribute("aria-label", message);
+    button.title = message;
 
     button.disabled = true;
 
@@ -3381,6 +3385,8 @@ function showCopyButtonStatus(
             () => {
                 button.textContent =
                     button.dataset.originalText;
+                button.setAttribute("aria-label", button.dataset.originalLabel);
+                button.title = button.dataset.originalTitle;
 
                 button.disabled =
                     false;
@@ -4634,7 +4640,7 @@ function setupBackupImport() {
 
             const confirmed =
                 window.confirm(
-                    "Import this backup? Existing LoRAs will remain and duplicate name/version entries will be skipped."
+                    "Import this backup? Existing LoRAs will remain and duplicate name/version/creator entries will be skipped."
                 );
 
             if (!confirmed) {
@@ -4722,7 +4728,7 @@ function setupBackupImport() {
                 );
 
                 window.alert(
-                    "Unable to import the backup."
+                    error.message || "Unable to import the backup."
                 );
 
             } finally {

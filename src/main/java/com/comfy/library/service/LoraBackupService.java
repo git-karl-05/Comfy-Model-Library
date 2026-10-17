@@ -4,6 +4,8 @@ import com.comfy.library.dto.lora.BackupRestoreResponse;
 import com.comfy.library.dto.lora.LoraBackup;
 import com.comfy.library.dto.lora.LoraBackupItem;
 import com.comfy.library.entity.LoraEntity;
+import com.comfy.library.entity.LoraImageEntity;
+import com.comfy.library.repository.LoraImageRepository;
 import com.comfy.library.repository.LoraRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -18,11 +20,13 @@ public class LoraBackupService {
     private static final int CURRENT_BACKUP_VERSION = 1;
 
     private final LoraRepository loraRepository;
+    private final LoraImageRepository imageRepository;
 
     public LoraBackupService(
-            LoraRepository loraRepository
+            LoraRepository loraRepository, LoraImageRepository imageRepository
     ) {
         this.loraRepository = loraRepository;
+        this.imageRepository = imageRepository;
     }
 
     @Transactional
@@ -54,6 +58,12 @@ public class LoraBackupService {
             item.setFavorite(entity.isFavorite());
             item.setUrl(entity.getUrl());
             item.setFilePath(entity.getFilePath());
+            item.setModelFilePath(entity.getModelFilePath());
+            item.setSha256(entity.getSha256());
+            item.setCreatedDate(entity.getCreatedDate());
+            item.setLastUpdated(entity.getLastUpdated());
+            item.setImages(imageRepository.findByLoraIdOrderByIdAsc(entity.getId()).stream()
+                    .map(LoraImageEntity::getFilePath).toList());
 
             backupItems.add(item);
         }
@@ -81,9 +91,9 @@ public class LoraBackupService {
 
             boolean alreadyExists =
                     loraRepository
-                            .existsByLoraNameAndVersion(
+                            .existsByLoraNameAndVersionAndCreator(
                                     item.getLoraName(),
-                                    item.getVersion()
+                                    item.getVersion(), item.getCreator()
                             );
 
             if (alreadyExists) {
@@ -113,12 +123,20 @@ public class LoraBackupService {
 
             entity.setUrl(item.getUrl());
             entity.setFilePath(item.getFilePath());
+            entity.setModelFilePath(item.getModelFilePath());
+            entity.setSha256(item.getSha256());
+            entity.setCreatedDate(item.getCreatedDate());
+            entity.setLastUpdated(item.getLastUpdated());
 
             loraRepository.save(entity);
+            if (item.getImages() != null) {
+                for (String path : item.getImages()) imageRepository.save(new LoraImageEntity(path, entity));
+            }
 
             importedCount++;
         }
 
+        loraRepository.flush();
         return new BackupRestoreResponse(
                 importedCount,
                 skippedCount
@@ -149,6 +167,38 @@ public class LoraBackupService {
             throw new IllegalArgumentException(
                     "Backup does not contain LoRA data."
             );
+        }
+        for (int i = 0; i < backup.getLoras().size(); i++) {
+            LoraBackupItem item = backup.getLoras().get(i);
+            String prefix = "loras[" + i + "]";
+            if (item == null || item.getLoraName() == null || item.getLoraName().isBlank()) {
+                throw new IllegalArgumentException(prefix + ".loraName is required.");
+            }
+            validateLength(prefix + ".loraName", item.getLoraName(), 255);
+            validateLength(prefix + ".creator", item.getCreator(), 255);
+            validateLength(prefix + ".version", item.getVersion(), 255);
+            validateLength(prefix + ".subCategory", item.getSubCategory(), 255);
+            validateLength(prefix + ".baseModel", item.getBaseModel(), 255);
+            validateLength(prefix + ".groupName", item.getGroupName(), 255);
+            validateLength(prefix + ".positivePrompt", item.getPositivePrompt(), 5000);
+            validateLength(prefix + ".negativePrompt", item.getNegativePrompt(), 5000);
+            validateLength(prefix + ".notes", item.getNotes(), 5000);
+            validateLength(prefix + ".url", item.getUrl(), 255);
+            validateLength(prefix + ".filePath", item.getFilePath(), 255);
+            validateLength(prefix + ".modelFilePath", item.getModelFilePath(), 255);
+            validateLength(prefix + ".sha256", item.getSha256(), 255);
+            if (item.getImages() != null) {
+                for (String path : item.getImages()) {
+                    if (path == null) throw new IllegalArgumentException(prefix + ".images must not contain null.");
+                    validateLength(prefix + ".images", path, 255);
+                }
+            }
+        }
+    }
+
+    private void validateLength(String field, String value, int maximum) {
+        if (value != null && value.length() > maximum) {
+            throw new IllegalArgumentException(field + " exceeds " + maximum + " characters.");
         }
     }
 }

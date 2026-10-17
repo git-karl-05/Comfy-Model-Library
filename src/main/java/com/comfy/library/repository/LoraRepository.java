@@ -14,6 +14,7 @@ import java.util.Optional;
 
 @Repository
 public interface LoraRepository extends JpaRepository<LoraEntity, Long>, JpaSpecificationExecutor<LoraEntity> {
+    boolean existsByLoraNameAndVersionAndCreator(String loraName, String version, String creator);
 
 
 

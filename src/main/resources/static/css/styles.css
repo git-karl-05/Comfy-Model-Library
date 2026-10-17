@@ -1637,6 +1637,7 @@ body {
 
 .details-field-actions {
     display: flex;
+    flex: 0 0 auto;
     align-items: center;
     gap: 8px;
 }
@@ -2098,6 +2099,25 @@ body {
     cursor: default;
 
     opacity: 0.5;
+}
+
+.details-field-actions > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 1rem;
+}
+
+.details-field-header > .details-field-label {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
 }
 
 
@@ -2932,12 +2952,6 @@ body.returning-to-modal
     margin: 8px 8px 8px 0;
 }
 
-/* Identical live-value tools on both edit forms. */
-.edit-field-wrapper { position: relative; min-width: 0; }
-.edit-field-wrapper textarea { padding: 48px 88px 12px 12px; }
-.edit-field-tools { position: absolute; top: 8px; right: 8px; display: flex; gap: 6px; z-index: 2; }
-.edit-field-tools .edit-field-tool { width: 30px; height: 30px; min-width: 30px; padding: 0; font-size: 16px; display: inline-flex; align-items: center; justify-content: center; }
-.edit-field-single input { padding-right: 48px; }
 .pose-seed-field { display: flex; flex-direction: column; gap: 6px; }
 .expanded-field-value { flex: 1; min-height: min(60dvh, 600px); resize: none; }
 .clipboard-fallback { position: fixed; left: -9999px; }
