@@ -1,4 +1,5 @@
 const API_BASE_URL = "/api/loras";
+const BACKUP_API_BASE_URL = "/api/backup";
 
 
 /* =========================
@@ -70,6 +71,7 @@ let appliedSortDirection = null;
 
 let currentPreviewImages = [];
 let currentPreviewIndex = 0;
+let previewSwipe = null;
 let detailsRequestSequence = 0;
 
 
@@ -261,6 +263,17 @@ function displayLoras(
 }
 
 
+// Keep source paths in records/backups; only media requests use the persistent local cache.
+function localPreviewUrl(path) {
+    return /^https?:\/\//i.test(path || "")
+        ? `/api/loras/preview?url=${encodeURIComponent(path)}` : path;
+}
+
+function addPreviewCacheFallback(media, path) {
+    if (!media || localPreviewUrl(path) === path) return;
+    media.addEventListener("error", () => { media.src = path; }, {once: true});
+}
+
 function createLoraCard(
     lora
 ) {
@@ -284,7 +297,7 @@ function createLoraCard(
                 ? `
                     <video
                         class="lora-card-image"
-                        src="${lora.filePath}"
+                        src="${localPreviewUrl(lora.filePath)}"
                         muted
                         loop
                         playsinline
@@ -295,7 +308,7 @@ function createLoraCard(
                 : `
                     <img
                         class="lora-card-image"
-                        src="${lora.filePath}"
+                        src="${localPreviewUrl(lora.filePath)}"
                         alt="${lora.loraName ?? "LoRA Preview"}"
                     >
                   `
@@ -338,6 +351,8 @@ function createLoraCard(
         </div>
     `;
 
+
+    addPreviewCacheFallback(card.querySelector(".lora-card-image"), lora.filePath);
 
     const previewVideo =
         card.querySelector(
@@ -902,6 +917,14 @@ async function refreshCurrentView() {
 ========================= */
 
 function setupActionMenu() {
+    const backupButton = document.getElementById("backupMenuButton");
+    const backupOptions = document.getElementById("backupOptions");
+    backupButton?.addEventListener("click", () => {
+        const expanded = backupOptions.classList.contains("hidden");
+        backupOptions.classList.toggle("hidden", !expanded);
+        backupButton.setAttribute("aria-expanded", String(expanded));
+    });
+    document.getElementById("refreshLorasButton")?.addEventListener("click", refreshLoraLibrary);
     const openButton =
         document.getElementById(
             "openActionMenuButton"
@@ -956,6 +979,7 @@ function setupActionMenu() {
             overlay.classList.toggle(
                 "hidden"
             );
+            openButton.setAttribute("aria-expanded", String(!overlay.classList.contains("hidden")));
         }
     );
 
@@ -1014,8 +1038,31 @@ function setupActionMenu() {
     );
 }
 
+async function refreshLoraLibrary() {
+    const button = document.getElementById("refreshLorasButton");
+    const label = document.getElementById("refreshLorasLabel");
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    if (label) label.textContent = "Refreshing...";
+    try {
+        await refreshFilterMetadata();
+        // Keep the user's current search, filters, sort and page.
+        await refreshCurrentView();
+        closeActionMenu();
+        document.getElementById("openActionMenuButton")?.focus();
+    } catch (error) {
+        window.alert(`Unable to refresh the library: ${error.message}`);
+    } finally {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+        if (label) label.textContent = "Refresh";
+    }
+}
+
 
 function closeActionMenu() {
+    document.getElementById("openActionMenuButton")?.setAttribute("aria-expanded", "false");
     const overlay =
         document.getElementById(
             "actionMenuOverlay"
@@ -1195,14 +1242,7 @@ function setupFilterModal() {
         async () => {
             openButton.disabled = true;
             try {
-                // Refresh on every open so imports and edits are reflected immediately.
-                const response = await fetch(`${API_BASE_URL}/filter-options`);
-                if (!response.ok) throw new Error(`Unable to load filter metadata (${response.status}).`);
-                const metadata = await response.json();
-                if (!Array.isArray(metadata)) throw new Error("Invalid filter metadata response.");
-                filterMetadata = metadata;
-                populateMetadataFilterOptions({baseModel: appliedBaseModelFilter,
-                    category: appliedCategoryFilter, subCategory: appliedSubcategoryFilter});
+                await refreshFilterMetadata();
                 openFilterModal();
             } catch (error) {
                 window.alert(error.message);
@@ -1300,6 +1340,17 @@ function openFilterModal() {
             baseModelFilter?.focus();
         }
     );
+}
+
+async function refreshFilterMetadata() {
+    // Shared by opening the filter and explicitly refreshing the library.
+    const response = await fetch(`${API_BASE_URL}/filter-options`, {cache: "no-store"});
+    if (!response.ok) throw new Error(`Unable to load filter metadata (${response.status}).`);
+    const metadata = await response.json();
+    if (!Array.isArray(metadata)) throw new Error("Invalid filter metadata response.");
+    filterMetadata = metadata;
+    populateMetadataFilterOptions({baseModel: appliedBaseModelFilter,
+        category: appliedCategoryFilter, subCategory: appliedSubcategoryFilter});
 }
 
 function setMetadataFilterOptions(select, values, allLabel, selected, special = []) {
@@ -2107,6 +2158,7 @@ function finishClosingLoraDetailsModal(
 
 
 function closeLoraDetailsModal() {
+    previewSwipe?.reset();
     const modal =
         document.getElementById(
             "loraDetailsModal"
@@ -4027,7 +4079,56 @@ function setupBottomSheetSwipe({
    PREVIEW CAROUSEL
 ========================= */
 
+function setupPreviewSwipe(container) {
+    if (!container) return null;
+    let gesture = null;
+    const reset = () => { gesture = null; };
+    container.addEventListener("touchstart", event => {
+        reset();
+        if (event.touches.length !== 1 || currentPreviewImages.length < 2) return;
+        const target = event.target;
+        if (target.closest('button, a, input, select, textarea, [role="button"]')) return;
+        const touch = event.touches[0];
+        // Native video controls are retargeted to VIDEO; leave their bottom strip alone.
+        if (target.tagName === "VIDEO" && target.controls
+                && touch.clientY >= target.getBoundingClientRect().bottom - 64) return;
+        gesture = {x: touch.clientX, y: touch.clientY, horizontal: false,
+            record: currentLora, index: currentPreviewIndex};
+    }, {passive: true});
+    container.addEventListener("touchmove", event => {
+        if (!gesture) return;
+        if (event.touches.length !== 1) { reset(); return; }
+        const dx = Math.abs(event.touches[0].clientX - gesture.x);
+        const dy = Math.abs(event.touches[0].clientY - gesture.y);
+        if (!gesture.horizontal) {
+            if (Math.max(dx, dy) < 8) return;
+            if (dx <= dy * 1.25) { reset(); return; }
+            gesture.horizontal = true;
+        }
+        if (!event.cancelable) { reset(); return; }
+        event.preventDefault();
+        event.stopPropagation();
+    }, {passive: false});
+    container.addEventListener("touchend", event => {
+        const finished = gesture;
+        reset();
+        if (!finished || event.touches.length || !event.changedTouches.length
+                || finished.record !== currentLora || finished.index !== currentPreviewIndex) return;
+        const dx = event.changedTouches[0].clientX - finished.x;
+        const dy = event.changedTouches[0].clientY - finished.y;
+        const threshold = Math.min(80, Math.max(40, container.clientWidth * 0.12));
+        if (Math.abs(dx) < threshold || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
+        if (event.cancelable) event.preventDefault();
+        if (dx < 0) showNextPreview();
+        else showPreviousPreview();
+    }, {passive: false});
+    container.addEventListener("touchcancel", reset, {passive: true});
+    return {reset};
+}
+
+
 function setupPreviewCarousel() {
+    previewSwipe ??= setupPreviewSwipe(document.getElementById("detailsImageContainer"));
     const carousel = document.querySelector("#loraDetailsModal .details-carousel");
     carousel?.addEventListener("keydown", event => {
         if (event.target.tagName === "VIDEO" || currentPreviewImages.length <= 1) return;
@@ -4071,6 +4172,7 @@ function setupPreviewCarousel() {
 
 
 function resetPreviewCarousel() {
+    previewSwipe?.reset();
     currentPreviewImages = [];
     currentPreviewIndex = 0;
 
@@ -4229,10 +4331,16 @@ function renderPreviewPath(previewPath) {
     const isVideo = isVideoPreview(previewPath);
     const media = document.createElement(isVideo ? "video" : "img");
     media.className = "details-image";
+    let retriedSource = false;
     media.addEventListener("error", () => {
+        if (!retriedSource && localPreviewUrl(previewPath) !== previewPath) {
+            retriedSource = true;
+            media.src = previewPath;
+            return;
+        }
         // A late error from the previous preview must not replace the current one.
         if (media.parentElement === imageContainer) placeholder("Preview unavailable");
-    }, {once: true});
+    });
     if (isVideo) {
         media.controls = true;
         media.muted = true;
@@ -4242,7 +4350,7 @@ function renderPreviewPath(previewPath) {
     } else {
         media.alt = `${currentLora?.loraName || "LoRA"} — preview ${currentPreviewIndex + 1}`;
     }
-    media.src = previewPath;
+    media.src = localPreviewUrl(previewPath);
     imageContainer.appendChild(media);
     if (isVideo) media.play().catch(() => { /* Autoplay may be blocked. */ });
 }
@@ -4356,11 +4464,17 @@ function renderPreviewIndicators() {
                 thumbnail.loading = "lazy";
             }
             thumbnail.setAttribute("aria-hidden", "true");
+            let retriedSource = false;
             thumbnail.addEventListener("error", () => {
+                if (!retriedSource && localPreviewUrl(path) !== path) {
+                    retriedSource = true;
+                    thumbnail.src = path;
+                    return;
+                }
                 thumbnail.remove();
                 button.classList.add("preview-unavailable");
-            }, {once: true});
-            thumbnail.src = path;
+            });
+            thumbnail.src = localPreviewUrl(path);
             button.appendChild(thumbnail);
             button.addEventListener("click", () => {
                 currentPreviewIndex = index;
@@ -4403,8 +4517,8 @@ function setupBackupExport() {
     exportButton.addEventListener(
         "click",
         async () => {
-            const originalText =
-                exportButton.textContent;
+            const originalHtml =
+                exportButton.innerHTML;
 
             exportButton.disabled =
                 true;
@@ -4415,13 +4529,12 @@ function setupBackupExport() {
             try {
                 const response =
                     await fetch(
-                        `${API_BASE_URL}/backup/export`
+                        `${BACKUP_API_BASE_URL}/export`
                     );
 
                 if (!response.ok) {
-                    throw new Error(
-                        `Backup export failed. Status: ${response.status}`
-                    );
+                    const details = await response.text();
+                    throw new Error(`Backup export failed (HTTP ${response.status}). ${details}`);
                 }
 
                 const backupBlob =
@@ -4472,15 +4585,15 @@ function setupBackupExport() {
                 );
 
                 window.alert(
-                    "Unable to export the backup."
+                    error.message || "Unable to export the backup."
                 );
 
             } finally {
                 exportButton.disabled =
                     false;
 
-                exportButton.textContent =
-                    originalText;
+                exportButton.innerHTML =
+                    originalHtml;
             }
         }
     );
@@ -4569,7 +4682,7 @@ function setupBackupImport() {
 
             const confirmed =
                 window.confirm(
-                    "Import this backup? Existing LoRAs will remain and duplicate name/version/creator entries will be skipped."
+                    "Import this backup? Matching LoRAs will be updated using the backup. Missing fields in older backups will keep their existing values. Other LoRAs will remain."
                 );
 
             if (!confirmed) {
@@ -4578,8 +4691,8 @@ function setupBackupImport() {
                 return;
             }
 
-            const originalText =
-                importButton.textContent;
+            const originalHtml =
+                importButton.innerHTML;
 
             importButton.disabled =
                 true;
@@ -4598,7 +4711,7 @@ function setupBackupImport() {
 
                 const response =
                     await fetch(
-                        `${API_BASE_URL}/backup/import`,
+                        `${BACKUP_API_BASE_URL}/import`,
                         {
                             method: "POST",
                             body: formData
@@ -4664,8 +4777,8 @@ function setupBackupImport() {
                 importButton.disabled =
                     false;
 
-                importButton.textContent =
-                    originalText;
+                importButton.innerHTML =
+                    originalHtml;
 
                 fileInput.value = "";
             }
@@ -4709,6 +4822,7 @@ function buildBackupImportMessage(
     return (
         "Backup import complete.\n\n" +
         `Imported: ${imported}\n` +
+        `Updated: ${result.updatedCount ?? 0}\n` +
         `Skipped: ${skipped}\n` +
         `Failed: ${failed}`
     );
@@ -5083,7 +5197,8 @@ function setupLoraDetailsSwipe() {
     loraDetailsSwipe = setupSwipeDownToClose(
         modalSheet,
         scrollContainer,
-        finishDraggedLoraDetailsClose
+        finishDraggedLoraDetailsClose,
+        {allowVideoSwipe: true}
     );
 }
 // Returning through browser Back may restore a cached document rather than rerun startup.

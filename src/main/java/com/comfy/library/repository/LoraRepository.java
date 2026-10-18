@@ -18,6 +18,10 @@ import java.util.Optional;
 public interface LoraRepository extends JpaRepository<LoraEntity, Long>, JpaSpecificationExecutor<LoraEntity> {
     @Query("select distinct new com.comfy.library.dto.lora.LoraFilterMetadata(l.baseModel, l.category, l.subCategory) from LoraEntity l")
     List<LoraFilterMetadata> findFilterMetadata();
+    List<LoraEntity> findAllByLoraNameAndVersionAndCreator(String loraName, String version, String creator);
+    List<LoraEntity> findAllBySha256(String sha256);
+    List<LoraEntity> findAllByUrl(String url);
+
     boolean existsByLoraNameAndVersionAndCreator(String loraName, String version, String creator);
 
 

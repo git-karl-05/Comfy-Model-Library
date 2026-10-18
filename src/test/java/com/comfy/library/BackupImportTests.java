@@ -28,6 +28,8 @@ class BackupImportTests {
     @Autowired PoseRepository poses;
     @Autowired ObjectMapper mapper;
     @Autowired JdbcTemplate jdbc;
+    @Autowired com.comfy.library.service.LoraService loraService;
+    @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory;
     @Autowired org.springframework.core.env.Environment environment;
     MockMvc mvc;
 
@@ -120,7 +122,8 @@ class BackupImportTests {
         }
         mvc.perform(post("/api/backup/import").contentType("application/json").content(bytes))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.importedCount").value(0))
-                .andExpect(jsonPath("$.skippedCount").value(1156));
+                .andExpect(jsonPath("$.skippedCount").value(0))
+                .andExpect(jsonPath("$.updatedCount").value(1156));
         assertEquals(exported, mapper.readTree(exportLoras()).get("loras"));
 
         String snapshot = exportLoras();
@@ -180,7 +183,7 @@ class BackupImportTests {
         jdbc.execute("ALTER TABLE lora_entity ADD CONSTRAINT backup_test CHECK (lora_name <> 'Rejected')");
         try {
             mvc.perform(post("/api/backup/import").contentType("application/json").content("""
-                    {"backupVersion":1,"loras":[{"loraName":"Would be inserted"},{"loraName":"Rejected"}]}
+                    {"backupVersion":1,"loras":[{"loraName":"Existing","notes":"changed"},{"loraName":"Would be inserted"},{"loraName":"Rejected"}]}
                     """))
                     .andExpect(status().isBadRequest())
                     .andExpect(content().string(org.hamcrest.Matchers.containsString("No records were imported")));
@@ -189,6 +192,121 @@ class BackupImportTests {
         } finally {
             jdbc.execute("ALTER TABLE lora_entity DROP CONSTRAINT backup_test");
         }
+    }
+
+    @Test
+    void suppliedBackupRestoresAfterImportingTwoMetadataFiles() throws Exception {
+        JsonNode original = mapper.readTree(fixture()).get("loras");
+        for (int i = 0; i < 2; i++) {
+            JsonNode record = original.get(i);
+            var metadata = mapper.createObjectNode();
+            metadata.put("file_name", record.get("loraName").asText() + " by " + record.get("creator").asText());
+            metadata.put("file_path", "C:/models/folder/model-" + i + ".safetensors");
+            metadata.put("sha256", "metadata-hash-" + i);
+            var civitai = metadata.putObject("civitai");
+            civitai.put("name", record.get("version").asText());
+            civitai.put("downloadUrl", record.get("url").asText());
+            java.nio.file.Files.writeString(directory.resolve("model-" + i + ".metadata.json"),
+                    mapper.writeValueAsString(metadata));
+        }
+        assertEquals(2, loraService.importLorasFromFolder(directory.toString()).getImportedCount());
+        var ids = loras.findAll().stream().map(com.comfy.library.entity.LoraEntity::getId).toList();
+        mvc.perform(multipart("/api/backup/import").file(new MockMultipartFile(
+                "file", "backup.json", "application/json", fixture())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.importedCount").value(1154))
+                .andExpect(jsonPath("$.updatedCount").value(2));
+        assertEquals(1156, loras.count());
+        assertTrue(ids.stream().allMatch(loras::existsById));
+        JsonNode exported = mapper.readTree(exportLoras()).get("loras");
+        for (int i = 0; i < original.size(); i++) {
+            for (String field : original.get(i).propertyNames()) {
+                assertEquals(original.get(i).get(field), exported.get(i).get(field), "loras[" + i + "]." + field);
+            }
+        }
+        assertEquals("metadata-hash-0", loras.findById(ids.getFirst()).orElseThrow().getSha256());
+    }
+
+    @Test
+    void legacyBackupOverridesMetadataImportAndPreservesOmittedNewFields() throws Exception {
+        // Simulate persisted folder metadata, including fields absent from historical backups.
+        importJson("""
+                {"backupVersion":1,"loras":[{"loraName":"Model","version":"1","creator":"Artist",
+                 "notes":"metadata notes","positivePrompt":"metadata prompt","favorite":true,
+                 "modelFilePath":"C:/models/model.safetensors","sha256":"model-hash",
+                 "images":["/uploads/extra.png"],"createdDate":"2020-01-02T03:04:05"}]}
+                """);
+        Long id = loras.findAll().getFirst().getId();
+        String legacy = """
+                {"backupVersion":1,"loras":[{"loraName":"Model","version":"1","creator":"Artist",
+                 "notes":"backup notes","positivePrompt":null,"favorite":false,"seedNumber":9223372036854775807},
+                 {"loraName":"New record"}]}
+                """;
+        mvc.perform(post("/api/backup/import").contentType("application/json").content(legacy))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.importedCount").value(1))
+                .andExpect(jsonPath("$.updatedCount").value(1));
+        assertEquals(2, loras.count());
+        var saved = loras.findById(id).orElseThrow();
+        assertEquals("backup notes", saved.getNotes());
+        assertNull(saved.getPositivePrompt());
+        assertFalse(saved.isFavorite());
+        assertEquals(Long.MAX_VALUE, saved.getSeedNumber());
+        assertEquals("model-hash", saved.getSha256());
+        assertEquals("C:/models/model.safetensors", saved.getModelFilePath());
+        assertEquals(java.time.LocalDateTime.parse("2020-01-02T03:04:05"), saved.getCreatedDate());
+        assertEquals("/uploads/extra.png", images.findByLoraIdOrderByIdAsc(id).getFirst().getFilePath());
+        // Current backups also restore into a populated library without duplicating records/media.
+        String snapshot = exportLoras();
+        importJson(snapshot);
+        assertEquals(2, loras.count());
+        assertEquals(1, images.count());
+        assertEquals(mapper.readTree(snapshot).get("loras"), mapper.readTree(exportLoras()).get("loras"));
+        importJson("""
+                {"backupVersion":1,"loras":[{"loraName":"Model","version":"1","creator":"Artist",
+                "images":[],"sha256":null}]}
+                """);
+        assertEquals(0, images.count());
+        assertNull(loras.findById(id).orElseThrow().getSha256());
+    }
+
+    @Test
+    void stableSourceAndHashMatchRenamedRecordsWithoutMergingDifferentCreators() throws Exception {
+        importJson("""
+                {"backupVersion":1,"loras":[
+                {"loraName":"Metadata name","creator":"Metadata artist","sha256":"hash","url":"source"},
+                {"loraName":"Shared name","version":"1","creator":"A"},
+                {"loraName":"Shared name","version":"1","creator":"B"}]}
+                """);
+        Long id = loras.findAll().getFirst().getId();
+        importJson("""
+                {"backupVersion":1,"loras":[{"loraName":"Backup name","creator":"Backup artist","url":"source"},
+                {"loraName":"Shared name","version":"1","creator":"B","notes":"restore B"}]}
+                """);
+        assertEquals(3, loras.count());
+        assertEquals("Backup name", loras.findById(id).orElseThrow().getLoraName());
+        importJson("""
+                {"backupVersion":1,"loras":[{"loraName":"Another name","sha256":"hash"}]}
+                """);
+        assertEquals(3, loras.count());
+        assertEquals("Another name", loras.findById(id).orElseThrow().getLoraName());
+        assertNull(loras.findAllByLoraNameAndVersionAndCreator("Shared name", "1", "A").getFirst().getNotes());
+        assertEquals("restore B", loras.findAllByLoraNameAndVersionAndCreator("Shared name", "1", "B").getFirst().getNotes());
+    }
+
+    @Test
+    void ambiguousExistingMatchesFailWithoutPartialUpdates() throws Exception {
+        for (int i = 0; i < 2; i++) {
+            var entity = new com.comfy.library.entity.LoraEntity();
+            entity.setLoraName("Duplicate");
+            entity.setNotes("keep");
+            loras.saveAndFlush(entity);
+        }
+        mvc.perform(post("/api/backup/import").contentType("application/json").content("""
+                {"backupVersion":1,"loras":[{"loraName":"New"},{"loraName":"Duplicate","notes":"changed"}]}
+                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Multiple existing LoRAs")));
+        assertEquals(2, loras.count());
+        assertTrue(loras.findAll().stream().allMatch(entity -> "keep".equals(entity.getNotes())));
     }
 
     @Test

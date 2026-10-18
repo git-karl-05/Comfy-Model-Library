@@ -57,6 +57,8 @@
                             class="toolbar-action-button"
                             type="button"
                             aria-label="Open LoRA actions"
+                            aria-controls="actionMenuOverlay"
+                            aria-expanded="false"
                     >
                         ⋮
                     </button>
@@ -346,42 +348,33 @@
             ></div>
 
 
-            <div class="action-menu-divider"></div>
-
-
             <button
-                    id="exportBackupButton"
+                    id="refreshLorasButton"
                     class="compact-action-button"
                     type="button"
+                    title="Refresh LoRA library and filter options"
             >
-
-                    <span class="compact-action-icon">
-                        ↓
-                    </span>
-
-                <span>
-                        Export Backup
-                    </span>
-
+                <span class="compact-action-icon" aria-hidden="true">↻</span>
+                <span id="refreshLorasLabel">Refresh</span>
             </button>
 
-
-            <button
-                    id="importBackupButton"
-                    class="compact-action-button"
-                    type="button"
-            >
-
-                    <span class="compact-action-icon">
-                        ↑
-                    </span>
-
-                <span>
-                        Import Backup
-                    </span>
-
+            <button id="backupMenuButton" class="compact-action-button" type="button"
+                    aria-expanded="false" aria-controls="backupOptions" title="JSON backup options">
+                <span class="compact-action-icon" aria-hidden="true">▣</span>
+                <span>Backup</span>
             </button>
-
+            <div id="backupOptions" class="backup-options hidden">
+                <button id="exportBackupButton" class="compact-action-button" type="button"
+                        title="Export library as a JSON backup">
+                    <span class="compact-action-icon" aria-hidden="true">↓</span>
+                    <span>Export (JSON)</span>
+                </button>
+                <button id="importBackupButton" class="compact-action-button" type="button"
+                        title="Import a JSON backup">
+                    <span class="compact-action-icon" aria-hidden="true">↑</span>
+                    <span>Import (JSON)</span>
+                </button>
+            </div>
 
             <input
                     id="backupFileInput"

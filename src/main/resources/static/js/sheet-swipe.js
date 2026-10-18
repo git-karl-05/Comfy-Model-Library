@@ -2,7 +2,7 @@
 const SHEET_DISMISS_DISTANCE = 120;
 const SHEET_RESET_DURATION = 180;
 const sheetSwipeControllers = new WeakMap();
-function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileScrolled = false} = {}) {
+function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileScrolled = false, allowVideoSwipe = false} = {}) {
     if (!sheet) return null;
     if (sheetSwipeControllers.has(sheet)) return sheetSwipeControllers.get(sheet);
     let startX = 0, startY = 0, distance = 0;
@@ -33,7 +33,12 @@ function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileSc
         clearTimeout(clickTimer);
         suppressClick = false;
         const target = event.target;
-        if (target.closest('button, a, input, select, textarea, video, audio, [role="button"], [contenteditable="true"]')) return;
+        if (target.closest('button, a, input, select, textarea, audio, [role="button"], [contenteditable="true"]')) return;
+        if (target.tagName === "VIDEO") {
+            if (!allowVideoSwipe) return;
+            // Native controls retarget touches to VIDEO. Keep their bottom strip interactive.
+            if (target.controls && event.touches[0].clientY >= target.getBoundingClientRect().bottom - 64) return;
+        }
         const handle = target.closest(".sheet-drag-handle, .filter-sheet-handle");
         if (scrollContainer?.scrollTop > 2 && !(handleWhileScrolled && handle)) return;
         startX = event.touches[0].clientX;

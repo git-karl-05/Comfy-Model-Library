@@ -85,62 +85,66 @@ public class LoraBackupService {
         validateBackup(backup);
 
         int importedCount = 0;
-        int skippedCount = 0;
+        int updatedCount = 0;
 
         for (LoraBackupItem item : backup.getLoras()) {
-
-            boolean alreadyExists =
-                    loraRepository
-                            .existsByLoraNameAndVersionAndCreator(
-                                    item.getLoraName(),
-                                    item.getVersion(), item.getCreator()
-                            );
-
-            if (alreadyExists) {
-                skippedCount++;
-                continue;
-            }
-
-            LoraEntity entity = new LoraEntity();
-
-            entity.setLoraName(item.getLoraName());
-            entity.setCreator(item.getCreator());
-            entity.setVersion(item.getVersion());
-            entity.setCategory(item.getCategory());
-            entity.setSubCategory(item.getSubCategory());
-            entity.setBaseModel(item.getBaseModel());
-            entity.setGroupName(item.getGroupName());
-            entity.setPositivePrompt(item.getPositivePrompt());
-            entity.setNegativePrompt(item.getNegativePrompt());
-            entity.setSeedNumber(item.getSeedNumber());
-            entity.setNotes(item.getNotes());
-
-            entity.setFavorite(
-                    Boolean.TRUE.equals(
-                            item.getFavorite()
-                    )
-            );
-
-            entity.setUrl(item.getUrl());
-            entity.setFilePath(item.getFilePath());
-            entity.setModelFilePath(item.getModelFilePath());
-            entity.setSha256(item.getSha256());
-            entity.setCreatedDate(item.getCreatedDate());
-            entity.setLastUpdated(item.getLastUpdated());
+            LoraEntity existing = findExisting(item);
+            LoraEntity entity = existing == null ? new LoraEntity() : existing;
+            // Supplied values win, including null/false; omitted legacy fields stay intact.
+            if (item.hasField("loraName")) entity.setLoraName(item.getLoraName());
+            if (item.hasField("creator")) entity.setCreator(item.getCreator());
+            if (item.hasField("version")) entity.setVersion(item.getVersion());
+            if (item.hasField("category")) entity.setCategory(item.getCategory());
+            if (item.hasField("subCategory")) entity.setSubCategory(item.getSubCategory());
+            if (item.hasField("baseModel")) entity.setBaseModel(item.getBaseModel());
+            if (item.hasField("groupName")) entity.setGroupName(item.getGroupName());
+            if (item.hasField("positivePrompt")) entity.setPositivePrompt(item.getPositivePrompt());
+            if (item.hasField("negativePrompt")) entity.setNegativePrompt(item.getNegativePrompt());
+            if (item.hasField("seedNumber")) entity.setSeedNumber(item.getSeedNumber());
+            if (item.hasField("notes")) entity.setNotes(item.getNotes());
+            if (item.hasField("favorite")) entity.setFavorite(Boolean.TRUE.equals(item.getFavorite()));
+            if (item.hasField("url")) entity.setUrl(item.getUrl());
+            if (item.hasField("filePath")) entity.setFilePath(item.getFilePath());
+            if (item.hasField("modelFilePath")) entity.setModelFilePath(item.getModelFilePath());
+            if (item.hasField("sha256")) entity.setSha256(item.getSha256());
+            if (item.hasField("createdDate")) entity.setCreatedDate(item.getCreatedDate());
+            if (item.hasField("lastUpdated")) entity.setLastUpdated(item.getLastUpdated());
 
             loraRepository.save(entity);
-            if (item.getImages() != null) {
-                for (String path : item.getImages()) imageRepository.save(new LoraImageEntity(path, entity));
+            if (item.hasField("images")) {
+                imageRepository.deleteAll(imageRepository.findByLoraIdOrderByIdAsc(entity.getId()));
+                if (item.getImages() != null) {
+                    for (String path : item.getImages()) {
+                        imageRepository.save(new LoraImageEntity(path, entity));
+                    }
+                }
             }
-
-            importedCount++;
+            if (existing == null) importedCount++;
+            else updatedCount++;
         }
-
         loraRepository.flush();
-        return new BackupRestoreResponse(
-                importedCount,
-                skippedCount
-        );
+        imageRepository.flush();
+        return new BackupRestoreResponse(importedCount, 0, updatedCount);
+    }
+
+    private LoraEntity findExisting(LoraBackupItem item) {
+        // Stable file/source identity survives name and creator edits after metadata import.
+        List<LoraEntity> matches = List.of();
+        if (item.getSha256() != null && !item.getSha256().isBlank()) {
+            matches = loraRepository.findAllBySha256(item.getSha256());
+        }
+        if (matches.isEmpty() && item.getUrl() != null && !item.getUrl().isBlank()) {
+            matches = loraRepository.findAllByUrl(item.getUrl());
+        }
+        if (matches.isEmpty()) {
+            matches = loraRepository.findAllByLoraNameAndVersionAndCreator(
+                    item.getLoraName(), item.getVersion(), item.getCreator());
+        }
+        if (matches.size() > 1) {
+            throw new IllegalArgumentException("Multiple existing LoRAs match backup record '"
+                    + item.getLoraName() + "'. Resolve the duplicates before restoring. No records were changed.");
+        }
+        return matches.isEmpty() ? null : matches.getFirst();
     }
 
     private void validateBackup(

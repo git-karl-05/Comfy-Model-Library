@@ -626,11 +626,12 @@ body {
     background-color: var(--surface-light);
 }
 
-.layout-icon-button.active {
+.layout-icon-button.active,
+.toolbar-action-button[aria-expanded="true"] {
     border-color: var(--primary);
 
-    background-color: var(--primary);
-    color: white;
+    background-color: var(--surface);
+    color: var(--primary-hover);
 }
 
 /* =========================
@@ -647,6 +648,10 @@ body {
 
 .lora-list.single-column {
     grid-template-columns: 1fr;
+}
+
+#loraList {
+    padding-top: var(--gallery-spacing);
 }
 
 .lora-list.double-column {
@@ -3331,3 +3336,30 @@ body.returning-to-modal
 .expanded-field-value { flex: 1; min-height: min(60dvh, 600px); resize: none; }
 .clipboard-fallback { position: fixed; left: -9999px; }
 .pose-edit-image-nav { position: absolute; bottom: 12px; left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; z-index: 4; }
+
+/* Nested backup actions reuse the action menu controls. */
+.backup-options {
+    display: grid;
+    gap: 4px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border);
+}
+
+/* Bring LoRA media closer to the sheet edge without changing its dimensions. */
+#loraDetailsModal .lora-details-scroll-area {
+    padding-top: 4px;
+    padding-bottom: 8px;
+    gap: 8px;
+}
+
+#loraDetailsModal .sheet-header {
+    padding-block: 2px;
+}
+
+#loraDetailsModal .sheet-drag-handle {
+    margin-block: 6px 2px;
+}
+
+#loraDetailsModal #detailsImageContainer {
+    touch-action: pan-y pinch-zoom;
+}

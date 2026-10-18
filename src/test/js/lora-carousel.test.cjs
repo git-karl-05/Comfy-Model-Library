@@ -167,3 +167,99 @@ test('out-of-order detail responses cannot reopen an older LoRA', async () => {
     assert.equal(f.run('currentLora.id'), 2);
     assert.equal(f.ids.get('detailsImageContainer').children[0].src, '/new.png');
 });
+
+test('remote image/video previews and thumbnails share the local cache and retry original URLs on failure', async () => {
+    const f = fixture();
+    f.run('currentLora.filePath = "https://example.com/main.png";');
+    f.context.fetch = async () => ({ok: true, json: async () => [
+        {filePath: 'https://example.com/main.png'}, {filePath: 'https://example.com/clip.mp4'}]});
+    await f.run('loadPreviewCarousel(1)');
+    const image = f.ids.get('detailsImageContainer').children[0];
+    assert.equal(image.src, '/api/loras/preview?url=https%3A%2F%2Fexample.com%2Fmain.png');
+    const thumbnail = f.ids.get('previewIndicators').children[0].children[0];
+    assert.equal(thumbnail.src, image.src);
+    image.handlers.error();
+    assert.equal(image.src, 'https://example.com/main.png');
+    image.handlers.error();
+    assert.equal(f.ids.get('detailsImageContainer').children[0].textContent, 'Preview unavailable');
+    f.run('showNextPreview();');
+    const video = f.ids.get('detailsImageContainer').children[0];
+    assert.equal(video.tagName, 'VIDEO');
+    assert.equal(video.src, '/api/loras/preview?url=https%3A%2F%2Fexample.com%2Fclip.mp4');
+    video.handlers.error();
+    assert.equal(video.src, 'https://example.com/clip.mp4');
+});
+
+function swipeEvent(x, y, target = {tagName: 'IMG', closest: () => null}) {
+    return {target, touches: [{clientX: x, clientY: y}], changedTouches: [{clientX: x, clientY: y}],
+        cancelable: true, prevented: false, stopped: false,
+        preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; }};
+}
+
+async function swipeFixture() {
+    const f = fixture();
+    f.context.fetch = async () => ({ok: true, json: async () => ['/second.png', '/clip.mp4']});
+    await f.run('loadPreviewCarousel(1)');
+    f.media = f.ids.get('detailsImageContainer');
+    f.swipe = (fromX, fromY, toX, toY, target) => {
+        f.media.handlers.touchstart(swipeEvent(fromX, fromY, target));
+        const move = swipeEvent(toX, toY, target);
+        f.media.handlers.touchmove(move);
+        const end = swipeEvent(toX, toY, target); end.touches = [];
+        f.media.handlers.touchend(end);
+        return move;
+    };
+    return f;
+}
+
+test('horizontal swipes navigate images and videos, wrap and update selected thumbnails', async () => {
+    const f = await swipeFixture();
+    const move = f.swipe(150, 100, 50, 104);
+    assert.equal(move.prevented, true);
+    assert.equal(move.stopped, true);
+    assert.equal(f.media.children[0].src, '/second.png');
+    assert.equal(f.ids.get('previewIndicators').children[1].attrs['aria-pressed'], 'true');
+    f.swipe(150, 100, 50, 100);
+    const video = f.media.children[0];
+    assert.equal(video.tagName, 'VIDEO');
+    video.closest = () => null;
+    video.getBoundingClientRect = () => ({bottom: 400});
+    f.swipe(150, 100, 50, 100, video);
+    assert.equal(f.media.children[0].src, '/main.png');
+    assert.equal(video.paused, true);
+    f.swipe(50, 100, 150, 100);
+    assert.equal(f.media.children[0].src, '/clip.mp4');
+});
+
+test('vertical scrolling, small movements, controls and cancelled/multitouch gestures never change previews', async () => {
+    const f = await swipeFixture();
+    assert.equal(f.swipe(150, 100, 140, 220).prevented, false);
+    f.swipe(150, 100, 135, 101);
+    f.swipe(150, 100, 50, 100, {tagName: 'BUTTON', closest: () => ({})});
+    f.swipe(150, 380, 50, 380, {tagName: 'VIDEO', controls: true, closest: () => null,
+        getBoundingClientRect: () => ({bottom: 400})});
+    f.media.handlers.touchstart(swipeEvent(150, 100));
+    f.media.handlers.touchmove(swipeEvent(50, 100));
+    f.media.handlers.touchcancel();
+    const end = swipeEvent(50, 100); end.touches = [];
+    f.media.handlers.touchend(end);
+    f.media.handlers.touchstart(swipeEvent(150, 100));
+    const multi = swipeEvent(50, 100); multi.touches.push({clientX: 60, clientY: 110});
+    f.media.handlers.touchmove(multi);
+    f.media.handlers.touchend(end);
+    assert.equal(f.media.children[0].src, '/main.png');
+});
+
+test('changing or resetting the current preview cancels a pending swipe; a single preview stays put', async () => {
+    const f = await swipeFixture();
+    const end = swipeEvent(50, 100); end.touches = [];
+    f.media.handlers.touchstart(swipeEvent(150, 100));
+    f.run('showNextPreview()');
+    f.media.handlers.touchend(end);
+    assert.equal(f.media.children[0].src, '/second.png');
+    f.media.handlers.touchstart(swipeEvent(150, 100));
+    f.run('resetPreviewCarousel(); currentPreviewImages = ["/only.png"]; renderCurrentPreview();');
+    f.media.handlers.touchend(end);
+    f.swipe(150, 100, 50, 100);
+    assert.equal(f.media.children[0].src, '/only.png');
+});

@@ -238,7 +238,10 @@ async function loadCategories() {
     });
     if (select) select.value = category;
 }
-function closeActions() { byId("actionMenuOverlay").classList.add("hidden"); }
+function closeActions() {
+    byId("actionMenuOverlay").classList.add("hidden");
+    byId("openActionMenuButton").setAttribute("aria-expanded", "false");
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
     if (!byId("poseList")) {
@@ -270,7 +273,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     on("optionsButton", () => menu(true));
     on("closeMenuButton", () => menu(false));
     on("menuBackdrop", () => menu(false));
-    on("openActionMenuButton", () => byId("actionMenuOverlay").classList.toggle("hidden"));
+    on("openActionMenuButton", () => {
+        byId("actionMenuOverlay").classList.toggle("hidden");
+        byId("openActionMenuButton").setAttribute("aria-expanded", String(!byId("actionMenuOverlay").classList.contains("hidden")));
+    });
     on("actionMenuOverlay", event => { if (event.target === byId("actionMenuOverlay")) closeActions(); });
     on("addPoseActionButton", () => FormNavigation.go("/html/add-pose.html"));
     on("editPoseButton", () => { if (currentPose) FormNavigation.go(`/html/edit-pose.html?id=${currentPose.id}`); });

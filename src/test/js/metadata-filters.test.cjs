@@ -8,7 +8,9 @@ function fixture() {
     const elements = new Map();
     function element() {
         const classes = new Set();
-        return {value: 'ALL', dataset: {}, children: [], handlers: {}, style: {},
+        return {value: 'ALL', dataset: {}, children: [], handlers: {}, style: {}, attrs: {},
+            setAttribute(key, value) { this.attrs[key] = value; }, removeAttribute(key) { delete this.attrs[key]; },
+            focus() { this.focused = true; },
             classList: {contains: c => classes.has(c), toggle(c, on) { if (on) classes.add(c); else classes.delete(c); }},
             replaceChildren() { this.children = []; }, appendChild(child) { this.children.push(child); },
             addEventListener(key, handler) { this.handlers[key] = handler; }};
@@ -91,4 +93,76 @@ test('empty libraries have only All choices and Favorites; failures are visible 
     assert.equal(f.opened, 1);
     assert.match(f.errors[0], /Unable to load filter metadata/);
     assert.equal(f.elements.get('filterButton').disabled, false);
+});
+
+test('Refresh action reloads metadata and gallery while preserving search, filters, sort and page', async () => {
+    const f = fixture();
+    let refreshed = 0, closed = 0;
+    f.context.recordRefresh = () => { refreshed++; };
+    f.context.recordClose = () => { closed++; };
+    f.run('refreshCurrentView = async () => recordRefresh(); closeActionMenu = recordClose; setupActionMenu();');
+    f.run('currentPage = 4; appliedSortBy = "loraName"; appliedSortDirection = "asc"; appliedBaseModelFilter = "Illustrious"; appliedCategoryFilter = "STYLE"; appliedSubcategoryFilter = "Watercolor"; isSearchActive = true; lastSearchKeyword = "sample";');
+    f.elements.get('searchInput').value = 'sample';
+    f.context.fetch = async (url, options) => {
+        assert.equal(url, '/api/loras/filter-options');
+        assert.equal(options.cache, 'no-store');
+        return {ok: true, json: async () => [...rows, {baseModel: 'Imported Base', category: 'POSES', subCategory: 'New folder'}]};
+    };
+    await f.elements.get('refreshLorasButton').handlers.click();
+    assert.equal(refreshed, 1);
+    assert.equal(closed, 1);
+    assert.ok(f.options('baseModelFilter').some(([value]) => value === 'Imported Base'));
+    assert.equal(f.elements.get('baseModelFilter').value, 'Illustrious');
+    assert.equal(f.elements.get('subcategoryFilter').value, 'Watercolor');
+    assert.equal(f.run('currentPage'), 4);
+    assert.equal(f.run('appliedSortBy'), 'loraName');
+    assert.equal(f.run('appliedSortDirection'), 'asc');
+    assert.equal(f.run('isSearchActive'), true);
+    assert.equal(f.run('lastSearchKeyword'), 'sample');
+    assert.equal(f.elements.get('searchInput').value, 'sample');
+    assert.equal(f.elements.get('refreshLorasButton').disabled, false);
+    assert.equal(f.elements.get('refreshLorasLabel').textContent, 'Refresh');
+    assert.equal(f.elements.get('openActionMenuButton').focused, true);
+});
+
+test('Refresh blocks duplicate clicks during loading and recovers after a metadata error', async () => {
+    const f = fixture();
+    let fetches = 0, refreshed = 0;
+    f.context.recordRefresh = () => { refreshed++; };
+    f.run('refreshCurrentView = async () => recordRefresh();');
+    let finish;
+    f.context.fetch = () => { fetches++; return new Promise(resolve => { finish = resolve; }); };
+    const first = f.run('refreshLoraLibrary()');
+    assert.equal(f.elements.get('refreshLorasButton').disabled, true);
+    assert.equal(f.elements.get('refreshLorasButton').attrs['aria-busy'], 'true');
+    assert.equal(f.elements.get('refreshLorasLabel').textContent, 'Refreshing...');
+    await f.run('refreshLoraLibrary()');
+    assert.equal(fetches, 1);
+    finish({ok: false, status: 500});
+    await first;
+    assert.equal(refreshed, 0);
+    assert.match(f.errors[0], /Unable to refresh the library/);
+    assert.equal(f.elements.get('refreshLorasButton').disabled, false);
+    assert.equal(f.elements.get('refreshLorasButton').attrs['aria-busy'], undefined);
+    assert.equal(f.elements.get('refreshLorasLabel').textContent, 'Refresh');
+});
+
+test('Backup below Refresh toggles accessible JSON actions without changing their handlers', () => {
+    const f = fixture();
+    f.run('setupBackupExport(); setupBackupImport(); setupActionMenu();');
+    const options = f.elements.get('backupOptions');
+    options.classList.toggle('hidden', true);
+    const toggle = f.elements.get('backupMenuButton');
+    toggle.handlers.click();
+    assert.equal(options.classList.contains('hidden'), false);
+    assert.equal(toggle.attrs['aria-expanded'], 'true');
+    assert.equal(typeof f.elements.get('exportBackupButton').handlers.click, 'function');
+    assert.equal(typeof f.elements.get('importBackupButton').handlers.click, 'function');
+    toggle.handlers.click();
+    assert.equal(options.classList.contains('hidden'), true);
+    assert.equal(toggle.attrs['aria-expanded'], 'false');
+    const html = fs.readFileSync('src/main/resources/static/html/index.html', 'utf8');
+    assert.ok(html.indexOf('id="refreshLorasButton"') < html.indexOf('id="backupMenuButton"'));
+    assert.match(html, /Export \(JSON\)/);
+    assert.match(html, /Import \(JSON\)/);
 });

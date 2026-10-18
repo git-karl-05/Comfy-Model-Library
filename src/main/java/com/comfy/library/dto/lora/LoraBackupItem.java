@@ -22,6 +22,13 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 })
 public class LoraBackupItem {
 
+    // Missing legacy fields must be distinguished from explicit null values.
+    private final java.util.Set<String> providedFields = new java.util.HashSet<>();
+
+    public boolean hasField(String field) {
+        return providedFields.contains(field);
+    }
+
     private String loraName;
     private String creator;
     private String version;
@@ -46,21 +53,37 @@ public class LoraBackupItem {
     private java.util.List<String> images;
 
     public String getModelFilePath() { return modelFilePath; }
-    public void setModelFilePath(String value) { modelFilePath = value; }
+    public void setModelFilePath(String value) {
+        providedFields.add("modelFilePath");
+        modelFilePath = value;
+    }
     public String getSha256() { return sha256; }
-    public void setSha256(String value) { sha256 = value; }
+    public void setSha256(String value) {
+        providedFields.add("sha256");
+        sha256 = value;
+    }
     public java.time.LocalDateTime getCreatedDate() { return createdDate; }
-    public void setCreatedDate(java.time.LocalDateTime value) { createdDate = value; }
+    public void setCreatedDate(java.time.LocalDateTime value) {
+        providedFields.add("createdDate");
+        createdDate = value;
+    }
     public java.time.LocalDateTime getLastUpdated() { return lastUpdated; }
-    public void setLastUpdated(java.time.LocalDateTime value) { lastUpdated = value; }
+    public void setLastUpdated(java.time.LocalDateTime value) {
+        providedFields.add("lastUpdated");
+        lastUpdated = value;
+    }
     public java.util.List<String> getImages() { return images; }
-    public void setImages(java.util.List<String> value) { images = value; }
+    public void setImages(java.util.List<String> value) {
+        providedFields.add("images");
+        images = value;
+    }
 
     public String getLoraName() {
         return loraName;
     }
 
     public void setLoraName(String loraName) {
+        providedFields.add("loraName");
         this.loraName = loraName;
     }
 
@@ -69,6 +92,7 @@ public class LoraBackupItem {
     }
 
     public void setCreator(String creator) {
+        providedFields.add("creator");
         this.creator = creator;
     }
 
@@ -77,6 +101,7 @@ public class LoraBackupItem {
     }
 
     public void setVersion(String version) {
+        providedFields.add("version");
         this.version = version;
     }
 
@@ -85,6 +110,7 @@ public class LoraBackupItem {
     }
 
     public void setCategory(LoraCategory category) {
+        providedFields.add("category");
         this.category = category;
     }
 
@@ -93,6 +119,7 @@ public class LoraBackupItem {
     }
 
     public void setSubCategory(String subCategory) {
+        providedFields.add("subCategory");
         this.subCategory = subCategory;
     }
 
@@ -101,6 +128,7 @@ public class LoraBackupItem {
     }
 
     public void setBaseModel(String baseModel) {
+        providedFields.add("baseModel");
         this.baseModel = baseModel;
     }
 
@@ -109,6 +137,7 @@ public class LoraBackupItem {
     }
 
     public void setGroupName(String groupName) {
+        providedFields.add("groupName");
         this.groupName = groupName;
     }
 
@@ -117,6 +146,7 @@ public class LoraBackupItem {
     }
 
     public void setPositivePrompt(String positivePrompt) {
+        providedFields.add("positivePrompt");
         this.positivePrompt = positivePrompt;
     }
 
@@ -125,6 +155,7 @@ public class LoraBackupItem {
     }
 
     public void setNegativePrompt(String negativePrompt) {
+        providedFields.add("negativePrompt");
         this.negativePrompt = negativePrompt;
     }
 
@@ -133,6 +164,7 @@ public class LoraBackupItem {
     }
 
     public void setSeedNumber(Long seedNumber) {
+        providedFields.add("seedNumber");
         this.seedNumber = seedNumber;
     }
 
@@ -141,6 +173,7 @@ public class LoraBackupItem {
     }
 
     public void setNotes(String notes) {
+        providedFields.add("notes");
         this.notes = notes;
     }
 
@@ -149,6 +182,7 @@ public class LoraBackupItem {
     }
 
     public void setFavorite(Boolean favorite) {
+        providedFields.add("favorite");
         this.favorite = favorite;
     }
 
@@ -157,6 +191,7 @@ public class LoraBackupItem {
     }
 
     public void setUrl(String url) {
+        providedFields.add("url");
         this.url = url;
     }
 
@@ -165,6 +200,7 @@ public class LoraBackupItem {
     }
 
     public void setFilePath(String filePath) {
+        providedFields.add("filePath");
         this.filePath = filePath;
     }
 }
