@@ -630,14 +630,11 @@ function populateEditForm(lora) {
     );
 
 
+    setInputValue("editPrompt", lora.prompt);
+
     setInputValue(
         "editPositivePrompt",
         lora.positivePrompt
-    );
-
-    setInputValue(
-        "editNegativePrompt",
-        lora.negativePrompt
     );
 
     setInputValue(
@@ -695,15 +692,14 @@ function buildLoraUpdateRequest() {
                 ? null
                 : Number(seedValue),
 
+        prompt: getInputValue("editPrompt"),
+
         positivePrompt:
             getInputValue(
                 "editPositivePrompt"
             ),
 
-        negativePrompt:
-            getInputValue(
-                "editNegativePrompt"
-            ),
+        negativePrompt: currentLora?.negativePrompt ?? null,
 
         notes:
             getInputValue(

@@ -1,0 +1,8 @@
+{
+  "RuleName": "TCP Query User{B4F04D00-9FE9-44E8-A1ED-FF2D4E7EF949}C:\\users\\karli\\.jdks\\openjdk-25.0.2\\bin\\java.exe",
+  "Enabled": "True",
+  "Profile": "Private",
+  "Action": "Block",
+  "Program": "C:\\users\\karli\\.jdks\\openjdk-25.0.2\\bin\\java.exe",
+  "LocalPort": "Any"
+}

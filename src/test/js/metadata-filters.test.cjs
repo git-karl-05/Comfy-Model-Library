@@ -23,6 +23,7 @@ function fixture() {
         window: {addEventListener() {}, alert: message => errors.push(message)},
         IntersectionObserver: class {}, createGallerySort: () => ({}), console
     });
+    vm.runInContext(fs.readFileSync('src/main/resources/static/js/preview-media.js', 'utf8'), context);
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/app.js', 'utf8'), context);
     context.opened = () => { opened++; };
     const run = code => vm.runInContext(code, context);
@@ -49,21 +50,21 @@ test('filter choices use exact stored text and cascade from base model to catego
     };
     await f.elements.get('filterButton').handlers.click();
     assert.equal(f.opened, 1);
-    assert.deepEqual(f.options('baseModelFilter'), [['ALL', 'All Base Models'], ['Illustrious', 'Illustrious'],
+    assert.deepEqual(f.options('baseModelFilter'), [['ALL', 'Select a base model'], ['Illustrious', 'Illustrious'],
         ['Wan Video 2.2 I2V-A14B', 'Wan Video 2.2 I2V-A14B']]);
     f.elements.get('baseModelFilter').value = 'Illustrious';
     f.elements.get('baseModelFilter').handlers.change();
-    assert.deepEqual(f.options('categoryFilter').map(([value]) => value), ['ALL', 'FAVORITES', 'CHARACTER', 'STYLE']);
+    assert.deepEqual(f.options('categoryFilter').map(([value]) => value), ['ALL', 'CHARACTER', 'STYLE']);
     f.elements.get('categoryFilter').value = 'CHARACTER';
     f.elements.get('categoryFilter').handlers.change();
-    assert.deepEqual(f.options('subcategoryFilter'), [['ALL', 'All Subcategories'], ['Angel Blade', 'Angel Blade']]);
+    assert.deepEqual(f.options('subcategoryFilter'), [['ALL', 'Select a subcategory'], ['Angel Blade', 'Angel Blade']]);
     f.elements.get('subcategoryFilter').value = 'Angel Blade';
     f.elements.get('baseModelFilter').value = 'Wan Video 2.2 I2V-A14B';
     f.elements.get('baseModelFilter').handlers.change();
     assert.equal(f.elements.get('categoryFilter').value, 'ALL');
     assert.equal(f.elements.get('subcategoryFilter').value, 'ALL');
-    assert.deepEqual(f.options('categoryFilter').map(([value]) => value), ['ALL', 'FAVORITES', 'CONCEPT']);
-    assert.deepEqual(f.options('subcategoryFilter').map(([value]) => value), ['ALL', 'Motion', 'Transition']);
+    assert.deepEqual(f.options('categoryFilter').map(([value]) => value), ['ALL', 'CONCEPT']);
+    assert.deepEqual(f.options('subcategoryFilter').map(([value]) => value), ['ALL']);
 });
 
 test('reopening preserves valid applied filters and refreshes metadata after imports/edits', async () => {
@@ -81,12 +82,12 @@ test('reopening preserves valid applied filters and refreshes metadata after imp
     assert.equal(f.elements.get('subcategoryFilter').value, 'Watercolor');
 });
 
-test('empty libraries have only All choices and Favorites; failures are visible without opening stale options', async () => {
+test('empty libraries retain only hidden placeholders; failures remain visible', async () => {
     const f = fixture();
     f.context.fetch = async () => ({ok: true, json: async () => []});
     await f.elements.get('filterButton').handlers.click();
     assert.equal(f.options('baseModelFilter').length, 1);
-    assert.equal(f.options('categoryFilter').length, 2);
+    assert.equal(f.options('categoryFilter').length, 1);
     assert.equal(f.options('subcategoryFilter').length, 1);
     f.context.fetch = async () => ({ok: false, status: 500});
     await f.elements.get('filterButton').handlers.click();
@@ -165,4 +166,35 @@ test('Backup below Refresh toggles accessible JSON actions without changing thei
     assert.ok(html.indexOf('id="refreshLorasButton"') < html.indexOf('id="backupMenuButton"'));
     assert.match(html, /Export \(JSON\)/);
     assert.match(html, /Import \(JSON\)/);
+});
+
+
+test('category is disabled until a base model is selected; Favorites is never a category', async () => {
+    const f = fixture();
+    f.context.fetch = async () => ({ok: true, json: async () => rows});
+    await f.elements.get('filterButton').handlers.click();
+    const visible = id => f.elements.get(id).children.filter(option => !option.hidden);
+    assert.deepEqual(visible('categoryFilter').map(option => [option.value, option.textContent]), []);
+    assert.equal(visible('subcategoryFilter').length, 0);
+    assert.equal(f.elements.get('categoryFilter').disabled, true);
+    assert.equal(f.elements.get('subcategoryFilter').disabled, true);
+    for (const id of ['baseModelFilter', 'categoryFilter', 'subcategoryFilter']) {
+        const placeholder = f.elements.get(id).children[0];
+        assert.equal(placeholder.hidden, true);
+        assert.equal(placeholder.disabled, true);
+        assert.equal(f.elements.get(id).value, 'ALL');
+    }
+    f.elements.get('baseModelFilter').value = 'Illustrious';
+    f.elements.get('baseModelFilter').handlers.change();
+    assert.deepEqual(visible('categoryFilter').map(option => option.textContent), ['Character', 'Style']);
+    assert.equal(f.elements.get('categoryFilter').disabled, false);
+    assert.equal(visible('subcategoryFilter').length, 0);
+    f.elements.get('categoryFilter').value = 'CHARACTER';
+    f.elements.get('categoryFilter').handlers.change();
+    assert.equal(f.elements.get('subcategoryFilter').disabled, false);
+    assert.deepEqual(visible('subcategoryFilter').map(option => option.textContent), ['Angel Blade']);
+    f.elements.get('categoryFilter').value = 'FAVORITES';
+    f.elements.get('categoryFilter').handlers.change();
+    assert.equal(visible('subcategoryFilter').length, 0);
+    assert.equal(f.elements.get('subcategoryFilter').disabled, true);
 });

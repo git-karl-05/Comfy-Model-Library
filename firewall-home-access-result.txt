@@ -1,0 +1,1 @@
+SUCCESS: Allowed app TCP 8080 from 192.168.1.0/24 on Private networks; other Java TCP ports remain blocked.

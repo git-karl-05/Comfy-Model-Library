@@ -52,6 +52,7 @@ public class LoraBackupService {
             item.setGroupName(entity.getGroupName());
 
             item.setPositivePrompt(entity.getPositivePrompt());
+            item.setPrompt(entity.getPrompt());
             item.setNegativePrompt(entity.getNegativePrompt());
             item.setSeedNumber(entity.getSeedNumber());
             item.setNotes(entity.getNotes());
@@ -98,6 +99,7 @@ public class LoraBackupService {
             if (item.hasField("subCategory")) entity.setSubCategory(item.getSubCategory());
             if (item.hasField("baseModel")) entity.setBaseModel(item.getBaseModel());
             if (item.hasField("groupName")) entity.setGroupName(item.getGroupName());
+            if (item.hasField("prompt")) entity.setPrompt(item.getPrompt());
             if (item.hasField("positivePrompt")) entity.setPositivePrompt(item.getPositivePrompt());
             if (item.hasField("negativePrompt")) entity.setNegativePrompt(item.getNegativePrompt());
             if (item.hasField("seedNumber")) entity.setSeedNumber(item.getSeedNumber());
@@ -184,6 +186,7 @@ public class LoraBackupService {
             validateLength(prefix + ".subCategory", item.getSubCategory(), 255);
             validateLength(prefix + ".baseModel", item.getBaseModel(), 255);
             validateLength(prefix + ".groupName", item.getGroupName(), 255);
+            validateLength(prefix + ".prompt", item.getPrompt(), 5000);
             validateLength(prefix + ".positivePrompt", item.getPositivePrompt(), 5000);
             validateLength(prefix + ".negativePrompt", item.getNegativePrompt(), 5000);
             validateLength(prefix + ".notes", item.getNotes(), 5000);

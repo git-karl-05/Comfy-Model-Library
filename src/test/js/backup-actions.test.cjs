@@ -21,6 +21,7 @@ function fixture() {
         FormData, IntersectionObserver: class {}, createGallerySort: () => ({}),
         console: {log() {}, error() {}}
     });
+    vm.runInContext(fs.readFileSync('src/main/resources/static/js/preview-media.js', 'utf8'), context);
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/app.js', 'utf8'), context);
     vm.runInContext('refreshCurrentView = async () => {}; setupBackupExport(); setupBackupImport();', context);
     return {context, elements, alerts, downloads, blobs};

@@ -12,10 +12,11 @@
 
     <title>Edit LoRA</title>
 
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css?v=uniform-filter-width-1">
+    <script src="/js/appearance-settings.js?v=settings-pagination-1"></script>
     <script src="/js/edit-field-tools.js" defer></script>
     <script src="/js/form-navigation.js" defer></script>
-    <script src="/js/edit-lora.js" defer></script>
+    <script src="/js/edit-lora.js?v=remove-negative-1" defer></script>
 
 </head>
 
@@ -23,7 +24,7 @@
 
 <main class="edit-lora-page record-form-page">
 
-    <div class="edit-lora-container">
+    <div class="edit-lora-container content-container">
 
         <header class="edit-lora-header">
 
@@ -44,9 +45,7 @@
                     id="cancelEditHeaderButton"
                     class="page-close-button"
                     aria-label="Cancel editing and return"
-                    title="Cancel">
-                ×
-            </button>
+                    title="Return to LoRA Library"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
 
         </header>
 
@@ -83,9 +82,8 @@
             </a>
 
             <a
-                    href="/html/add-lora.html"
-                    class="side-menu-link">
-                Add LoRA
+                    href="/html/poses.html" class="side-menu-link">
+                Pose Gallery
             </a>
 
         </nav>
@@ -207,10 +205,10 @@
             <section class="details-prompt-section">
 
                 <div class="details-field-header">
-                    <h2 class="details-field-label" id="editPositivePromptLabel">Positive Prompt</h2>
+                    <h2 class="details-field-label" id="editPositivePromptLabel">Trained Words</h2>
                     <div class="details-field-actions">
-                        <button type="button" class="copy-field-button" data-edit-copy="editPositivePrompt" data-copy-label="Copy Positive Prompt" aria-label="Copy Positive Prompt" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button" data-edit-expand="editPositivePrompt" data-field-label="Positive Prompt" aria-label="Expand Positive Prompt" title="Expand">⛶</button>
+                        <button type="button" class="copy-field-button" data-edit-copy="editPositivePrompt" data-copy-label="Copy Trained Words" aria-label="Copy Trained Words" title="Copy">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="editPositivePrompt" data-field-label="Trained Words" aria-label="Expand Trained Words" title="Expand">⛶</button>
                     </div>
                 </div>
                 <textarea
@@ -219,7 +217,7 @@
                         name="positivePrompt"
                         class="details-edit-textarea"
                         rows="8"
-                        placeholder="Enter the positive prompt or trigger words..."></textarea>
+                        placeholder="Enter the trained words..."></textarea>
 
             </section>
 
@@ -227,23 +225,17 @@
 
 
             <section class="details-prompt-section">
-
                 <div class="details-field-header">
-                    <h2 class="details-field-label" id="editNegativePromptLabel">Negative Prompt</h2>
+                    <h2 class="details-field-label" id="editPromptLabel">Prompt</h2>
                     <div class="details-field-actions">
-                        <button type="button" class="copy-field-button" data-edit-copy="editNegativePrompt" data-copy-label="Copy Negative Prompt" aria-label="Copy Negative Prompt" title="Copy">⧉</button>
-                        <button type="button" class="expand-field-button" data-edit-expand="editNegativePrompt" data-field-label="Negative Prompt" aria-label="Expand Negative Prompt" title="Expand">⛶</button>
+                        <button type="button" class="copy-field-button" data-edit-copy="editPrompt" data-copy-label="Copy Prompt" aria-label="Copy prompt" title="Copy prompt">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="editPrompt" data-field-label="Prompt" aria-label="Expand prompt" title="Expand prompt">⛶</button>
                     </div>
                 </div>
-                <textarea
-                        id="editNegativePrompt"
-                        aria-labelledby="editNegativePromptLabel"
-                        name="negativePrompt"
-                        class="details-edit-textarea"
-                        rows="8"
-                        placeholder="Enter the negative prompt..."></textarea>
-
+                <textarea id="editPrompt" name="prompt" aria-labelledby="editPromptLabel" class="details-edit-textarea" rows="8" maxlength="5000" placeholder="Enter the prompt..."></textarea>
             </section>
+
+
 
             <section class="details-prompt-section">
 

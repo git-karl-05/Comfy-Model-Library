@@ -40,6 +40,42 @@ class MetadataFilterTests {
     }
 
     @Test
+    void importsPromptIntoPromptAndLeavesNotesForTheUser() throws Exception {
+        Files.writeString(directory.resolve("model.metadata.json"), """
+                {"file_name":"Imported", "civitai":{"images":[{"url":"https://example.com/one.png",
+                "meta":{"prompt":"A scene prompt"}}], "description":"Model description"}}
+                """);
+        assertEquals(1, service.importLorasFromFolder(directory.toString()).getImportedCount());
+        var imported = loras.findAll().getFirst();
+        assertEquals("A scene prompt", imported.getPrompt());
+        assertNull(imported.getNotes());
+        mvc.perform(get("/api/loras/" + imported.getId())).andExpect(status().isOk())
+                .andExpect(jsonPath("$.prompt").value("A scene prompt"))
+                .andExpect(jsonPath("$.notes").isEmpty());
+    }
+
+    @Test
+    void repairsOnlyVerifiedImportedNotesAndPreservesUserNotesAndPrompts() throws Exception {
+        Path model = directory.resolve("model.safetensors");
+        Files.writeString(directory.resolve("model.metadata.json"), """
+                {"base_model":"Flux", "civitai":{"description":"Imported scene"}}
+                """);
+        var legacy = save("Legacy", "Flux", LoraCategory.STYLE, null, false);
+        legacy.setModelFilePath(model.toString()); legacy.setNotes("Base model: Flux\nDescription: Imported scene"); loras.save(legacy);
+        var personal = save("Personal", "Flux", LoraCategory.STYLE, null, false);
+        personal.setModelFilePath(model.toString()); personal.setNotes("My own notes"); loras.save(personal);
+        var edited = save("Edited", "Flux", LoraCategory.STYLE, null, false);
+        edited.setModelFilePath(model.toString()); edited.setPrompt("User prompt"); edited.setNotes("Personal"); loras.save(edited);
+        service.repairImportedPromptFields();
+        var repaired = loras.findById(legacy.getId()).orElseThrow();
+        assertEquals("Imported scene", repaired.getPrompt()); assertNull(repaired.getNotes());
+        assertEquals("My own notes", loras.findById(personal.getId()).orElseThrow().getNotes());
+        assertEquals("User prompt", loras.findById(edited.getId()).orElseThrow().getPrompt());
+        service.repairImportedPromptFields();
+        assertEquals("Imported scene", loras.findById(legacy.getId()).orElseThrow().getPrompt());
+    }
+
+    @Test
     void folderImportUsesPortableModelParentAndFallsBackToTheJsonFolder() throws Exception {
         String[] paths = {"C:\\models\\character\\Anime\\model.safetensors",
                 "/models/character/Portraits/model.safetensors", null, "model.safetensors"};
@@ -58,6 +94,31 @@ class MetadataFilterTests {
             assertEquals(expected[i], saved.getSubCategory());
             assertEquals("Illustrious", saved.getBaseModel());
         }
+    }
+
+    @Test
+    void carouselMatchesEachPromptByUrlIncludingExistingImports() throws Exception {
+        var lora = save("Prompt test", "Illustrious", LoraCategory.CHARACTER, null, false);
+        lora.setFilePath("https://example.com/main.png");
+        lora.setModelFilePath(directory.resolve("model.safetensors").toString());
+        loras.save(lora);
+        var extra = new LoraImageEntity("https://example.com/clip.mp4", lora);
+        images.save(extra);
+        Files.writeString(directory.resolve("model.metadata.json"), """
+                {"civitai":{"images":[
+                  {"url":"https://example.com/clip.mp4","meta":{"prompt":"Video prompt"}},
+                  {"url":"https://example.com/main.png","meta":{"prompt":"Image <prompt>"}},
+                  {"url":"https://example.com/missing.png","meta":null}
+                ]}}
+                """);
+        mvc.perform(get("/api/loras/" + lora.getId() + "/images"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].prompt").value("Image <prompt>"))
+                .andExpect(jsonPath("$[1].prompt").value("Video prompt"));
+        Files.writeString(directory.resolve("model.metadata.json"), "not json");
+        mvc.perform(get("/api/loras/" + lora.getId() + "/images"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].filePath").value("https://example.com/main.png"));
     }
 
     private LoraEntity save(String name, String model, LoraCategory category, String subcategory, boolean favorite) {
@@ -88,6 +149,17 @@ class MetadataFilterTests {
         // Changes are visible without an application restart or any hardcoded option list.
         save("New", "New Base Model", LoraCategory.POSES, "Custom folder", false);
         mvc.perform(get("/api/loras/filter-options")).andExpect(jsonPath("$.length()").value(5));
+    }
+
+    @Test
+    void favoritesNarrowTheAppliedCategoryAndMetadata() throws Exception {
+        save("Match", "Illustrious", LoraCategory.STYLE, "Motion", true);
+        save("Other category", "Illustrious", LoraCategory.CONCEPT, "Motion", true);
+        save("Not favorite", "Illustrious", LoraCategory.STYLE, "Motion", false);
+        mvc.perform(get("/api/loras/favorites").param("baseModel", "Illustrious")
+                .param("category", "STYLE").param("subcategory", "Motion"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].loraName").value("Match"));
     }
 
     @Test

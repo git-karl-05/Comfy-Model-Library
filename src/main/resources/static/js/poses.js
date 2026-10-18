@@ -1,5 +1,10 @@
 const API_BASE_URL = "/api/poses";
 let currentPage = 0;
+window.addEventListener("library-page-size-change", () => {
+    if (!document.getElementById("poseList")) return;
+    currentPage = 0;
+    refreshCurrentView();
+});
 let totalPages = 0;
 let appliedSortBy = null;
 let appliedSortDirection = null;
@@ -9,6 +14,9 @@ let currentPose = null;
 let previews = [];
 let previewIndex = 0;
 let poseDetailsSwipe = null;
+let posePreviewSwipe = null;
+let poseToDelete = null;
+let deletingPose = false;
 let retainedImages = [];
 let selectedPoseFiles = [];
 let editImageIndex = 0;
@@ -31,6 +39,8 @@ function showModal(id, open) {
     const modal = byId(id);
     if (id === "poseDetailsModal") {
         poseDetailsSwipe?.reset();
+        posePreviewSwipe?.reset();
+        closePoseDetailsActions();
         if (!open) {
             modal.querySelectorAll("video").forEach(video => { video.pause(); video.currentTime = 0; });
             currentPose = null;
@@ -53,7 +63,7 @@ function poseImages(pose) {
 }
 async function refreshCurrentView() {
     const version = ++requestVersion;
-    const params = new URLSearchParams({page: currentPage, size: 12});
+    const params = new URLSearchParams({page: currentPage, size: window.LibrarySettings?.pageSize ?? 12});
     const keyword = byId("searchInput").value.trim();
     if (keyword) params.set("keyword", keyword);
     if (category !== "ALL") params.set("category", category);
@@ -75,7 +85,13 @@ async function refreshCurrentView() {
         byId("paginationControls").classList.toggle("hidden", totalPages <= 1);
         byId("previousPageButton").disabled = currentPage <= 0;
         byId("nextPageButton").disabled = currentPage >= totalPages - 1;
-        byId("pageIndicator").textContent = `Page ${currentPage + 1} of ${Math.max(1, totalPages)}`;
+        if (window.GalleryPagination) {
+            window.GalleryPagination.render(byId("pageIndicator"), currentPage, Math.max(1, totalPages), async page => {
+                currentPage = page;
+                await refreshCurrentView();
+                window.scrollTo({top: 0, behavior: "smooth"});
+            });
+        } else byId("pageIndicator").textContent = `Page ${currentPage + 1} of ${Math.max(1, totalPages)}`;
     } catch (error) {
         if (version === requestVersion) byId("poseList").textContent = `Unable to load poses: ${error.message}`;
     }
@@ -86,9 +102,8 @@ function createPoseCard(pose) {
     card.dataset.poseId = String(pose.id);
     const image = poseImages(pose)[0];
     if (image) {
-        const img = document.createElement("img");
+        const img = createPosePreview(image);
         img.className = "lora-card-image";
-        img.src = image;
         img.alt = pose.name || "Pose preview";
         img.loading = "lazy";
         card.appendChild(img);
@@ -105,7 +120,7 @@ function createPoseCard(pose) {
     favorite.setAttribute("aria-label", "Toggle favorite");
     favorite.addEventListener("click", async event => {
         event.stopPropagation();
-        try { await api(`/${pose.id}/favorite`, {method: "PATCH"}); await refreshCurrentView(); }
+        try { await togglePoseFavorite(pose.id); }
         catch (error) { window.alert(error.message); }
     });
     const header = document.createElement("div");
@@ -120,6 +135,18 @@ function createPoseCard(pose) {
     card.addEventListener("click", () => openPoseDetails(pose.id));
     return card;
 }
+function updatePoseFilterButtons() {
+    const count = Number(category !== "ALL");
+    byId("filterCountBadge").textContent = count;
+    byId("filterCountBadge").classList.toggle("hidden", !count);
+    byId("filterButton").classList.toggle("active", count > 0);
+    const active = favorites === "true";
+    byId("favoritesToggleButton").classList.toggle("active", active);
+    byId("favoritesToggleButton").setAttribute("aria-pressed", String(active));
+    byId("favoritesToggleButton").title = active ? "Turn off Favorites filter" : "Show favorites only";
+    byId("favoritesToggleIcon").textContent = active ? "★" : "☆";
+}
+
 async function applySort(field) {
     if (!["name", "category", "seed"].includes(field)) return;
     appliedSortDirection = appliedSortBy === field && appliedSortDirection === "asc" ? "desc" : "asc";
@@ -146,49 +173,221 @@ async function openPoseDetails(id) {
         previews = poseImages(currentPose);
         previewIndex = 0;
         renderPreview();
-        byId("poseDetailsModal").querySelector(".lora-details-scroll-area").scrollTop = 0;
         showModal("poseDetailsModal", true);
         sizePosePreviewLikeGalleryCard();
+        const modal = byId("poseDetailsModal");
+        const scrollArea = modal.querySelector(".lora-details-scroll-area");
+        const openedPose = currentPose;
+        const resetScroll = () => {
+            modal.scrollTop = 0;
+            if (scrollArea) scrollArea.scrollTop = 0;
+        };
+        // A hidden scroll container may ignore scrollTop; reset after it is visible and sized.
+        resetScroll();
+        window.requestAnimationFrame(() => {
+            if (currentPose === openedPose && !modal.classList.contains("hidden")) resetScroll();
+        });
     } catch (error) { window.alert(error.message); }
 }
 function sizePosePreviewLikeGalleryCard() {
     const modal = byId("poseDetailsModal");
     if (!modal) return;
-    const cards = document.querySelectorAll("#poseList .lora-card");
-    const card = [...cards].find(item => item.dataset.poseId === String(currentPose?.id)) ?? cards[0];
-    const bounds = card?.getBoundingClientRect();
-    const doubleColumn = byId("poseList")?.classList.contains("double-column");
-    const ratio = bounds?.width > 0 && bounds?.height > 0
-            ? bounds.width / bounds.height : doubleColumn ? 4 / 5 : 3 / 4;
-    modal.style.setProperty("--preview-card-ratio", String(ratio));
-    modal.style.setProperty("--preview-card-width", bounds?.width > 0 ? `${bounds.width}px` : "100%");
+    // Modal dimensions always follow the single-column gallery, regardless of tile layout.
+    const list = byId("poseList");
+    const padding = list ? getComputedStyle(list) : null;
+    const width = (list?.clientWidth ?? 0)
+            - (parseFloat(padding?.paddingLeft) || 0) - (parseFloat(padding?.paddingRight) || 0);
+    modal.style.setProperty("--preview-card-ratio", String(3 / 4));
+    modal.style.setProperty("--preview-card-width", width > 0 ? `${width}px` : "100%");
     const scrollArea = modal.querySelector(".lora-details-scroll-area");
     const scrollbarWidth = Math.max(0, (scrollArea?.offsetWidth ?? 0) - (scrollArea?.clientWidth ?? 0));
     modal.style.setProperty("--preview-scrollbar-width", `${scrollbarWidth}px`);
 }
+function updatePoseDetailsFavorite() {
+    const favorite = Boolean(currentPose?.favorite);
+    byId("favoritePoseDetailsButton")?.setAttribute("aria-checked", String(favorite));
+    if (byId("favoritePoseDetailsLabel")) byId("favoritePoseDetailsLabel").textContent = favorite ? "Unfavorite" : "Favorite";
+    if (byId("favoritePoseDetailsIcon")) byId("favoritePoseDetailsIcon").textContent = favorite ? "★" : "☆";
+}
+async function togglePoseFavorite(id) {
+    const updated = await api(`/${id}/favorite`, {method: "PATCH"});
+    if (String(currentPose?.id) === String(id)) {
+        currentPose.favorite = Boolean(updated.favorite);
+        updatePoseDetailsFavorite();
+    }
+    await refreshCurrentView();
+    return updated;
+}
+function closePoseDetailsActions(focus = false) {
+    const menu = byId("poseDetailsActionsMenu");
+    if (menu) menu.hidden = true;
+    byId("poseDetailsActionsButton")?.setAttribute("aria-expanded", "false");
+    if (focus) byId("poseDetailsActionsButton")?.focus();
+}
+function setupPoseDetailsActions() {
+    const wrapper = byId("poseDetailsMoreActions"), menu = byId("poseDetailsActionsMenu");
+    const button = byId("poseDetailsActionsButton"), favorite = byId("favoritePoseDetailsButton");
+    const items = [favorite, byId("editPoseButton"), byId("deletePoseButton")];
+    function open() {
+        updatePoseDetailsFavorite(); menu.hidden = false;
+        button.setAttribute("aria-expanded", "true"); favorite.focus();
+    }
+    button.addEventListener("click", () => menu.hidden ? open() : closePoseDetailsActions(true));
+    button.addEventListener("keydown", event => {
+        if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+            event.preventDefault(); open();
+            if (event.key === "ArrowUp") items[2].focus();
+        }
+    });
+    favorite.addEventListener("click", async () => {
+        if (!currentPose?.id || favorite.disabled) return;
+        const id = currentPose.id; favorite.disabled = true;
+        try {
+            await togglePoseFavorite(id);
+            if (String(currentPose?.id) === String(id)) closePoseDetailsActions(true);
+        } catch (error) { window.alert(`Unable to update favorite: ${error.message}`); }
+        finally { favorite.disabled = false; }
+    });
+    menu.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation(); closePoseDetailsActions(true);
+        } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const available = items.filter(item => !item.disabled);
+            const current = available.indexOf(document.activeElement);
+            const next = event.key === "Home" ? 0 : event.key === "End" ? available.length - 1
+                : (current + (event.key === "ArrowUp" ? -1 : 1) + available.length) % available.length;
+            available[next]?.focus();
+        }
+    });
+    wrapper.addEventListener("focusout", event => {
+        if (event.relatedTarget && !wrapper.contains(event.relatedTarget)) closePoseDetailsActions();
+    });
+    document.addEventListener("click", event => { if (!wrapper.contains(event.target)) closePoseDetailsActions(); });
+}
+
+function openDeletePoseDialog() {
+    if (!currentPose || deletingPose) return;
+    closePoseDetailsActions();
+    poseToDelete = {id: currentPose.id, name: currentPose.name};
+    byId("deletePosePrompt").textContent = `Are you sure you want to delete "${poseToDelete.name || "this pose"}"? This cannot be undone.`;
+    message("deletePoseError", "");
+    byId("deletePoseDialog").showModal();
+    byId("cancelDeletePoseButton").focus();
+}
+function cancelDeletePose() {
+    if (deletingPose) return;
+    byId("deletePoseDialog").close();
+    poseToDelete = null;
+    byId("poseDetailsActionsButton").focus();
+}
+async function confirmDeletePose() {
+    if (!poseToDelete || deletingPose) return;
+    deletingPose = true;
+    const button = byId("confirmDeletePoseButton");
+    button.disabled = true;
+    button.textContent = "Deleting...";
+    byId("cancelDeletePoseButton").disabled = true;
+    message("deletePoseError", "");
+    try {
+        await api(`/${poseToDelete.id}`, {method: "DELETE"});
+    } catch (error) {
+        message("deletePoseError", `Unable to delete pose: ${error.message}`);
+        return;
+    } finally {
+        deletingPose = false;
+        button.disabled = false;
+        button.textContent = "Delete";
+        byId("cancelDeletePoseButton").disabled = false;
+    }
+    byId("deletePoseDialog").close();
+    poseToDelete = null;
+    showModal("poseDetailsModal", false);
+    if (currentPage > 0 && byId("poseList").children.length <= 1) currentPage--;
+    try {
+        await loadCategories();
+        await refreshCurrentView();
+    } catch (error) { window.alert(`Pose deleted. Unable to refresh the gallery: ${error.message}`); }
+    byId("openActionMenuButton").focus();
+}
+
+function createPosePreview(path, thumbnail = false) {
+    const video = /\.(mp4|webm|ogg|mov)(?:[?#]|$)/i.test(path);
+    const media = document.createElement(video ? "video" : "img");
+    if (video) {
+        media.muted = true;
+        media.playsInline = true;
+        media.preload = "metadata";
+        media.controls = !thumbnail;
+        media.loop = !thumbnail;
+    } else media.loading = "lazy";
+    addPreviewCacheFallback(media, path);
+    media.src = localPreviewUrl(path);
+    return media;
+}
+function changePosePreview(direction) {
+    if (previews.length < 2) return;
+    previewIndex = (previewIndex + direction + previews.length) % previews.length;
+    renderPreview();
+}
 function renderPreview() {
     const container = byId("detailsImageContainer");
+    container.querySelectorAll("video").forEach(video => video.pause());
     container.replaceChildren();
     if (previews.length) {
-        const img = document.createElement("img");
-        img.src = previews[previewIndex];
-        img.alt = currentPose.name || "Pose preview";
-        img.className = "details-image";
-        container.appendChild(img);
+        const media = createPosePreview(previews[previewIndex]);
+        media.alt = currentPose.name || "Pose preview";
+        media.className = "details-image";
+        container.appendChild(media);
     } else container.textContent = "No Image";
     for (const id of ["previousPreviewButton", "nextPreviewButton", "previewIndicators"]) byId(id).classList.toggle("hidden", previews.length <= 1);
     const indicators = byId("previewIndicators");
-    indicators.replaceChildren();
-    previews.forEach((_, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "preview-indicator-button" + (index === previewIndex ? " active" : "");
-        button.setAttribute("aria-label", `Image ${index + 1}`);
-        button.addEventListener("click", () => { previewIndex = index; renderPreview(); });
-        indicators.appendChild(button);
+    const signature = JSON.stringify(previews);
+    if (indicators.dataset.paths !== signature) {
+        indicators.dataset.paths = signature;
+        indicators.replaceChildren();
+        previews.forEach((path, index) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "preview-indicator-button";
+            button.setAttribute("aria-label", `Preview ${index + 1}`);
+            button.title = `Show preview ${index + 1}`;
+            const thumbnail = createPosePreview(path, true);
+            thumbnail.alt = "";
+            thumbnail.setAttribute("aria-hidden", "true");
+            button.appendChild(thumbnail);
+            button.addEventListener("click", () => { previewIndex = index; renderPreview(); });
+            indicators.appendChild(button);
+        });
+    }
+    [...(indicators.children || [])].forEach((button, index) => {
+        button.classList.toggle("active", index === previewIndex);
+        button.setAttribute("aria-pressed", String(index === previewIndex));
     });
+    byId("previewStatus").textContent = previews.length ? `Preview ${previewIndex + 1} of ${previews.length}` : "No previews";
 }
+async function refreshPoseLibrary() {
+    const button = byId("refreshPosesButton");
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    byId("refreshPosesLabel").textContent = "Refreshing...";
+    try {
+        await loadCategories();
+        await refreshCurrentView();
+        closeActions();
+        byId("openActionMenuButton").focus();
+    } catch (error) {
+        window.alert(`Unable to refresh the gallery: ${error.message}`);
+    } finally {
+        button.disabled = false;
+        button.removeAttribute("aria-busy");
+        byId("refreshPosesLabel").textContent = "Refresh";
+    }
+}
+
 function openPoseForm(pose = null) {
+    pendingOutputImage = "";
     byId("poseForm").reset();
     message("poseFormMessage", "");
     byId("poseFormTitle").textContent = pose ? "Edit Pose" : "Add Pose";
@@ -251,21 +450,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     gallerySort.setup();
     const detailsModal = byId("poseDetailsModal");
     poseDetailsSwipe = setupSwipeDownToClose(detailsModal.querySelector(".lora-details-sheet"),
-        detailsModal.querySelector(".lora-details-scroll-area"), () => showModal("poseDetailsModal", false), {handleWhileScrolled: true});
+        detailsModal.querySelector(".lora-details-scroll-area"), () => showModal("poseDetailsModal", false), {handleWhileScrolled: true, allowVideoSwipe: true});
     const on = (id, action, event = "click") => byId(id).addEventListener(event, action);
+    posePreviewSwipe = setupHorizontalPreviewSwipe(byId("detailsImageContainer"), {
+        getRecord: () => currentPose, getIndex: () => previewIndex, getCount: () => previews.length,
+        previous: () => changePosePreview(-1), next: () => changePosePreview(1)
+    });
+    byId("poseDetailsModal").querySelector(".details-carousel")?.addEventListener("keydown", event => {
+        if (event.target.tagName === "VIDEO" || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        changePosePreview(event.key === "ArrowLeft" ? -1 : 1);
+    });
+    on("refreshPosesButton", refreshPoseLibrary);
+    setupPoseDetailsActions();
+    on("deletePoseButton", openDeletePoseDialog);
+    on("cancelDeletePoseButton", cancelDeletePose);
+    on("confirmDeletePoseButton", confirmDeletePose);
+    on("deletePoseDialog", event => {
+        const dialog = byId("deletePoseDialog");
+        if (event.target !== dialog) return;
+        const bounds = dialog.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right
+                || event.clientY < bounds.top || event.clientY > bounds.bottom) cancelDeletePose();
+    });
+    on("deletePoseDialog", event => {
+        event.preventDefault();
+        cancelDeletePose();
+    }, "cancel");
+    on("backupMenuButton", () => {
+        const expanded = byId("backupOptions").classList.contains("hidden");
+        byId("backupOptions").classList.toggle("hidden", !expanded);
+        byId("backupMenuButton").setAttribute("aria-expanded", String(expanded));
+    });
     const refreshFromStart = () => { currentPage = 0; return refreshCurrentView(); };
     on("searchInput", () => { clearTimeout(searchTimer); searchTimer = setTimeout(refreshFromStart, 400); }, "input");
     on("searchIconButton", () => { byId("searchOverlay").classList.remove("hidden"); byId("searchInput").focus(); });
     on("closeSearchButton", () => { clearTimeout(searchTimer); byId("searchOverlay").classList.add("hidden"); byId("searchInput").value = ""; refreshFromStart(); });
     on("previousPageButton", () => { if (currentPage > 0) { currentPage--; refreshCurrentView(); } });
     on("nextPageButton", () => { if (currentPage + 1 < totalPages) { currentPage++; refreshCurrentView(); } });
-    for (const [id, layout] of [["singleColumnButton", "single-column"], ["doubleColumnButton", "double-column"]]) {
-        on(id, () => {
-            byId("poseList").classList.remove("single-column", "double-column");
-            byId("poseList").classList.add(layout);
-            for (const button of ["singleColumnButton", "doubleColumnButton"]) byId(button).classList.toggle("active", button === id);
-        });
+    function setLayout(doubleColumn) {
+        byId("poseList").classList.toggle("single-column", !doubleColumn);
+        byId("poseList").classList.toggle("double-column", doubleColumn);
+        byId("doubleColumnButton").classList.toggle("active", doubleColumn);
+        byId("doubleColumnButton").setAttribute("aria-pressed", String(doubleColumn));
+        byId("doubleColumnButton").title = doubleColumn ? "Switch to single-column layout" : "Switch to double-column layout";
     }
+    setLayout(false);
+    on("doubleColumnButton", () => setLayout(!byId("poseList").classList.contains("double-column")));
+    on("favoritesToggleButton", async () => {
+        const button = byId("favoritesToggleButton");
+        if (button.disabled) return;
+        button.disabled = true;
+        favorites = favorites === "true" ? "ALL" : "true";
+        byId("favoriteFilter").value = favorites;
+        currentPage = 0;
+        updatePoseFilterButtons();
+        try { await refreshCurrentView(); }
+        finally { button.disabled = false; }
+    });
     function menu(open) {
         for (const id of ["sideMenu", "menuBackdrop"]) byId(id).classList.toggle("hidden", !open);
         byId("optionsButton").setAttribute("aria-expanded", String(open));
@@ -279,12 +521,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     on("actionMenuOverlay", event => { if (event.target === byId("actionMenuOverlay")) closeActions(); });
     on("addPoseActionButton", () => FormNavigation.go("/html/add-pose.html"));
-    on("editPoseButton", () => { if (currentPose) FormNavigation.go(`/html/edit-pose.html?id=${currentPose.id}`); });
+    on("editPoseButton", () => { closePoseDetailsActions(); if (currentPose) FormNavigation.go(`/html/edit-pose.html?id=${currentPose.id}`); });
     for (const id of ["closePoseFormButton", "cancelPoseFormButton", "poseFormBackdrop"]) on(id, () => showModal("poseFormModal", false));
     on("closePoseDetailsButton", () => showModal("poseDetailsModal", false));
     on("poseDetailsModal", event => { if (event.target === byId("poseDetailsModal")) showModal("poseDetailsModal", false); });
-    on("previousPreviewButton", () => { previewIndex = (previewIndex + previews.length - 1) % previews.length; renderPreview(); });
-    on("nextPreviewButton", () => { previewIndex = (previewIndex + 1) % previews.length; renderPreview(); });
+    on("previousPreviewButton", () => changePosePreview(-1));
+    on("nextPreviewButton", () => changePosePreview(1));
     on("poseImagesInput", () => { byId("poseSelectedImages").textContent = Array.from(byId("poseImagesInput").files, file => file.name).join(", "); }, "change");
     setupPoseSubmission();
     on("filterButton", () => { byId("categoryFilter").value = category; byId("favoriteFilter").value = favorites; showModal("filterModal", true); byId("filterButton").setAttribute("aria-expanded", "true"); });
@@ -293,10 +535,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     function applyFilters() {
         category = byId("categoryFilter").value;
         favorites = byId("favoriteFilter").value;
-        const count = Number(category !== "ALL") + Number(favorites !== "ALL");
-        byId("filterCountBadge").textContent = count;
-        byId("filterCountBadge").classList.toggle("hidden", !count);
-        byId("filterButton").classList.toggle("active", count > 0);
+        updatePoseFilterButtons();
         closeFilter();
         refreshFromStart();
     }
@@ -352,6 +591,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     on("expandedTextModal", event => { if (event.target === byId("expandedTextModal")) showModal("expandedTextModal", false); });
     document.addEventListener("keydown", event => {
         if (event.key !== "Escape") return;
+        if (byId("deletePoseDialog").open) return;
         for (const id of ["expandedTextModal", "poseFormModal", "poseDetailsModal", "filterModal"]) {
             if (!byId(id).classList.contains("hidden")) { showModal(id, false); break; }
         }
@@ -372,12 +612,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         byId("searchInput").value = saved.search || "";
         if (saved.search) byId("searchOverlay").classList.remove("hidden");
         if (saved.doubleColumn) byId("doubleColumnButton").click();
-        const count = Number(category !== "ALL") + Number(favorites !== "ALL");
-        byId("filterCountBadge").textContent = count;
-        byId("filterCountBadge").classList.toggle("hidden", !count);
-        byId("filterButton").classList.toggle("active", count > 0);
+        updatePoseFilterButtons();
         gallerySort.update();
     }
+    updatePoseFilterButtons();
     FormNavigation.register(() => ({page: currentPage, sortBy: appliedSortBy, sortDirection: appliedSortDirection,
         category, favorites, search: byId("searchInput").value, doubleColumn: byId("poseList").classList.contains("double-column")}));
     await refreshCurrentView();
@@ -390,6 +628,7 @@ function setupPoseSubmission() {
         event.preventDefault();
         if (!byId("poseForm").reportValidity()) return;
         const data = new FormData(byId("poseForm"));
+        if (pendingOutputImage) data.set("outputImage", pendingOutputImage);
         data.set("retainedImages", JSON.stringify(retainedImages));
         if (window.location.pathname.endsWith("/edit-pose.html")) {
             data.delete("images");
@@ -423,6 +662,7 @@ async function setupPosePage() {
     byId("closeMenuButton").addEventListener("click", () => menu(false));
     byId("menuBackdrop").addEventListener("click", () => menu(false));
     byId("poseImagesInput").addEventListener("change", renderSelectedImages);
+    setupPoseImagePicker();
     setupPoseSubmission();
     // Disable saving until the existing record has loaded, including invalid/missing IDs.
     byId("savePoseButton").disabled = true;
@@ -434,7 +674,9 @@ async function setupPosePage() {
     try { await loadCategories(); } catch (error) { console.error("Unable to load categories", error); }
 }
 let selectedImageUrls = [];
+let pendingOutputImage = "";
 function renderSelectedImages() {
+    if (byId("poseImagesInput").files.length) pendingOutputImage = "";
     selectedImageUrls.forEach(url => URL.revokeObjectURL(url));
     selectedImageUrls = [];
     const container = byId("poseSelectedImages");
@@ -456,15 +698,21 @@ function renderSelectedImages() {
 function updatePoseImagePreview() {
     const container = byId("poseImagePreviewContainer");
     if (!container) return;
+    container.querySelectorAll("video").forEach(video => video.pause());
     container.replaceChildren();
     const editing = window.location.pathname.endsWith("/edit-pose.html");
     const images = editing ? [...retainedImages, ...selectedImageUrls] : [...selectedImageUrls, ...retainedImages];
+    if (pendingOutputImage) images.unshift(`/api/poses/output-image?path=${encodeURIComponent(pendingOutputImage)}`);
     editImageIndex = Math.min(editImageIndex, Math.max(0, images.length - 1));
     const path = images[editImageIndex];
     if (path) {
-        const image = document.createElement("img");
+        const video = /\.(mp4|webm|mov|ogg)(?:[?#]|$)/i.test(path);
+        const image = document.createElement(video ? "video" : "img");
+        if (video) {
+            image.muted = true; image.loop = true; image.playsInline = true;
+            image.autoplay = true; image.preload = "metadata";
+        } else image.alt = `Pose preview ${editImageIndex + 1}; choose from ComfyUI`;
         image.src = path;
-        image.alt = `Pose image ${editImageIndex + 1}; click to add images`;
         container.appendChild(image);
         if (editing) {
             const remove = document.createElement("button");
@@ -474,9 +722,11 @@ function updatePoseImagePreview() {
             remove.textContent = "×";
             remove.addEventListener("click", event => {
                 event.preventDefault(); event.stopPropagation();
-                if (editImageIndex < retainedImages.length) retainedImages.splice(editImageIndex, 1);
+                const savedIndex = editImageIndex - (pendingOutputImage ? 1 : 0);
+                if (pendingOutputImage && editImageIndex === 0) pendingOutputImage = "";
+                else if (savedIndex < retainedImages.length) retainedImages.splice(savedIndex, 1);
                 else {
-                    const index = editImageIndex - retainedImages.length;
+                    const index = savedIndex - retainedImages.length;
                     selectedPoseFiles.splice(index, 1);
                     URL.revokeObjectURL(selectedImageUrls[index]);
                     selectedImageUrls.splice(index, 1);
@@ -506,7 +756,7 @@ function updatePoseImagePreview() {
     } else {
         const placeholder = document.createElement("div");
         placeholder.className = "lora-card-placeholder";
-        placeholder.textContent = "Click to choose preview images";
+        placeholder.textContent = "Tap to choose from ComfyUI";
         container.appendChild(placeholder);
     }
 }
@@ -514,3 +764,30 @@ function updatePoseImagePreview() {
 window.addEventListener("pageshow", event => {
     if (event.persisted && byId("poseList")) refreshCurrentView();
 });
+
+
+function setupPoseImagePicker() {
+    const picker = byId("poseImagePicker");
+    if (!picker) return;
+    const preview = byId("poseImagePreviewContainer"), frame = byId("outputPageFrame");
+    const close = () => { picker.close(); preview.focus(); };
+    const open = event => {
+        if (event.target.closest("button")) return;
+        event.preventDefault();
+        if (!frame.getAttribute("src")) frame.src = "/html/output.html";
+        picker.showModal(); frame.focus();
+    };
+    preview.addEventListener("click", open);
+    preview.addEventListener("keydown", event => {
+        if (event.target === preview && ["Enter", " "].includes(event.key)) open(event);
+    });
+    picker.addEventListener("cancel", event => { event.preventDefault(); close(); });
+    window.addEventListener("message", event => {
+        if (event.origin !== location.origin || event.source !== frame.contentWindow || !picker.open) return;
+        if (event.data?.type === "output-cancel") close();
+        if (event.data?.type === "output-select" && typeof event.data.path === "string" && event.data.path) {
+            pendingOutputImage = event.data.path; editImageIndex = 0;
+            updatePoseImagePreview(); close();
+        }
+    });
+}

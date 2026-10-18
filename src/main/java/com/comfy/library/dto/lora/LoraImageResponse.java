@@ -6,6 +6,10 @@ public class LoraImageResponse {
 
     private Long id;
     private String filePath;
+    private String prompt;
+
+    public String getPrompt() { return prompt; }
+    public void setPrompt(String prompt) { this.prompt = prompt; }
     private boolean primary;
 
     public LoraImageResponse(Long id, String filePath, boolean primary) {

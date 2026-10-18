@@ -35,6 +35,10 @@ public class PoseController {
     @GetMapping("/{id}")
     public PoseEntity get(@PathVariable Long id) { return service.get(id); }
 
+    @DeleteMapping("/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) { service.delete(id); }
+
     @GetMapping("/categories")
     public List<String> categories() { return service.categories(); }
 
@@ -51,9 +55,10 @@ public class PoseController {
                            @RequestParam(defaultValue = "") String notes,
                            @RequestParam(required = false) String baseModel,
                            @RequestParam(defaultValue = "[]") String retainedImages,
-                           @RequestParam(required = false) List<MultipartFile> images) throws IOException {
+                           @RequestParam(required = false) List<MultipartFile> images,
+                           @RequestParam(required = false) String outputImage) throws IOException {
         List<String> retained = Arrays.asList(mapper.readValue(retainedImages, String[].class));
-        return service.save(id, name, category, seed, lora, prompt, notes, baseModel, retained, images == null ? List.of() : images);
+        return service.save(id, name, category, seed, lora, prompt, notes, baseModel, retained, images == null ? List.of() : images, outputImage);
     }
 
     @GetMapping("/backup/export")

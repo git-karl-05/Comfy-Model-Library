@@ -7,11 +7,15 @@
             content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     >
     <title>Pose Gallery</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css?v=filter-title-inset-1">
+    <script src="/js/appearance-settings.js?v=settings-pagination-1"></script>
     <script src="/js/form-navigation.js" defer></script>
+    <script src="/js/gallery-pagination.js?v=page-jump-1" defer></script>
+    <script src="/js/gallery-header.js" defer></script>
     <script src="/js/sheet-swipe.js" defer></script>
+    <script src="/js/preview-media.js?v=video-posters-1" defer></script>
     <script src="/js/gallery-sort.js" defer></script>
-    <script src="/js/poses.js" defer></script>
+    <script src="/js/poses.js?v=page-jump-1" defer></script>
 </head>
 
 <body>
@@ -38,7 +42,7 @@
                 </button>
 
                 <h1 class="toolbar-title">
-                    Pose Gallery
+                    <button class="gallery-title-button" type="button" data-scroll-top aria-label="Pose Gallery, scroll to top">Pose Gallery</button>
                 </h1>
 
                 <div class="toolbar-right-actions">
@@ -143,13 +147,9 @@
 
                 <div class="layout-icon-controls">
 
-                    <button
-                            id="singleColumnButton"
-                            class="layout-icon-button active"
-                            type="button"
-                            aria-label="Single-column layout"
-                    >
-                        ☰
+                    <button id="favoritesToggleButton" class="layout-icon-button" type="button"
+                            aria-label="Favorites only" aria-pressed="false" title="Show favorites only">
+                        <span id="favoritesToggleIcon" aria-hidden="true">☆</span>
                     </button>
 
                     <button
@@ -157,6 +157,8 @@
                             class="layout-icon-button"
                             type="button"
                             aria-label="Double-column layout"
+                            aria-pressed="false"
+                            title="Switch to double-column layout"
                     >
                         ▦
                     </button>
@@ -273,6 +275,11 @@
                 aria-label="Pose actions"
         >
 
+            <button id="refreshPosesButton" class="compact-action-button" type="button"
+                    title="Refresh Pose gallery and filter options">
+                <span class="compact-action-icon" aria-hidden="true">↻</span>
+                <span id="refreshPosesLabel">Refresh</span>
+            </button>
             <button
                     id="addPoseActionButton"
                     class="compact-action-button"
@@ -293,42 +300,18 @@
             </button>
 
 
-            <div class="action-menu-divider"></div>
-
-
-            <button
-                    id="exportBackupButton"
-                    class="compact-action-button"
-                    type="button"
-            >
-
-                    <span class="compact-action-icon">
-                        ↓
-                    </span>
-
-                <span>
-                        Export Poses (JSON)
-                    </span>
-
+            <button id="backupMenuButton" class="compact-action-button" type="button"
+                    aria-expanded="false" aria-controls="backupOptions" title="JSON backup options">
+                <span class="compact-action-icon" aria-hidden="true">▣</span><span>Backup</span>
             </button>
-
-
-            <button
-                    id="importBackupButton"
-                    class="compact-action-button"
-                    type="button"
-            >
-
-                    <span class="compact-action-icon">
-                        ↑
-                    </span>
-
-                <span>
-                        Import Poses (JSON)
-                    </span>
-
-            </button>
-
+            <div id="backupOptions" class="backup-options hidden">
+                <button id="exportBackupButton" class="compact-action-button" type="button" title="Export poses as a JSON backup">
+                    <span class="compact-action-icon" aria-hidden="true">↓</span><span>Export (JSON)</span>
+                </button>
+                <button id="importBackupButton" class="compact-action-button" type="button" title="Import a JSON backup">
+                    <span class="compact-action-icon" aria-hidden="true">↑</span><span>Import (JSON)</span>
+                </button>
+            </div>
 
             <input
                     id="backupFileInput"
@@ -556,12 +539,28 @@
                 <div id="detailsHeaderView" class="details-header-view">
                     <div class="details-title-container"><h2 id="detailsPoseName">Pose Title</h2></div>
                     <div class="details-actions">
-                        <button id="editPoseButton" class="icon-button" type="button" aria-label="Edit pose" title="Edit pose">✏</button>
+                        <div id="poseDetailsMoreActions" class="details-more-actions">
+                            <button id="poseDetailsActionsButton" class="icon-button" type="button"
+                                    aria-label="Pose actions" title="Pose actions" aria-haspopup="menu"
+                                    aria-controls="poseDetailsActionsMenu" aria-expanded="false">⋮</button>
+                            <div id="poseDetailsActionsMenu" class="pose-details-actions-menu" role="menu" aria-label="Pose actions" hidden>
+                                <button id="favoritePoseDetailsButton" class="compact-action-button" type="button" role="menuitemcheckbox" aria-checked="false">
+                                    <span id="favoritePoseDetailsIcon" class="compact-action-icon" aria-hidden="true">☆</span>
+                                    <span id="favoritePoseDetailsLabel">Favorite</span>
+                                </button>
+                                <button id="editPoseButton" class="compact-action-button" type="button" role="menuitem">
+                                    <span class="compact-action-icon" aria-hidden="true">✏</span><span>Edit</span>
+                                </button>
+                                <button id="deletePoseButton" class="compact-action-button" type="button" role="menuitem" title="Delete pose">
+                                    <span class="compact-action-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/></svg></span><span>Delete</span>
+                                </button>
+                            </div>
+                        </div>
                         <button id="closePoseDetailsButton" class="close-button" type="button" aria-label="Close pose details">×</button>
                     </div>
                 </div>
             </div>
-            <div class="details-carousel">
+            <div class="details-carousel" tabindex="0" role="region" aria-label="Pose previews">
                 <div class="details-carousel-preview">
                     <button id="previousPreviewButton" class="carousel-navigation-button carousel-previous-button hidden" type="button" aria-label="Previous image">‹</button>
                     <div id="detailsImageContainer" class="details-image-container">
@@ -569,7 +568,8 @@
                     </div>
                     <button id="nextPreviewButton" class="carousel-navigation-button carousel-next-button hidden" type="button" aria-label="Next image">›</button>
                 </div>
-                <div id="previewIndicators" class="preview-indicators hidden" aria-label="Image selection"></div>
+                <div id="previewIndicators" class="preview-indicators hidden" aria-label="Preview selection"></div>
+                <p id="previewStatus" class="preview-status" role="status" aria-live="polite"></p>
             </div>
             <section id="detailsInfoView" class="details-info">
                 <p><strong>Base Model:</strong> <span id="detailsBaseModel">N/A</span></p>
@@ -693,6 +693,16 @@
     </section>
 
 </div>
+
+<dialog id="deletePoseDialog" class="pose-delete-dialog" aria-labelledby="deletePoseTitle" aria-describedby="deletePosePrompt">
+    <h2 id="deletePoseTitle">Delete pose?</h2>
+    <p id="deletePosePrompt"></p>
+    <p id="deletePoseError" class="details-edit-message-error hidden" role="alert"></p>
+    <div class="pose-delete-actions">
+        <button id="cancelDeletePoseButton" class="filter-reset-button" type="button" autofocus>Cancel</button>
+        <button id="confirmDeletePoseButton" class="pose-delete-confirm" type="button">Delete</button>
+    </div>
+</dialog>
 
 </body>
 </html>

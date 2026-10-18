@@ -357,6 +357,8 @@ function buildAddLoraFormData() {
         getValue("baseModel")
     );
 
+    formData.append("prompt", getValue("prompt"));
+
     formData.append(
         "positivePrompt",
         getValue("positivePrompt")

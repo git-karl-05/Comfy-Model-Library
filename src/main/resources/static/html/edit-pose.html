@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Edit Pose</title>
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css?v=uniform-filter-width-1">
+    <script src="/js/appearance-settings.js?v=settings-pagination-1"></script>
     <script src="/js/edit-field-tools.js" defer></script>
     <script src="/js/form-navigation.js" defer></script>
-    <script src="/js/poses.js" defer></script>
+    <script src="/js/poses.js?v=pose-picker-2" defer></script>
 </head>
 <body>
 <main class="edit-lora-page record-form-page">
-    <div class="edit-lora-container">
+    <div class="edit-lora-container content-container">
         <header class="edit-lora-header">
             <button id="optionsButton" class="options-button" type="button" aria-label="Open navigation menu" aria-controls="sideMenu" aria-expanded="false">☰</button>
             <h1 id="poseFormTitle">Edit Pose</h1>
-            <button id="closePoseFormButton" class="page-close-button" type="button" aria-label="Cancel and return" title="Cancel">×</button>
+            <button id="closePoseFormButton" class="page-close-button" type="button" aria-label="Cancel and return" title="Return to Pose Gallery"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
         </header>
         <div id="menuBackdrop" class="menu-backdrop hidden" aria-hidden="true"></div>
         <nav id="sideMenu" class="side-menu hidden" aria-label="Main navigation" aria-hidden="true">
@@ -26,10 +27,10 @@
         <form id="poseForm" class="edit-lora-form" enctype="multipart/form-data">
             <input id="poseIdInput" name="id" type="hidden">
             <section class="edit-image-section">
-                <label id="poseImagePreviewContainer" for="poseImagesInput" class="details-image-container add-image-preview">
-                    <div class="lora-card-placeholder">Click to choose preview images</div>
+                <label id="poseImagePreviewContainer" tabindex="0" role="button" aria-label="Choose pose preview from ComfyUI" class="details-image-container add-image-preview">
+                    <div class="lora-card-placeholder">Tap to choose from ComfyUI</div>
                 </label>
-                <input id="poseImagesInput" name="images" class="hidden-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
+                <input id="poseImagesInput" name="images" hidden disabled aria-hidden="true" class="hidden-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
                 <div id="poseSelectedImages" class="hidden" aria-live="polite"></div>
                 <div id="poseExistingImages" class="hidden"></div>
             </section>
@@ -102,5 +103,8 @@
     </section>
 </div>
 
+<dialog id="poseImagePicker" class="output-page-dialog" aria-label="Choose a preview">
+    <iframe id="outputPageFrame" title="ComfyUI output preview selection"></iframe>
+</dialog>
 </body>
 </html>

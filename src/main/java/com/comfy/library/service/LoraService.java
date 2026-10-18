@@ -106,6 +106,7 @@ public class LoraService {
         loraEntity.setPositivePrompt(
                 request.getPositivePrompt()
         );
+        if (request.getPrompt() != null) loraEntity.setPrompt(request.getPrompt());
 
         loraEntity.setNegativePrompt(
                 request.getNegativePrompt()
@@ -185,6 +186,7 @@ public class LoraService {
         loraEntity.setPositivePrompt(
                 request.getPositivePrompt()
         );
+        if (request.getPrompt() != null) loraEntity.setPrompt(request.getPrompt());
 
         loraEntity.setNegativePrompt(
                 request.getNegativePrompt()
@@ -328,6 +330,7 @@ public class LoraService {
         entity.setPositivePrompt(
                 request.getPositivePrompt()
         );
+        if (request.getPrompt() != null) entity.setPrompt(request.getPrompt());
 
         entity.setNegativePrompt(
                 request.getNegativePrompt()
@@ -472,6 +475,8 @@ public class LoraService {
 
             case "createdDate" ->
                     "createdDate";
+
+            case "category", "subCategory", "baseModel" -> sortBy;
 
             default ->
                     DEFAULT_SORT_BY;
@@ -913,6 +918,7 @@ public class LoraService {
                 )
         );
 
+        entity.setPrompt(resolveImportedPrompt(root));
         entity.setNotes(null);
         entity.setFavorite(false);
 
@@ -1362,6 +1368,51 @@ public class LoraService {
         return null;
     }
 
+
+    private String resolveImportedPrompt(JsonNode root) {
+        String prompt = getText(root, "prompt");
+        JsonNode images = root.path("civitai").path("images");
+        if (prompt == null && images.isArray()) {
+            for (JsonNode image : images) {
+                prompt = getText(image.path("meta"), "prompt");
+                if (prompt != null) break;
+            }
+        }
+        if (prompt == null) prompt = getText(root.path("civitai"), "description");
+        // Metadata stays intact on disk; the editable field has a 5,000-character limit.
+        return prompt == null ? null : prompt.substring(0, Math.min(prompt.length(), 5000));
+    }
+
+    // Only move notes that exactly match the old importer output or a metadata prompt.
+    // Unrecognized notes and an existing user prompt are never overwritten.
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    @org.springframework.transaction.annotation.Transactional
+    public void repairImportedPromptFields() {
+        for (LoraEntity entity : loraRepository.findAll()) {
+            if (entity.getModelFilePath() == null || entity.getModelFilePath().isBlank()) continue;
+            if (entity.getPrompt() != null && !entity.getPrompt().isBlank()) continue;
+            try {
+                Path metadata = resolveMetadataPath(Path.of(entity.getModelFilePath()).toAbsolutePath());
+                if (!Files.isRegularFile(metadata)) continue;
+                JsonNode root;
+                try (var input = Files.newInputStream(metadata)) { root = objectMapper.readTree(input); }
+                String importedPrompt = resolveImportedPrompt(root);
+                String notes = entity.getNotes();
+                boolean importedNotes = notes != null && !notes.isBlank()
+                        && (notes.equals(resolveNotes(root)) || notes.equals(importedPrompt));
+                if (importedNotes) {
+                    entity.setPrompt(importedPrompt != null ? importedPrompt : notes);
+                    entity.setNotes(null);
+                    loraRepository.save(entity);
+                } else if ((notes == null || notes.isBlank()) && importedPrompt != null) {
+                    entity.setPrompt(importedPrompt);
+                    loraRepository.save(entity);
+                }
+            } catch (IOException | IllegalArgumentException | tools.jackson.core.JacksonException ignored) {
+                // Missing or invalid metadata must not change user content or prevent startup.
+            }
+        }
+    }
 
     private String resolveNotes(
             JsonNode root

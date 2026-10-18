@@ -27,7 +27,7 @@ function fixture() {
         play() { this.played = true; return Promise.resolve(); }
     }
     const ids = new Map(['loraDetailsModal', 'detailsImageContainer', 'previewIndicators', 'previewStatus',
-        'previousPreviewButton', 'nextPreviewButton', 'loraList'].map(id => [id, new Element()]));
+        'previewPromptButton', 'copyPreviewPromptButton', 'closeExpandedTextButton', 'expandedTextModal', 'expandedTextTitle', 'expandedTextContent', 'previousPreviewButton', 'nextPreviewButton', 'loraList'].map(id => [id, new Element()]));
     const carousel = new Element();
     const sheet = new Element();
     ids.get('loraDetailsModal').querySelector = () => sheet;
@@ -41,9 +41,11 @@ function fixture() {
             querySelectorAll: () => [card]
         },
         window: {addEventListener(name, handler) { windowHandlers[name] = handler; }},
+        getComputedStyle: () => ({paddingLeft: "2px", paddingRight: "2px"}),
         IntersectionObserver: class {}, createGallerySort: () => ({}), console: {debug() {}, error() {}},
         fetch: async () => ({ok: true, json: async () => []})
     });
+    vm.runInContext(fs.readFileSync('src/main/resources/static/js/preview-media.js', 'utf8'), context);
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/app.js', 'utf8'), context);
     const run = code => vm.runInContext(code, context);
     run('currentLora = {id: 1, loraName: "Example", filePath: "/main.png"}; setupPreviewCarousel();');
@@ -136,15 +138,21 @@ test('late preview responses never replace another LoRA or update a closed modal
     assert.equal(f.ids.get('detailsImageContainer').children[0].src, '/new.png');
 });
 
-test('modal proportions follow the selected gallery card and are updated on resize', () => {
+test('LoRA modal keeps single-column dimensions in both gallery layouts and updates on resize', () => {
     const f = fixture();
     const modal = f.ids.get('loraDetailsModal');
     modal.querySelector = () => ({offsetWidth: 415, clientWidth: 400});
+    f.ids.get('loraList').clientWidth = 404;
     f.run('sizePreviewLikeGalleryCard()');
-    assert.equal(modal.style['--preview-card-ratio'], '0.8');
+    assert.equal(modal.style['--preview-card-ratio'], '0.75');
     assert.equal(modal.style['--preview-card-width'], '400px');
     assert.equal(modal.style['--preview-scrollbar-width'], '15px');
-    f.card.getBoundingClientRect = () => ({width: 300, height: 400});
+    f.ids.get('loraList').classList.add('double-column');
+    f.card.getBoundingClientRect = () => ({width: 193, height: 241.25});
+    f.run('sizePreviewLikeGalleryCard()');
+    assert.equal(modal.style['--preview-card-ratio'], '0.75');
+    assert.equal(modal.style['--preview-card-width'], '400px');
+    f.ids.get('loraList').clientWidth = 304;
     f.windowHandlers.resize();
     assert.equal(modal.style['--preview-card-ratio'], '0.75');
     assert.equal(modal.style['--preview-card-width'], '300px');
@@ -185,9 +193,9 @@ test('remote image/video previews and thumbnails share the local cache and retry
     f.run('showNextPreview();');
     const video = f.ids.get('detailsImageContainer').children[0];
     assert.equal(video.tagName, 'VIDEO');
-    assert.equal(video.src, '/api/loras/preview?url=https%3A%2F%2Fexample.com%2Fclip.mp4');
+    assert.equal(video.src, '/api/loras/preview?url=https%3A%2F%2Fexample.com%2Fclip.mp4#t=0.1');
     video.handlers.error();
-    assert.equal(video.src, 'https://example.com/clip.mp4');
+    assert.equal(video.src, 'https://example.com/clip.mp4#t=0.1');
 });
 
 function swipeEvent(x, y, target = {tagName: 'IMG', closest: () => null}) {
@@ -228,7 +236,7 @@ test('horizontal swipes navigate images and videos, wrap and update selected thu
     assert.equal(f.media.children[0].src, '/main.png');
     assert.equal(video.paused, true);
     f.swipe(50, 100, 150, 100);
-    assert.equal(f.media.children[0].src, '/clip.mp4');
+    assert.equal(f.media.children[0].src, '/clip.mp4#t=0.1');
 });
 
 test('vertical scrolling, small movements, controls and cancelled/multitouch gestures never change previews', async () => {
@@ -262,4 +270,103 @@ test('changing or resetting the current preview cancels a pending swipe; a singl
     f.media.handlers.touchend(end);
     f.swipe(150, 100, 50, 100);
     assert.equal(f.media.children[0].src, '/only.png');
+});
+
+
+test('preview info follows the selected URL and clears stale prompts', async () => {
+    const f = fixture();
+    f.context.document.body = {style: {}};
+    f.context.fetch = async () => ({ok: true, json: async () => [
+        {filePath: '/main.png', prompt: '<first prompt>'},
+        {filePath: '/clip.mp4', prompt: 'video prompt'},
+        {filePath: '/unknown.png', prompt: null}
+    ]});
+    await f.run('loadPreviewCarousel(1)');
+    const info = f.ids.get('previewPromptButton');
+    info.handlers.click();
+    assert.equal(f.ids.get('expandedTextContent').textContent, '<first prompt>');
+    f.run('showNextPreview()');
+    info.handlers.click();
+    assert.equal(f.ids.get('expandedTextContent').textContent, 'video prompt');
+    f.run('showNextPreview()');
+    info.handlers.click();
+    assert.equal(f.ids.get('expandedTextContent').textContent, 'No prompt available for this preview.');
+    f.run('resetPreviewCarousel()');
+    assert.equal(f.run('currentPreviewPrompts.size'), 0);
+    assert.equal(info.classList.contains('hidden'), true);
+});
+
+
+test('video controls fade info on interaction and restore it after idle without affecting another preview', async () => {
+    const f = fixture();
+    let pending;
+    f.context.setTimeout = callback => { pending = callback; return 1; };
+    f.context.clearTimeout = () => { pending = null; };
+    f.context.fetch = async () => ({ok: true, json: async () => ['/clip.mp4']});
+    await f.run('loadPreviewCarousel(1)');
+    f.run('showNextPreview()');
+    const video = f.ids.get('detailsImageContainer').children[0];
+    const info = f.ids.get('previewPromptButton');
+    video.paused = false;
+    video.handlers.pointermove();
+    assert.equal(info.classList.contains('video-controls-active'), true);
+    pending();
+    assert.equal(info.classList.contains('video-controls-active'), false);
+    video.paused = true;
+    video.handlers.pause();
+    assert.equal(info.classList.contains('video-controls-active'), true);
+    assert.equal(pending, null);
+    video.paused = false;
+    video.handlers.play();
+    const oldTimeout = pending;
+    f.run('showNextPreview()');
+    oldTimeout();
+    video.handlers.pointermove();
+    assert.equal(info.classList.contains('video-controls-active'), false);
+});
+
+
+test('preview prompt replaces close with shared copy action and dismisses on backdrop only', () => {
+    const f = fixture();
+    f.context.document.body = {style: {}};
+    f.run('setupExpandedTextModal(); openExpandedTextModal("Preview prompt", "exact prompt", true)');
+    const modal = f.ids.get('expandedTextModal');
+    const copy = f.ids.get('copyPreviewPromptButton');
+    const close = f.ids.get('closeExpandedTextButton');
+    assert.equal(copy.classList.contains('hidden'), false);
+    assert.equal(close.classList.contains('hidden'), true);
+    modal.handlers.click({target: copy});
+    assert.equal(modal.classList.contains('hidden'), false);
+    modal.handlers.click({target: modal});
+    assert.equal(modal.classList.contains('hidden'), true);
+    f.run('openExpandedTextModal("Notes", "Other text")');
+    assert.equal(copy.classList.contains('hidden'), true);
+    assert.equal(close.classList.contains('hidden'), false);
+});
+
+test('mobile video thumbnails request a frame without autoplay and reuse captured posters', async () => {
+    const f = fixture();
+    f.context.fetch = async () => ({ok: true, json: async () => [{filePath: '/clip.mp4'}]});
+    await f.run('loadPreviewCarousel(1)');
+    const thumbnail = f.ids.get('previewIndicators').children[1].querySelector('video');
+    assert.equal(thumbnail.src, '/clip.mp4#t=0.1');
+    assert.equal(thumbnail.played, undefined);
+    thumbnail.duration = 0.1;
+    thumbnail.handlers.loadedmetadata();
+    assert.equal(thumbnail.currentTime, 0.05);
+    thumbnail.videoWidth = 1920; thumbnail.videoHeight = 1080; thumbnail.readyState = 2;
+    let drawn;
+    f.context.document.createElement = tag => {
+        assert.equal(tag, 'canvas');
+        return {getContext: () => ({drawImage(...args) { drawn = args; }}),
+            toDataURL: () => 'data:image/jpeg;base64,frame'};
+    };
+    thumbnail.handlers.seeked();
+    assert.equal(thumbnail.poster, 'data:image/jpeg;base64,frame');
+    assert.deepEqual(drawn.slice(1), [0, 0, 640, 360]);
+    const next = {handlers: {}, addEventListener(type, handler) { this.handlers[type] = handler; }};
+    f.context.nextVideo = next;
+    f.run('setupVideoPreviewPoster(nextVideo, "/clip.mp4")');
+    assert.equal(next.poster, thumbnail.poster);
+    assert.equal(next.played, undefined);
 });

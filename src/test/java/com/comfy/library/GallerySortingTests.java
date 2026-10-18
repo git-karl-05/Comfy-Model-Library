@@ -29,6 +29,31 @@ class GallerySortingTests {
     @Autowired LoraImageRepository loraImages;
 
     @Test
+    void configuredPageSizesReturnTheRequestedNumberOfRecords() throws Exception {
+        var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+        for (int i = 0; i < 40; i++) {
+            var lora = new LoraEntity();
+            lora.setLoraName("Pagination fixture " + i);
+            lora.setBaseModel("Pagination fixture"); lora.setCategory(LoraCategory.STYLE); lora.setFavorite(true);
+            loras.save(lora);
+            var pose = new PoseEntity(); pose.setName("Pagination fixture " + i); pose.setFavorite(true);
+            poses.save(pose);
+        }
+        for (int size : new int[]{12, 24, 32}) {
+            for (String endpoint : new String[]{"/api/loras", "/api/loras/search", "/api/loras/filter", "/api/loras/favorites", "/api/poses"}) {
+                mvc.perform(get(endpoint).param("size", String.valueOf(size)).param("keyword", "Pagination fixture")
+                        .param("baseModel", "Pagination fixture"))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.size").value(size))
+                        .andExpect(jsonPath("$.content.length()").value(size))
+                        .andExpect(jsonPath("$.totalPages").value((40 + size - 1) / size));
+                mvc.perform(get(endpoint).param("size", String.valueOf(size)).param("page", "1")
+                        .param("keyword", "Pagination fixture").param("baseModel", "Pagination fixture"))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(Math.min(size, 40 - size)));
+            }
+        }
+    }
+
+    @Test
     void poseHttpContractMatchesThePage() throws Exception {
         var mvc = MockMvcBuilders.webAppContextSetup(context).build();
         mvc.perform(multipart("/api/poses")
@@ -137,6 +162,34 @@ class GallerySortingTests {
         assertEquals("Zulu", loraService.getFavoriteLoras(0, 12, "loraName", "desc").getContent().getFirst().getLoraName());
         assertEquals("Alpha", loraService.getFilteredLoras("Flux", LoraCategory.CHARACTER, null, 0, 12, "loraName", "asc").getContent().getFirst().getLoraName());
         assertEquals("Alpha", loraService.searchLoras("a", "Flux", LoraCategory.CHARACTER, null, true, 0, 12, "loraName", "asc").getContent().getFirst().getLoraName());
+    }
+
+    @Test
+    void metadataSortFieldsOrderBeforePaginationAcrossGallerySearchAndFavorites() throws Exception {
+        var mvc = MockMvcBuilders.webAppContextSetup(context).build();
+        loras.deleteAll();
+        for (int i=0;i<3;i++) {
+            var lora=new LoraEntity();
+            lora.setLoraName("Model " + (char)('A'+i));
+            lora.setCategory(List.of(LoraCategory.STYLE,LoraCategory.CHARACTER,LoraCategory.CONCEPT).get(i));
+            lora.setSubCategory(List.of("Zulu","Mike","Alpha").get(i));
+            lora.setBaseModel(List.of("Flux","SDXL","Illustrious").get(i));
+            lora.setFavorite(true);
+            loras.saveAndFlush(lora);
+        }
+        var expected=java.util.Map.of("category",List.of("Model B","Model C","Model A"),
+                "subCategory",List.of("Model C","Model B","Model A"),
+                "baseModel",List.of("Model A","Model C","Model B"));
+        for(var entry:expected.entrySet()) {
+            String field=entry.getKey(); var names=entry.getValue();
+            assertEquals(names.subList(0,2),loraService.getLoras(0,2,field,"asc").map(lora -> lora.getLoraName()).getContent());
+            assertEquals(names.getLast(),loraService.getLoras(1,2,field,"asc").getContent().getFirst().getLoraName());
+            assertEquals(names.reversed(),loraService.getLoras(0,12,field,"desc").map(lora -> lora.getLoraName()).getContent());
+            assertEquals(names,loraService.getFavoriteLoras(0,12,field,"asc").map(lora -> lora.getLoraName()).getContent());
+            assertEquals(names,loraService.searchLoras("Model",null,null,null,true,0,12,field,"asc").map(lora -> lora.getLoraName()).getContent());
+            mvc.perform(get("/api/loras").param("sortBy",field).param("sortDirection","asc"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].loraName").value(names.getFirst()));
+        }
     }
 
     @Test

@@ -244,6 +244,7 @@ public class LoraController {
 
     @GetMapping("/favorites")
     public ResponseEntity<Page<LoraResponse>> getFavoriteLoras(
+            @RequestParam(required = false) LoraCategory category,
             @RequestParam(required = false) String baseModel,
             @RequestParam(required = false) String subcategory,
             @RequestParam(defaultValue = "0")
@@ -257,7 +258,7 @@ public class LoraController {
     ) {
         return ResponseEntity.ok(
                 loraService.searchLoras(
-                        null, baseModel, null, subcategory, true,
+                        null, baseModel, category, subcategory, true,
                         page,
                         size,
                         sortBy,

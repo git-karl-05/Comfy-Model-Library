@@ -21,10 +21,12 @@ import java.util.*;
 public class PoseService {
     private final PoseRepository repository;
     private final Path uploadPath;
+    private final ComfyOutputService output;
 
-    public PoseService(PoseRepository repository,
+    public PoseService(PoseRepository repository, ComfyOutputService output,
                        @Value("${pose.upload.path:${user.home}/ComfyLibrary/uploads/pose}") String uploadPath) {
         this.repository = repository;
+        this.output = output;
         this.uploadPath = Paths.get(uploadPath);
     }
 
@@ -52,6 +54,12 @@ public class PoseService {
         return repository.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pose not found"));
     }
 
+    @Transactional
+    public void delete(Long id) {
+        // Media files can also be referenced by other records or restored backups.
+        repository.delete(get(id));
+    }
+
     public List<String> categories() {
         return repository.findAll().stream().map(PoseEntity::getCategory)
                 .filter(Objects::nonNull).filter(value -> !value.isBlank()).distinct().sorted().toList();
@@ -67,6 +75,13 @@ public class PoseService {
     @Transactional
     public PoseEntity save(Long id, String name, String category, Long seed, String lora,
                            String prompt, String notes, String baseModel, List<String> retained, List<MultipartFile> files) throws IOException {
+        return save(id, name, category, seed, lora, prompt, notes, baseModel, retained, files, null);
+    }
+
+    @Transactional
+    public PoseEntity save(Long id, String name, String category, Long seed, String lora,
+                           String prompt, String notes, String baseModel, List<String> retained,
+                           List<MultipartFile> files, String outputImage) throws IOException {
         if (name == null || name.isBlank() || name.length() > 255) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pose name is required (maximum 255 characters)");
         }
@@ -81,7 +96,9 @@ public class PoseService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Supported images: PNG, JPEG, WebP, GIF");
             }
         }
+        if (outputImage != null && !outputImage.isBlank()) output.image(outputImage);
         List<String> images = new ArrayList<>(retained);
+        if (outputImage != null && !outputImage.isBlank()) images.add(0, output.copyImage(outputImage, uploadPath));
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
             String extension = switch (file.getContentType()) {
@@ -104,7 +121,8 @@ public class PoseService {
         if (baseModel != null) pose.setBaseModel(baseModel.trim());
         pose.setImages(images);
         pose.setFilePath(images.isEmpty() ? null : images.getFirst());
-        pose.setType(PoseType.IMAGE);
+        pose.setType(!images.isEmpty() && images.getFirst().matches("(?i).*\\.(mp4|webm|mov|ogg)([?#].*)?$")
+                ? PoseType.VIDEO : PoseType.IMAGE);
         return repository.save(pose);
     }
 

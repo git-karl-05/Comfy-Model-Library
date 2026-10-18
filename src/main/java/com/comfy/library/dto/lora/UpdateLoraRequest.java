@@ -10,6 +10,7 @@ public class UpdateLoraRequest {
     private LoraCategory category;
     private String subCategory;
     private String baseModel;
+    private String prompt;
     private String positivePrompt;
     private String negativePrompt;
     private Long seedNumber;
@@ -72,6 +73,9 @@ public class UpdateLoraRequest {
         this.subCategory = subCategory;
     }
 
+
+    public String getPrompt() { return prompt; }
+    public void setPrompt(String prompt) { this.prompt = prompt; }
 
     public String getPositivePrompt() {
         return positivePrompt;

@@ -13,6 +13,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
         "baseModel",
         "groupName",
         "positivePrompt",
+        "prompt",
         "negativePrompt",
         "seedNumber",
         "notes",
@@ -37,6 +38,7 @@ public class LoraBackupItem {
     private String baseModel;
     private String groupName;
 
+    private String prompt;
     private String positivePrompt;
     private String negativePrompt;
     private Long seedNumber;
@@ -140,6 +142,9 @@ public class LoraBackupItem {
         providedFields.add("groupName");
         this.groupName = groupName;
     }
+
+    public String getPrompt() { return prompt; }
+    public void setPrompt(String prompt) { providedFields.add("prompt"); this.prompt = prompt; }
 
     public String getPositivePrompt() {
         return positivePrompt;

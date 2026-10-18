@@ -18,9 +18,16 @@ let loraDetailsSwipe = null;
 const DEFAULT_PAGE_SIZE = 12;
 
 let currentPage = 0;
-let pageSize = DEFAULT_PAGE_SIZE;
+let pageSize = window.LibrarySettings?.pageSize ?? DEFAULT_PAGE_SIZE;
 let totalPages = 0;
 let totalElements = 0;
+window.addEventListener("library-page-size-change", event => {
+    pageSize = event.detail.pageSize;
+    if (!document.getElementById("loraList")) return;
+    currentPage = 0;
+    pageBeforeSearch = 0;
+    refreshCurrentView();
+});
 
 
 /* =========================
@@ -46,6 +53,7 @@ let lastSearchKeyword = "";
 
 let appliedBaseModelFilter = "ALL";
 let appliedCategoryFilter = "ALL";
+let favoritesOnly = false;
 let appliedSubcategoryFilter = "ALL";
 let filterMetadata = [];
 
@@ -70,6 +78,7 @@ let appliedSortDirection = null;
 ========================= */
 
 let currentPreviewImages = [];
+let currentPreviewPrompts = new Map();
 let currentPreviewIndex = 0;
 let previewSwipe = null;
 let detailsRequestSequence = 0;
@@ -143,10 +152,11 @@ document.addEventListener(
         const saved = FormNavigation.restoreState();
         if (saved) {
             currentPage = Number.isInteger(saved.page) && saved.page >= 0 ? saved.page : 0;
-            appliedSortBy = ["loraName", "creator", "createdDate"].includes(saved.sortBy) ? saved.sortBy : null;
+            appliedSortBy = ["loraName", "creator", "category", "subCategory", "baseModel"].includes(saved.sortBy) ? saved.sortBy : null;
             appliedSortDirection = saved.sortDirection === "desc" ? "desc" : "asc";
             appliedBaseModelFilter = saved.baseModel || "ALL";
-            appliedCategoryFilter = saved.category || "ALL";
+            appliedCategoryFilter = saved.category === "FAVORITES" ? (saved.categoryBeforeFavorites || "ALL") : (saved.category || "ALL");
+            favoritesOnly = saved.favoritesOnly === true || saved.category === "FAVORITES";
             appliedSubcategoryFilter = saved.subcategory || "ALL";
             document.getElementById("searchInput").value = saved.search || "";
             isSearchActive = (saved.search || "").trim().length >= MINIMUM_SEARCH_LENGTH;
@@ -158,6 +168,7 @@ document.addEventListener(
         FormNavigation.register(() => ({
             page: currentPage, sortBy: appliedSortBy, sortDirection: appliedSortDirection,
             baseModel: appliedBaseModelFilter, category: appliedCategoryFilter, subcategory: appliedSubcategoryFilter,
+            favoritesOnly,
             search: document.getElementById("searchInput")?.value || "",
             doubleColumn: document.getElementById("loraList")?.classList.contains("double-column")
         }));
@@ -262,17 +273,6 @@ function displayLoras(
     );
 }
 
-
-// Keep source paths in records/backups; only media requests use the persistent local cache.
-function localPreviewUrl(path) {
-    return /^https?:\/\//i.test(path || "")
-        ? `/api/loras/preview?url=${encodeURIComponent(path)}` : path;
-}
-
-function addPreviewCacheFallback(media, path) {
-    if (!media || localPreviewUrl(path) === path) return;
-    media.addEventListener("error", () => { media.src = path; }, {once: true});
-}
 
 function createLoraCard(
     lora
@@ -546,13 +546,20 @@ async function toggleFavorite(loraId) {
             );
         }
 
+        const updated = await response.json();
+        if (String(currentLora?.id) === String(loraId)) {
+            currentLora.favorite = Boolean(updated.favorite);
+            updateLoraDetailsFavorite();
+        }
         await refreshCurrentView();
+        return updated;
 
     } catch (error) {
         console.error(
             "Error toggling favorite:",
             error
         );
+        return null;
     }
 }
 
@@ -796,8 +803,7 @@ async function searchLoras(
         };
 
         if (
-            appliedCategoryFilter ===
-            "FAVORITES"
+            favoritesOnly
         ) {
             parameters.favorite = true;
         }
@@ -877,13 +883,9 @@ async function refreshCurrentView() {
         return;
     }
 
-    /*
-     * Favorites is represented by the
-     * special FAVORITES category value.
-     */
+    // Favorites narrows the applied filters independently.
     if (
-        appliedCategoryFilter ===
-        "FAVORITES"
+        favoritesOnly
     ) {
         await fetchFavoriteLoras(
             currentPage
@@ -1210,7 +1212,24 @@ function getFilterElements() {
    FILTER MODAL
 ========================= */
 
+function setupFavoritesToggle() {
+    const button = document.getElementById("favoritesToggleButton");
+    if (!button) return;
+    button.addEventListener("click", async () => {
+        if (button.disabled) return;
+        button.disabled = true;
+        favoritesOnly = !favoritesOnly;
+        currentPage = 0;
+        pageBeforeSearch = 0;
+        updateFilterButton();
+        try { await refreshCurrentView(); }
+        finally { button.disabled = false; }
+    });
+}
+
+
 function setupFilterModal() {
+    setupFavoritesToggle();
     const {
         modal,
         backdrop,
@@ -1353,17 +1372,24 @@ async function refreshFilterMetadata() {
         category: appliedCategoryFilter, subCategory: appliedSubcategoryFilter});
 }
 
-function setMetadataFilterOptions(select, values, allLabel, selected, special = []) {
+function setMetadataFilterOptions(select, values, placeholder, selected, special = [], formatLabel = value => value) {
     const unique = [...new Set(values.filter(value => typeof value === "string" && value.trim()))]
             .sort((a, b) => a.localeCompare(b, undefined, {numeric: true}));
     select.replaceChildren();
-    for (const [value, label] of [["ALL", allLabel], ...special, ...unique.map(value => [value, value])]) {
+    // ALL remains an internal unfiltered value, never a selectable menu option.
+    const empty = document.createElement("option");
+    empty.value = "ALL";
+    empty.textContent = placeholder;
+    empty.hidden = true;
+    empty.disabled = true;
+    select.appendChild(empty);
+    for (const [value, label] of [...special, ...unique.map(value => [value, formatLabel(value)])]) {
         const option = document.createElement("option");
         option.value = value;
         option.textContent = label;
         select.appendChild(option);
     }
-    // Older saved filters used uppercase values; the backend compares case-insensitively.
+    // Older saved filters used uppercase values; retain the underlying metadata values.
     const match = selected === "ALL" ? null
             : unique.find(value => value.toLowerCase() === String(selected).toLowerCase());
     select.value = special.some(([value]) => value === selected) ? selected : match ?? "ALL";
@@ -1372,14 +1398,18 @@ function setMetadataFilterOptions(select, values, allLabel, selected, special = 
 function populateMetadataFilterOptions(selected) {
     const {baseModelFilter, categoryFilter, subcategoryFilter} = getFilterElements();
     setMetadataFilterOptions(baseModelFilter, filterMetadata.map(row => row.baseModel),
-            "All Base Models", selected.baseModel);
-    const models = filterMetadata.filter(row => baseModelFilter.value === "ALL" || row.baseModel === baseModelFilter.value);
+            "Select a base model", selected.baseModel);
+    const models = baseModelFilter.value === "ALL" ? []
+            : filterMetadata.filter(row => row.baseModel === baseModelFilter.value);
+    const sentenceCase = value => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
     setMetadataFilterOptions(categoryFilter, models.map(row => row.category),
-            "All Categories", selected.category, [["FAVORITES", "Favorites"]]);
-    const categories = models.filter(row => ["ALL", "FAVORITES"].includes(categoryFilter.value)
-            || row.category === categoryFilter.value);
+            "Select a category", selected.category, [], sentenceCase);
+    categoryFilter.disabled = baseModelFilter.value === "ALL";
+    const categories = models.filter(row => row.category === categoryFilter.value);
     setMetadataFilterOptions(subcategoryFilter, categories.map(row => row.subCategory),
-            "All Subcategories", selected.subCategory);
+            "Select a subcategory", selected.subCategory);
+    subcategoryFilter.disabled = categories.length === 0
+            || !categories.some(row => typeof row.subCategory === "string" && row.subCategory.trim());
 }
 
 
@@ -1529,8 +1559,7 @@ async function applySelectedFilter() {
     appliedBaseModelFilter =
         baseModelFilter.value;
 
-    appliedCategoryFilter =
-        categoryFilter.value;
+    appliedCategoryFilter = categoryFilter.value === "FAVORITES" ? "ALL" : categoryFilter.value;
 
     appliedSubcategoryFilter =
         subcategoryFilter.value;
@@ -1567,6 +1596,13 @@ function clearSearchForFilterChange() {
 
 
 function updateFilterButton() {
+    const favorites = favoritesOnly;
+    const favoritesButton = document.getElementById("favoritesToggleButton");
+    favoritesButton?.classList.toggle("active", favorites);
+    favoritesButton?.setAttribute("aria-pressed", String(favorites));
+    if (favoritesButton) favoritesButton.title = favorites ? "Turn off Favorites filter" : "Show favorites only";
+    const icon = document.getElementById("favoritesToggleIcon");
+    if (icon) icon.textContent = favorites ? "★" : "☆";
     const {
         openButton,
         countBadge
@@ -1777,77 +1813,100 @@ async function fetchLorasByCategory(
 ========================= */
 
 function setupLayoutButtons() {
-    const singleButton =
-        document.getElementById(
-            "singleColumnButton"
-        );
-
-    const doubleButton =
-        document.getElementById(
-            "doubleColumnButton"
-        );
-
-    const loraList =
-        document.getElementById(
-            "loraList"
-        );
-
-    if (
-        !singleButton ||
-        !doubleButton ||
-        !loraList
-    ) {
-        return;
+    const singleButton = document.getElementById("singleColumnButton");
+    const doubleButton = document.getElementById("doubleColumnButton");
+    const loraList = document.getElementById("loraList");
+    if (!doubleButton || !loraList) return;
+    function setLayout(doubleColumn) {
+        loraList.classList.toggle("single-column", !doubleColumn);
+        loraList.classList.toggle("double-column", doubleColumn);
+        doubleButton.classList.toggle("active", doubleColumn);
+        doubleButton.setAttribute("aria-pressed", String(doubleColumn));
+        doubleButton.title = doubleColumn ? "Switch to single-column layout" : "Switch to double-column layout";
+        singleButton?.classList.toggle("active", !doubleColumn);
     }
-
-    singleButton.addEventListener(
-        "click",
-        () => {
-            loraList.classList.remove(
-                "double-column"
-            );
-
-            loraList.classList.add(
-                "single-column"
-            );
-
-            singleButton.classList.add(
-                "active"
-            );
-
-            doubleButton.classList.remove(
-                "active"
-            );
-        }
-    );
-
-    doubleButton.addEventListener(
-        "click",
-        () => {
-            loraList.classList.remove(
-                "single-column"
-            );
-
-            loraList.classList.add(
-                "double-column"
-            );
-
-            doubleButton.classList.add(
-                "active"
-            );
-
-            singleButton.classList.remove(
-                "active"
-            );
-        }
-    );
+    // Support older pages with two controls; the main gallery uses a single toggle.
+    singleButton?.addEventListener("click", () => setLayout(false));
+    doubleButton.addEventListener("click", () => setLayout(singleButton ? true : !loraList.classList.contains("double-column")));
+    setLayout(loraList.classList.contains("double-column"));
 }
+
 
 /* =========================
    LORA DETAILS MODAL
 ========================= */
 
+function updateLoraDetailsFavorite() {
+    const favorite = Boolean(currentLora?.favorite);
+    document.getElementById("favoriteLoraDetailsButton")?.setAttribute("aria-checked", String(favorite));
+    const label = document.getElementById("favoriteLoraDetailsLabel");
+    const icon = document.getElementById("favoriteLoraDetailsIcon");
+    if (label) label.textContent = favorite ? "Unfavorite" : "Favorite";
+    if (icon) icon.textContent = favorite ? "★" : "☆";
+}
+function closeLoraDetailsActions(focus = false) {
+    const menu = document.getElementById("loraDetailsActionsMenu");
+    if (menu) menu.hidden = true;
+    const button = document.getElementById("loraDetailsActionsButton");
+    button?.setAttribute("aria-expanded", "false");
+    if (focus) button?.focus();
+}
+function setupLoraDetailsActions() {
+    const wrapper = document.getElementById("loraDetailsMoreActions");
+    const button = document.getElementById("loraDetailsActionsButton");
+    const menu = document.getElementById("loraDetailsActionsMenu");
+    const favorite = document.getElementById("favoriteLoraDetailsButton");
+    const edit = document.getElementById("editLoraButton");
+    if (!wrapper || !button || !menu || !favorite || !edit) return;
+    function open() {
+        updateLoraDetailsFavorite();
+        menu.hidden = false;
+        button.setAttribute("aria-expanded", "true");
+        favorite.focus();
+    }
+    button.addEventListener("click", () => menu.hidden ? open() : closeLoraDetailsActions(true));
+    button.addEventListener("keydown", event => {
+        if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+            event.preventDefault(); open();
+            if (event.key === "ArrowUp") edit.focus();
+        }
+    });
+    favorite.addEventListener("click", async () => {
+        if (!currentLora?.id || favorite.disabled) return;
+        const id = currentLora.id;
+        favorite.disabled = true;
+        try {
+            const updated = await toggleFavorite(id);
+            if (!updated) window.alert("Unable to update this LoRA's favorite status. Please try again.");
+            else if (String(currentLora?.id) === String(id)) closeLoraDetailsActions(true);
+        } finally { favorite.disabled = false; }
+    });
+    menu.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation(); closeLoraDetailsActions(true);
+        } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const items = [favorite, edit].filter(item => !item.disabled);
+            if (!items.length) return;
+            const current = items.indexOf(document.activeElement);
+            const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1
+                : (current + (event.key === "ArrowUp" ? -1 : 1) + items.length) % items.length;
+            items[next].focus();
+        }
+    });
+    wrapper.addEventListener("focusout", event => {
+        // Touch browsers may blur before click without focusing the tapped button.
+        // Outside clicks still dismiss the menu through the document click handler.
+        if (event.relatedTarget && !wrapper.contains(event.relatedTarget)) closeLoraDetailsActions();
+    });
+    document.addEventListener("click", event => {
+        if (!wrapper.contains(event.target)) closeLoraDetailsActions();
+    });
+}
+
+
 function setupLoraDetailsModal() {
+    setupLoraDetailsActions();
     const closeButton =
         document.getElementById(
             "closeLoraDetailsButton"
@@ -1888,10 +1947,10 @@ function setupLoraDetailsModal() {
         }
     );
 
-    editButton.addEventListener(
-        "click",
-        openEditLoraPage
-    );
+    editButton.addEventListener("click", () => {
+        closeLoraDetailsActions();
+        openEditLoraPage();
+    });
 }
 
 
@@ -2064,6 +2123,7 @@ async function openLoraDetailsModal(
     loraId
 ) {
     const requestSequence = ++detailsRequestSequence;
+    closeLoraDetailsActions();
     try {
         const response =
             await fetch(
@@ -2139,6 +2199,7 @@ function finishClosingLoraDetailsModal(
     modal,
     modalSheet
 ) {
+    closeLoraDetailsActions();
     detailsRequestSequence++;
     loraDetailsSwipe?.reset();
     modal.setAttribute("aria-hidden", "true");
@@ -2158,6 +2219,7 @@ function finishClosingLoraDetailsModal(
 
 
 function closeLoraDetailsModal() {
+    closeLoraDetailsActions();
     previewSwipe?.reset();
     const modal =
         document.getElementById(
@@ -2292,8 +2354,10 @@ function populateLoraDetailsModal(
         "detailsPositivePrompt",
         "detailsPositivePrompt",
         lora.positivePrompt,
-        "No positive prompt saved."
+        "No trained words saved."
     );
+
+    setCopyableField("detailsPrompt", "detailsPrompt", lora.prompt, "No prompt saved.");
 
     setCopyableField(
         "detailsSeedNumber",
@@ -3654,7 +3718,7 @@ function updatePaginationState(
             pageResponse.size
         )
             ? pageResponse.size
-            : DEFAULT_PAGE_SIZE;
+            : (window.LibrarySettings?.pageSize ?? DEFAULT_PAGE_SIZE);
 
     totalPages =
         Number.isInteger(
@@ -3848,8 +3912,13 @@ function updatePaginationControls() {
         currentPage >=
         totalPages - 1;
 
-    pageIndicator.textContent =
-        `Page ${currentPage + 1} of ${totalPages}`;
+    if (window.GalleryPagination) {
+        window.GalleryPagination.render(pageIndicator, currentPage, totalPages, async page => {
+            currentPage = page;
+            await refreshCurrentView();
+            scrollToLoraGalleryControls();
+        });
+    } else pageIndicator.textContent = `Page ${currentPage + 1} of ${totalPages}`;
 }
 
 
@@ -4079,56 +4148,15 @@ function setupBottomSheetSwipe({
    PREVIEW CAROUSEL
 ========================= */
 
-function setupPreviewSwipe(container) {
-    if (!container) return null;
-    let gesture = null;
-    const reset = () => { gesture = null; };
-    container.addEventListener("touchstart", event => {
-        reset();
-        if (event.touches.length !== 1 || currentPreviewImages.length < 2) return;
-        const target = event.target;
-        if (target.closest('button, a, input, select, textarea, [role="button"]')) return;
-        const touch = event.touches[0];
-        // Native video controls are retargeted to VIDEO; leave their bottom strip alone.
-        if (target.tagName === "VIDEO" && target.controls
-                && touch.clientY >= target.getBoundingClientRect().bottom - 64) return;
-        gesture = {x: touch.clientX, y: touch.clientY, horizontal: false,
-            record: currentLora, index: currentPreviewIndex};
-    }, {passive: true});
-    container.addEventListener("touchmove", event => {
-        if (!gesture) return;
-        if (event.touches.length !== 1) { reset(); return; }
-        const dx = Math.abs(event.touches[0].clientX - gesture.x);
-        const dy = Math.abs(event.touches[0].clientY - gesture.y);
-        if (!gesture.horizontal) {
-            if (Math.max(dx, dy) < 8) return;
-            if (dx <= dy * 1.25) { reset(); return; }
-            gesture.horizontal = true;
-        }
-        if (!event.cancelable) { reset(); return; }
-        event.preventDefault();
-        event.stopPropagation();
-    }, {passive: false});
-    container.addEventListener("touchend", event => {
-        const finished = gesture;
-        reset();
-        if (!finished || event.touches.length || !event.changedTouches.length
-                || finished.record !== currentLora || finished.index !== currentPreviewIndex) return;
-        const dx = event.changedTouches[0].clientX - finished.x;
-        const dy = event.changedTouches[0].clientY - finished.y;
-        const threshold = Math.min(80, Math.max(40, container.clientWidth * 0.12));
-        if (Math.abs(dx) < threshold || Math.abs(dx) <= Math.abs(dy) * 1.25) return;
-        if (event.cancelable) event.preventDefault();
-        if (dx < 0) showNextPreview();
-        else showPreviousPreview();
-    }, {passive: false});
-    container.addEventListener("touchcancel", reset, {passive: true});
-    return {reset};
-}
-
-
 function setupPreviewCarousel() {
-    previewSwipe ??= setupPreviewSwipe(document.getElementById("detailsImageContainer"));
+    document.getElementById("previewPromptButton")?.addEventListener("click", () => {
+        const path = currentPreviewImages[currentPreviewIndex];
+        openExpandedTextModal("Preview prompt", currentPreviewPrompts.get(path) || "No prompt available for this preview.", true);
+    });
+    previewSwipe ??= setupHorizontalPreviewSwipe(document.getElementById("detailsImageContainer"), {
+        getRecord: () => currentLora, getIndex: () => currentPreviewIndex,
+        getCount: () => currentPreviewImages.length, previous: showPreviousPreview, next: showNextPreview
+    });
     const carousel = document.querySelector("#loraDetailsModal .details-carousel");
     carousel?.addEventListener("keydown", event => {
         if (event.target.tagName === "VIDEO" || currentPreviewImages.length <= 1) return;
@@ -4174,6 +4202,8 @@ function setupPreviewCarousel() {
 function resetPreviewCarousel() {
     previewSwipe?.reset();
     currentPreviewImages = [];
+    currentPreviewPrompts.clear();
+    document.getElementById("previewPromptButton")?.classList.add("hidden");
     currentPreviewIndex = 0;
 
     const indicators =
@@ -4202,14 +4232,22 @@ async function loadPreviewCarousel(loraId, requestSequence = detailsRequestSeque
     try {
         const response = await fetch(`${API_BASE_URL}/${loraId}/images`);
         if (!response.ok) throw new Error(`Unable to load previews (${response.status})`);
-        const previews = normalizePreviewResponse(await response.json());
+        const payload = await response.json();
+        const previews = normalizePreviewResponse(payload);
         if (!isCurrentRequest()) return;
+        currentPreviewPrompts.clear();
+        const entries = Array.isArray(payload) ? payload : payload?.previews ?? [];
+        entries.forEach(preview => {
+            const path = preview?.filePath ?? preview?.url ?? preview?.path;
+            if (path && typeof preview.prompt === "string") currentPreviewPrompts.set(path, preview.prompt);
+        });
         // Historical LoRAs may only have a primary path; keep it first.
         currentPreviewImages = [...new Set([primaryPath, ...previews]
                 .filter(path => typeof path === "string" && path.trim()))];
     } catch (error) {
         if (!isCurrentRequest()) return;
         console.debug("Unable to load preview carousel; using main preview:", error);
+        currentPreviewPrompts.clear();
         currentPreviewImages = primaryPath ? [primaryPath] : [];
     }
     currentPreviewIndex = 0;
@@ -4221,15 +4259,13 @@ function sizePreviewLikeGalleryCard() {
     const modal = getLoraDetailsModal();
     const carousel = document.querySelector("#loraDetailsModal .details-carousel");
     if (!modal || !carousel) return;
-    const cards = document.querySelectorAll("#loraList .lora-card");
-    const card = [...cards].find(item => item.dataset.loraId === String(currentLora?.id))
-            ?? cards[0];
-    const bounds = card?.getBoundingClientRect();
-    const doubleColumn = document.getElementById("loraList")?.classList.contains("double-column");
-    const ratio = bounds?.width > 0 && bounds?.height > 0
-            ? bounds.width / bounds.height : doubleColumn ? 4 / 5 : 3 / 4;
-    modal.style.setProperty("--preview-card-ratio", String(ratio));
-    modal.style.setProperty("--preview-card-width", bounds?.width > 0 ? `${bounds.width}px` : "100%");
+    // Use the single-column gallery dimensions regardless of the selected display layout.
+    const list = document.getElementById("loraList");
+    const padding = list ? getComputedStyle(list) : null;
+    const width = (list?.clientWidth ?? 0)
+            - (parseFloat(padding?.paddingLeft) || 0) - (parseFloat(padding?.paddingRight) || 0);
+    modal.style.setProperty("--preview-card-ratio", String(3 / 4));
+    modal.style.setProperty("--preview-card-width", width > 0 ? `${width}px` : "100%");
     // Include the scroll area's gutter so it does not steal width from the image.
     const scrollArea = modal.querySelector(".lora-details-scroll-area");
     const scrollbarWidth = Math.max(0, (scrollArea?.offsetWidth ?? 0) - (scrollArea?.clientWidth ?? 0));
@@ -4281,6 +4317,8 @@ function normalizePreviewResponse(
 
 
 function renderCurrentPreview() {
+    const promptButton = document.getElementById("previewPromptButton");
+    promptButton?.classList.toggle("hidden", currentPreviewImages.length === 0);
     if (
         currentPreviewImages.length ===
         0
@@ -4317,6 +4355,7 @@ function renderPreviewPath(previewPath) {
     const imageContainer = document.getElementById("detailsImageContainer");
     if (!imageContainer) return;
     imageContainer.querySelector("video")?.pause();
+    document.getElementById("previewPromptButton")?.classList.remove("video-controls-active");
     imageContainer.replaceChildren();
     const placeholder = message => {
         const empty = document.createElement("div");
@@ -4335,7 +4374,7 @@ function renderPreviewPath(previewPath) {
     media.addEventListener("error", () => {
         if (!retriedSource && localPreviewUrl(previewPath) !== previewPath) {
             retriedSource = true;
-            media.src = previewPath;
+            media.src = isVideo && !previewPath.includes("#") ? `${previewPath}#t=0.1` : previewPath;
             return;
         }
         // A late error from the previous preview must not replace the current one.
@@ -4347,12 +4386,40 @@ function renderPreviewPath(previewPath) {
         media.loop = true;
         media.playsInline = true;
         media.preload = "metadata";
+        setupVideoPreviewPoster(media, previewPath);
+        setupPreviewPromptVisibility(media);
     } else {
         media.alt = `${currentLora?.loraName || "LoRA"} — preview ${currentPreviewIndex + 1}`;
     }
-    media.src = localPreviewUrl(previewPath);
+    media.src = isVideo ? videoThumbnailUrl(previewPath) : localPreviewUrl(previewPath);
     imageContainer.appendChild(media);
     if (isVideo) media.play().catch(() => { /* Autoplay may be blocked. */ });
+}
+
+
+// Native controls have no visibility event. Follow the interactions that reveal
+// them, then restore the info button after playback becomes idle.
+function setupPreviewPromptVisibility(video) {
+    const button = document.getElementById("previewPromptButton");
+    if (!button) return;
+    let idleTimer;
+    const isCurrent = () => video.parentElement === document.getElementById("detailsImageContainer");
+    const revealControls = () => {
+        if (!isCurrent()) return;
+        clearTimeout(idleTimer);
+        button.classList.add("video-controls-active");
+        if (!video.paused) {
+            idleTimer = setTimeout(() => {
+                if (isCurrent()) button.classList.remove("video-controls-active");
+            }, 2500);
+        }
+    };
+    ["pointermove", "pointerdown", "touchstart", "focus", "play", "pause", "seeking"].forEach(type =>
+        video.addEventListener(type, revealControls));
+    video.addEventListener("pointerleave", () => {
+        clearTimeout(idleTimer);
+        if (isCurrent() && !video.paused) button.classList.remove("video-controls-active");
+    });
 }
 
 
@@ -4454,6 +4521,7 @@ function renderPreviewIndicators() {
                 thumbnail.playsInline = true;
                 thumbnail.preload = "metadata";
                 thumbnail.tabIndex = -1;
+                setupVideoPreviewPoster(thumbnail, path, {thumbnail: true});
                 const badge = document.createElement("span");
                 badge.className = "preview-video-badge";
                 badge.textContent = "▶";
@@ -4468,13 +4536,13 @@ function renderPreviewIndicators() {
             thumbnail.addEventListener("error", () => {
                 if (!retriedSource && localPreviewUrl(path) !== path) {
                     retriedSource = true;
-                    thumbnail.src = path;
+                    thumbnail.src = isVideoPreview(path) && !path.includes("#") ? `${path}#t=0.1` : path;
                     return;
                 }
                 thumbnail.remove();
                 button.classList.add("preview-unavailable");
             });
-            thumbnail.src = localPreviewUrl(path);
+            thumbnail.src = isVideoPreview(path) ? videoThumbnailUrl(path) : localPreviewUrl(path);
             button.appendChild(thumbnail);
             button.addEventListener("click", () => {
                 currentPreviewIndex = index;
@@ -4912,7 +4980,8 @@ function setupExpandedTextModal() {
 
 function openExpandedTextModal(
     title,
-    text
+    text,
+    isPreviewPrompt = false
 ) {
     const modal =
         document.getElementById(
@@ -4935,6 +5004,14 @@ function openExpandedTextModal(
         !contentElement
     ) {
         return;
+    }
+
+    document.getElementById("closeExpandedTextButton")?.classList.toggle("hidden", isPreviewPrompt);
+    const copyButton = document.getElementById("copyPreviewPromptButton");
+    copyButton?.classList.toggle("hidden", !isPreviewPrompt);
+    if (copyButton) {
+        copyButton.title = "Copy preview prompt";
+        copyButton.setAttribute("aria-label", "Copy preview prompt");
     }
 
     titleElement.textContent =

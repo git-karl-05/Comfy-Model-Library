@@ -10,16 +10,18 @@
 
     <title>Add LoRA</title>
 
-    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css?v=uniform-filter-width-1">
+    <script src="/js/appearance-settings.js?v=settings-pagination-1"></script>
     <script src="/js/form-navigation.js" defer></script>
-    <script src="/js/add-lora.js" defer></script>
+    <script src="/js/add-lora.js?v=lora-prompt-1" defer></script>
+    <script src="/js/edit-field-tools.js" defer></script>
 </head>
 
 <body>
 
 <main class="add-lora-page record-form-page">
 
-    <div class="add-lora-container">
+    <div class="add-lora-container content-container">
 
 
         <header class="add-lora-header">
@@ -40,9 +42,7 @@
                     href="/html/index.html"
                     class="page-close-button"
                     aria-label="Cancel and return to LoRA Library"
-                    title="Cancel">
-                ×
-            </a>
+                    title="Return to LoRA Library"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
 
         </header>
 
@@ -74,8 +74,8 @@
                 LoRA Library
             </a>
 
-            <a href="/html/add-lora.html" class="side-menu-link active">
-                Add LoRA
+            <a href="/html/poses.html" class="side-menu-link">
+                Pose Gallery
             </a>
 
         </nav>
@@ -198,22 +198,47 @@
 
 
             <section class="details-prompt-section">
-                <h2>Positive Prompt</h2>
+                <div class="details-field-header">
+                    <h2 class="details-field-label" id="positivePromptLabel">Trained Words</h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="positivePrompt" data-copy-label="Copy Trained Words" aria-label="Copy Trained Words" title="Copy Trained Words">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="positivePrompt" data-field-label="Trained Words" aria-label="Expand Trained Words" title="Expand Trained Words">⛶</button>
+                    </div>
+                </div>
 
                 <textarea
                         id="positivePrompt"
+                        aria-labelledby="positivePromptLabel"
                         name="positivePrompt"
                         class="details-edit-textarea"
                         rows="8"
-                        placeholder="Enter the positive prompt or trigger words..."></textarea>
+                        placeholder="Enter the trained words..."></textarea>
             </section>
 
 
             <section class="details-prompt-section">
-                <h2>Notes</h2>
+                <div class="details-field-header">
+                    <h2 class="details-field-label" id="promptLabel">Prompt</h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="prompt" data-copy-label="Copy Prompt" aria-label="Copy Prompt" title="Copy Prompt">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="prompt" data-field-label="Prompt" aria-label="Expand Prompt" title="Expand Prompt">⛶</button>
+                    </div>
+                </div>
+                <textarea id="prompt" name="prompt" aria-labelledby="promptLabel" class="details-edit-textarea" rows="8" maxlength="5000" placeholder="Enter the prompt..."></textarea>
+            </section>
+
+            <section class="details-prompt-section">
+                <div class="details-field-header">
+                    <h2 class="details-field-label" id="notesLabel">Notes</h2>
+                    <div class="details-field-actions">
+                        <button type="button" class="copy-field-button" data-edit-copy="notes" data-copy-label="Copy Notes" aria-label="Copy Notes" title="Copy Notes">⧉</button>
+                        <button type="button" class="expand-field-button" data-edit-expand="notes" data-field-label="Notes" aria-label="Expand Notes" title="Expand Notes">⛶</button>
+                    </div>
+                </div>
 
                 <textarea
                         id="notes"
+                        aria-labelledby="notesLabel"
                         name="notes"
                         class="details-edit-textarea"
                         rows="6"
@@ -251,6 +276,16 @@
     </div>
 
 </main>
+
+<div id="expandedFieldEditor" class="expanded-text-modal hidden" role="dialog" aria-modal="true" aria-labelledby="expandedFieldTitle" aria-hidden="true" inert>
+    <section class="expanded-text-sheet">
+        <header class="expanded-text-header">
+            <h2 id="expandedFieldTitle">Edit text</h2>
+            <button id="closeExpandedFieldEditor" class="close-button" type="button" aria-label="Apply expanded text and close">×</button>
+        </header>
+        <textarea id="expandedFieldValue" class="details-edit-textarea expanded-field-value" aria-label="Expanded text"></textarea>
+    </section>
+</div>
 
 </body>
 </html>

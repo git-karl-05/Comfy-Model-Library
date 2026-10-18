@@ -14,6 +14,7 @@ public class LoraResponse {
     private LoraCategory category;
     private String subCategory;
     private String groupName;
+    private String prompt;
     private String positivePrompt;
     private String negativePrompt;
     private Long seedNumber;
@@ -36,6 +37,7 @@ public class LoraResponse {
         this.category = loraEntity.getCategory();
         this.subCategory = loraEntity.getSubCategory();
         this.groupName = loraEntity.getGroupName();
+        this.prompt = loraEntity.getPrompt();
         this.positivePrompt = loraEntity.getPositivePrompt();
         this.negativePrompt = loraEntity.getNegativePrompt();
         this.seedNumber = loraEntity.getSeedNumber();
@@ -112,6 +114,9 @@ public class LoraResponse {
     public void setGroupName(String groupName) {
         this.groupName = groupName;
     }
+
+    public String getPrompt() { return prompt; }
+    public void setPrompt(String prompt) { this.prompt = prompt; }
 
     public String getPositivePrompt() {
         return positivePrompt;

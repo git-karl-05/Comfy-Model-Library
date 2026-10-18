@@ -41,6 +41,35 @@ class BackupImportTests {
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
     }
 
+    @Test
+    void separatePromptPersistsThroughFormsAndBackupsWithoutChangingTrainedWords() throws Exception {
+        var created = mvc.perform(multipart("/api/loras").param("loraName", "Separate prompt")
+                        .param("category", "CHARACTER").param("positivePrompt", "trigger words")
+                        .param("prompt", "A detailed scene"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.prompt").value("A detailed scene"))
+                .andReturn().getResponse().getContentAsString();
+        long id = mapper.readTree(created).path("id").asLong();
+        var update = multipart("/api/loras/" + id).param("loraName", "Separate prompt")
+                .param("category", "CHARACTER").param("positivePrompt", "trigger words")
+                .param("prompt", "Edited scene");
+        update.with(request -> { request.setMethod("PUT"); return request; });
+        mvc.perform(update).andExpect(status().isOk()).andExpect(jsonPath("$.prompt").value("Edited scene"));
+        String backup = mvc.perform(get("/api/backup/export")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        images.deleteAll();
+        loras.deleteAll();
+        mvc.perform(post("/api/backup/import").contentType("application/json").content(backup))
+                .andExpect(status().isOk());
+        var restored = loras.findAll().getFirst();
+        assertEquals("trigger words", restored.getPositivePrompt());
+        assertEquals("Edited scene", restored.getPrompt());
+        var legacy = mapper.readTree(backup);
+        ((tools.jackson.databind.node.ObjectNode) legacy.path("loras").get(0)).remove("prompt");
+        mvc.perform(post("/api/backup/import").contentType("application/json").content(mapper.writeValueAsString(legacy)))
+                .andExpect(status().isOk());
+        assertEquals("Edited scene", loras.findAll().getFirst().getPrompt());
+    }
+
     private byte[] fixture() throws Exception {
         String suppliedPath = System.getProperty("backup.fixture.path");
         if (suppliedPath != null) {
@@ -307,6 +336,24 @@ class BackupImportTests {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Multiple existing LoRAs")));
         assertEquals(2, loras.count());
         assertTrue(loras.findAll().stream().allMatch(entity -> "keep".equals(entity.getNotes())));
+    }
+
+    @Test
+    void deletingPoseRemovesOnlyTheSelectedRecordAndHandlesMissingIds() throws Exception {
+        var selected = new com.comfy.library.entity.PoseEntity();
+        selected.setName("Delete this");
+        selected.setImages(new ArrayList<>(List.of("/uploads/pose/shared.png", "/uploads/pose/extra.png")));
+        selected = poses.saveAndFlush(selected);
+        var keep = new com.comfy.library.entity.PoseEntity();
+        keep.setName("Keep this");
+        keep.setImages(new ArrayList<>(List.of("/uploads/pose/shared.png")));
+        keep = poses.saveAndFlush(keep);
+        mvc.perform(delete("/api/poses/" + selected.getId())).andExpect(status().isNoContent());
+        assertFalse(poses.existsById(selected.getId()));
+        assertEquals(1, poses.count());
+        assertEquals(List.of("/uploads/pose/shared.png"), poses.findById(keep.getId()).orElseThrow().getImages());
+        mvc.perform(delete("/api/poses/" + selected.getId())).andExpect(status().isNotFound());
+        assertEquals(1, poses.count());
     }
 
     @Test

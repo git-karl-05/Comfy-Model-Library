@@ -21,6 +21,8 @@ public class LoraEntity {
     private String subCategory;
     private String groupName;
     @Column(length = 5000)
+    private String prompt;
+    @Column(length = 5000)
     private String positivePrompt;
     @Column(length = 5000)
     private String negativePrompt;
@@ -107,6 +109,9 @@ public class LoraEntity {
     public void setGroupName(String groupName) {
         this.groupName = groupName;
     }
+
+    public String getPrompt() { return prompt; }
+    public void setPrompt(String prompt) { this.prompt = prompt; }
 
     public String getPositivePrompt() {
         return positivePrompt;

@@ -16,17 +16,22 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class LoraImageService {
 
     private final LoraRepository loraRepository;
+    private final ObjectMapper objectMapper;
     private final LoraImageRepository loraImageRepository;
 
     @Value("${lora.upload.path}")
     private String uploadPath;
 
-    public LoraImageService(LoraRepository loraRepository, LoraImageRepository loraImageRepository) {
+    public LoraImageService(LoraRepository loraRepository, LoraImageRepository loraImageRepository, ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
         this.loraRepository = loraRepository;
         this.loraImageRepository = loraImageRepository;
     }
@@ -58,8 +63,38 @@ public class LoraImageService {
                 .toList();
 
         images.addAll(additionalImages);
+        Map<String, String> prompts = readPreviewPrompts(lora);
+        images.forEach(image -> image.setPrompt(prompts.get(image.getFilePath())));
 
         return images;
+    }
+
+    // Read the sidecar for existing imports too; match URLs rather than array positions.
+    private Map<String, String> readPreviewPrompts(LoraEntity lora) {
+        Map<String, String> prompts = new HashMap<>();
+        String modelPath = lora.getModelFilePath();
+        if (modelPath == null || modelPath.isBlank()) return prompts;
+        try {
+            Path model = Path.of(modelPath);
+            String name = model.getFileName().toString();
+            String stem = name.replaceFirst("(?i)\\.safetensors$", "");
+            Path metadata = model.resolveSibling(stem + ".metadata.json");
+            if (!Files.isRegularFile(metadata)) return prompts;
+            try (var input = Files.newInputStream(metadata)) {
+                var previews = objectMapper.readTree(input).path("civitai").path("images");
+                if (!previews.isArray()) return prompts;
+                for (var preview : previews) {
+                    var url = preview.path("url");
+                    var prompt = preview.path("meta").path("prompt");
+                    if (url.isTextual() && prompt.isTextual()) {
+                        prompts.putIfAbsent(url.asText(), prompt.asText());
+                    }
+                }
+            }
+        } catch (IOException | IllegalArgumentException | tools.jackson.core.JacksonException e) {
+            // An unavailable sidecar must not prevent viewing the carousel.
+        }
+        return prompts;
     }
 
     public String savePreviewImage(MultipartFile previewImage) {
