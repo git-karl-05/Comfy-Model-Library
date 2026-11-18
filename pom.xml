@@ -102,6 +102,12 @@
 
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>desktop</id>
+            <properties><start-class>com.comfy.library.desktop.DesktopLauncher</start-class></properties>
+        </profile>
+    </profiles>
     <build>
         <plugins>
             <plugin>

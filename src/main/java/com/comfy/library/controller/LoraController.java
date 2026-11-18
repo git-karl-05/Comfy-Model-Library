@@ -16,13 +16,17 @@ import java.util.List;
 @RequestMapping("/api/loras")
 public class LoraController {
 
+    private final com.comfy.library.service.PreviewEditorSaveService previewEditor;
+
     private final LoraService loraService;
     private final LoraImageService loraImageService;
 
     public LoraController(
             LoraService loraService,
-            LoraImageService loraImageService
+            LoraImageService loraImageService,
+            com.comfy.library.service.PreviewEditorSaveService previewEditor
     ) {
+        this.previewEditor = previewEditor;
         this.loraService = loraService;
         this.loraImageService = loraImageService;
     }
@@ -51,8 +55,13 @@ public class LoraController {
     public LoraResponse saveLoraWithPreviewImage(
             @ModelAttribute CreateLoraRequest request,
             @RequestParam(required = false)
-            MultipartFile previewImage
-    ) {
+            MultipartFile previewImage,
+            @RequestParam(required = false) List<MultipartFile> previewFiles
+    ) throws java.io.IOException {
+        if (request.getPreviewManifest() != null) {
+            if (previewImage != null && !previewImage.isEmpty()) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Conflicting preview instructions");
+            return previewEditor.saveLora(null, request, null, request.getPreviewManifest(), previewFiles == null ? List.of() : previewFiles);
+        }
         return loraService
                 .saveLoraWithPreviewImage(
                         request,
@@ -74,8 +83,13 @@ public class LoraController {
             @PathVariable Long loraId,
             @ModelAttribute UpdateLoraRequest request,
             @RequestParam(required = false)
-            MultipartFile preview
-    ) {
+            MultipartFile preview,
+            @RequestParam(required = false) List<MultipartFile> previewFiles
+    ) throws java.io.IOException {
+        if (request.getPreviewManifest() != null) {
+            if (request.isRemovePreview() || (preview != null && !preview.isEmpty())) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Conflicting preview instructions");
+            return ResponseEntity.ok(previewEditor.saveLora(loraId, null, request, request.getPreviewManifest(), previewFiles == null ? List.of() : previewFiles));
+        }
         return ResponseEntity.ok(
                 loraService
                         .updateLoraWithPreviewById(

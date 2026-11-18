@@ -6,6 +6,8 @@ import com.comfy.library.entity.LoraEntity;
 import java.time.LocalDateTime;
 
 public class LoraResponse {
+    private boolean archived;
+    public boolean isArchived() { return archived; }
     private Long id;
     private String loraName;
     private String version;
@@ -29,6 +31,7 @@ public class LoraResponse {
     private String baseModel;
 
     public LoraResponse(LoraEntity loraEntity) {
+        this.archived = loraEntity.isArchived();
         this.id = loraEntity.getId();
         this.loraName = loraEntity.getLoraName();
         this.version = loraEntity.getVersion();

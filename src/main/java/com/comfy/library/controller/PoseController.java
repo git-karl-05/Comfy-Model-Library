@@ -13,10 +13,13 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/poses")
 public class PoseController {
+    private final com.comfy.library.service.PreviewEditorSaveService previewEditor;
+
     private final PoseService service;
     private final ObjectMapper mapper;
 
-    public PoseController(PoseService service, ObjectMapper mapper) {
+    public PoseController(PoseService service, ObjectMapper mapper, com.comfy.library.service.PreviewEditorSaveService previewEditor) {
+        this.previewEditor = previewEditor;
         this.service = service;
         this.mapper = mapper;
     }
@@ -56,7 +59,13 @@ public class PoseController {
                            @RequestParam(required = false) String baseModel,
                            @RequestParam(defaultValue = "[]") String retainedImages,
                            @RequestParam(required = false) List<MultipartFile> images,
-                           @RequestParam(required = false) String outputImage) throws IOException {
+                           @RequestParam(required = false) String outputImage,
+                           @RequestParam(required = false) String previewManifest) throws IOException {
+        if (previewManifest != null) {
+            if (!"[]".equals(retainedImages) || (images != null && images.stream().anyMatch(file -> !file.isEmpty())) || (outputImage != null && !outputImage.isBlank()))
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Conflicting preview instructions");
+            return previewEditor.savePose(id, name, category, seed, lora, prompt, notes, baseModel, previewManifest);
+        }
         List<String> retained = Arrays.asList(mapper.readValue(retainedImages, String[].class));
         return service.save(id, name, category, seed, lora, prompt, notes, baseModel, retained, images == null ? List.of() : images, outputImage);
     }

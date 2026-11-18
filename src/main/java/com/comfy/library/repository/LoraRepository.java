@@ -16,7 +16,10 @@ import java.util.Optional;
 
 @Repository
 public interface LoraRepository extends JpaRepository<LoraEntity, Long>, JpaSpecificationExecutor<LoraEntity> {
-    @Query("select distinct new com.comfy.library.dto.lora.LoraFilterMetadata(l.baseModel, l.category, l.subCategory) from LoraEntity l")
+    List<LoraEntity> findByArchivedFalse();
+    Page<LoraEntity> findByArchivedFalse(Pageable pageable);
+    Page<LoraEntity> findByArchivedTrue(Pageable pageable);
+    @Query("select distinct new com.comfy.library.dto.lora.LoraFilterMetadata(l.baseModel, l.category, l.subCategory) from LoraEntity l where l.archived = false")
     List<LoraFilterMetadata> findFilterMetadata();
     List<LoraEntity> findAllByLoraNameAndVersionAndCreator(String loraName, String version, String creator);
     List<LoraEntity> findAllBySha256(String sha256);
@@ -26,11 +29,11 @@ public interface LoraRepository extends JpaRepository<LoraEntity, Long>, JpaSpec
 
 
 
-    Page<LoraEntity> findByCategory(LoraCategory category, Pageable pageable);
+    Page<LoraEntity> findByCategoryAndArchivedFalse(LoraCategory category, Pageable pageable);
 
-    Page<LoraEntity> findByGroupNameIgnoreCase(String groupName, Pageable pageable);
+    Page<LoraEntity> findByGroupNameIgnoreCaseAndArchivedFalse(String groupName, Pageable pageable);
 
-    Page<LoraEntity> findByFavoriteTrue(Pageable pageable);
+    Page<LoraEntity> findByFavoriteTrueAndArchivedFalse(Pageable pageable);
 
     Page<LoraEntity> findByLoraNameContainingIgnoreCase(String keyword, Pageable pageable);
 

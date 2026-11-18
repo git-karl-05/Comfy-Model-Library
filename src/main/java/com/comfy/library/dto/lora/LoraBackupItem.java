@@ -45,6 +45,12 @@ public class LoraBackupItem {
 
     private String notes;
     private Boolean favorite;
+    private Boolean archived;
+    public Boolean getArchived() { return archived; }
+    public void setArchived(Boolean value) {
+        providedFields.add("archived");
+        archived = value;
+    }
 
     private String url;
     private String filePath;

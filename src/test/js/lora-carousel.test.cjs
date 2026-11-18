@@ -30,10 +30,11 @@ function fixture() {
         'previewPromptButton', 'copyPreviewPromptButton', 'closeExpandedTextButton', 'expandedTextModal', 'expandedTextTitle', 'expandedTextContent', 'previousPreviewButton', 'nextPreviewButton', 'loraList'].map(id => [id, new Element()]));
     const carousel = new Element();
     const sheet = new Element();
+    ids.get('loraDetailsModal').classList.add('hidden');
     ids.get('loraDetailsModal').querySelector = () => sheet;
     const card = new Element(); card.dataset.loraId = '1';
     card.getBoundingClientRect = () => ({width: 400, height: 500});
-    const windowHandlers = {};
+    const windowHandlers = {}, observers = [];
     const context = vm.createContext({
         document: {
             addEventListener() {}, getElementById: id => ids.get(id), createElement: tag => new Element(tag),
@@ -42,15 +43,24 @@ function fixture() {
         },
         window: {addEventListener(name, handler) { windowHandlers[name] = handler; }},
         getComputedStyle: () => ({paddingLeft: "2px", paddingRight: "2px"}),
-        IntersectionObserver: class {}, createGallerySort: () => ({}), console: {debug() {}, error() {}},
+        IntersectionObserver: class {constructor(callback) { observers.push(callback); } observe() {}}, createGallerySort: () => ({}), console: {debug() {}, error() {}},
         fetch: async () => ({ok: true, json: async () => []})
     });
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/preview-media.js', 'utf8'), context);
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/app.js', 'utf8'), context);
     const run = code => vm.runInContext(code, context);
     run('currentLora = {id: 1, loraName: "Example", filePath: "/main.png"}; setupPreviewCarousel();');
-    return {ids, context, run, carousel, card, windowHandlers};
+    return {ids, context, run, carousel, card, windowHandlers, observers};
 }
+
+test('LoRA handle supports dismissal while the details content is scrolled', () => {
+    const f = fixture();
+    let options;
+    f.context.setupSwipeDownToClose = (sheet, scroll, dismiss, config) => { options = config; return {reset() {}}; };
+    f.run('setupLoraDetailsSwipe();');
+    assert.equal(options.handleWhileScrolled, true);
+    assert.equal(options.allowVideoSwipe, true);
+});
 
 test('loads the existing images endpoint, preserves primary/order, deduplicates and shows thumbnails', async () => {
     const f = fixture();
@@ -193,9 +203,9 @@ test('remote image/video previews and thumbnails share the local cache and retry
     f.run('showNextPreview();');
     const video = f.ids.get('detailsImageContainer').children[0];
     assert.equal(video.tagName, 'VIDEO');
-    assert.equal(video.src, '/api/loras/preview?url=https%3A%2F%2Fexample.com%2Fclip.mp4#t=0.1');
+    assert.equal(video.src, '/api/loras/preview?url=https%3A%2F%2Fexample.com%2Fclip.mp4');
     video.handlers.error();
-    assert.equal(video.src, 'https://example.com/clip.mp4#t=0.1');
+    assert.equal(video.src, 'https://example.com/clip.mp4');
 });
 
 function swipeEvent(x, y, target = {tagName: 'IMG', closest: () => null}) {
@@ -236,7 +246,7 @@ test('horizontal swipes navigate images and videos, wrap and update selected thu
     assert.equal(f.media.children[0].src, '/main.png');
     assert.equal(video.paused, true);
     f.swipe(50, 100, 150, 100);
-    assert.equal(f.media.children[0].src, '/clip.mp4#t=0.1');
+    assert.equal(f.media.children[0].src, '/clip.mp4');
 });
 
 test('vertical scrolling, small movements, controls and cancelled/multitouch gestures never change previews', async () => {
@@ -344,29 +354,155 @@ test('preview prompt replaces close with shared copy action and dismisses on bac
     assert.equal(close.classList.contains('hidden'), false);
 });
 
-test('mobile video thumbnails request a frame without autoplay and reuse captured posters', async () => {
+test('sidebar opens and closes from its backdrop with no X control', () => {
     const f = fixture();
-    f.context.fetch = async () => ({ok: true, json: async () => [{filePath: '/clip.mp4'}]});
-    await f.run('loadPreviewCarousel(1)');
-    const thumbnail = f.ids.get('previewIndicators').children[1].querySelector('video');
-    assert.equal(thumbnail.src, '/clip.mp4#t=0.1');
-    assert.equal(thumbnail.played, undefined);
-    thumbnail.duration = 0.1;
-    thumbnail.handlers.loadedmetadata();
-    assert.equal(thumbnail.currentTime, 0.05);
-    thumbnail.videoWidth = 1920; thumbnail.videoHeight = 1080; thumbnail.readyState = 2;
-    let drawn;
-    f.context.document.createElement = tag => {
-        assert.equal(tag, 'canvas');
-        return {getContext: () => ({drawImage(...args) { drawn = args; }}),
-            toDataURL: () => 'data:image/jpeg;base64,frame'};
+    for (const id of ['optionsButton', 'sideMenu', 'menuBackdrop']) f.ids.set(id, f.context.document.createElement('div'));
+    f.run('setupMenu()');
+    f.ids.get('optionsButton').handlers.click();
+    assert.equal(f.ids.get('optionsButton').attrs['aria-expanded'], 'true');
+    f.ids.get('menuBackdrop').handlers.click();
+    assert.equal(f.ids.get('sideMenu').classList.contains('hidden'), true);
+    assert.equal(f.ids.get('optionsButton').attrs['aria-expanded'], 'false');
+});
+
+test('details backdrop and Escape dismissal remain available without a close button', () => {
+    const f = fixture(), handlers = {};
+    f.ids.set('editLoraButton', f.context.document.createElement('button'));
+    f.context.document.addEventListener = (type, handler) => { handlers[type] = handler; };
+    f.context.dismissals = 0;
+    f.run('closeLoraDetailsModal = () => { dismissals++; }; setupLoraDetailsModal();');
+    const modal = f.ids.get('loraDetailsModal');
+    modal.classList.remove('hidden');
+    modal.handlers.click({target:modal});
+    handlers.keydown({key:'Escape'});
+    assert.equal(f.context.dismissals, 2);
+    handlers.keydown({key:'Escape', defaultPrevented:true});
+    assert.equal(f.context.dismissals, 2);
+});
+
+
+test('gallery cards use the original media markup and hover playback without priming', () => {
+    const f = fixture(), make = f.context.document.createElement;
+    const card = make('article'), video = make('video'); let markup;
+    Object.defineProperty(card, 'innerHTML', {get: () => markup, set(value) { markup = value; }});
+    card.querySelector = selector => ['.lora-card-image', 'video.lora-card-image'].includes(selector) ? video : null;
+    f.context.document.createElement = () => card;
+    f.context.document.querySelectorAll = () => [video];
+    f.context.window.matchMedia = () => ({matches:true});
+    f.run('createLoraCard({id:1, loraName:"Original video", filePath:"https://example.com/clip.mp4"})');
+    assert.match(markup, /src="\/api\/loras\/preview\?url=https%3A%2F%2Fexample.com%2Fclip.mp4"/);
+    assert.match(markup, /muted[\s\S]*loop[\s\S]*playsinline[\s\S]*preload="auto"/);
+    assert.equal(video.played, undefined);
+    assert.equal(video.poster, undefined);
+    card.handlers.mouseenter(); assert.equal(video.played, true);
+    card.handlers.mouseleave(); assert.equal(video.paused, true); assert.equal(video.currentTime, 0);
+});
+
+test('blocked mobile autoplay keeps cards clickable and retries directly on a trusted gesture', async () => {
+    const f = fixture(), video = f.context.document.createElement('video'), card = f.context.document.createElement('article');
+    f.ids.get('loraDetailsModal').classList.add('hidden');
+    f.context.window.matchMedia = () => ({matches:false});
+    f.context.document.querySelectorAll = () => [video];
+    video.isConnected = true; video.dataset.galleryVisible = 'true'; video.paused = true;
+    let attempts = 0;
+    video.play = () => {
+        attempts++;
+        if (attempts === 1) return Promise.reject(Object.assign(new Error('User gesture required'), {name:'NotAllowedError'}));
+        video.paused = false; return Promise.resolve();
     };
-    thumbnail.handlers.seeked();
-    assert.equal(thumbnail.poster, 'data:image/jpeg;base64,frame');
-    assert.deepEqual(drawn.slice(1), [0, 0, 640, 360]);
-    const next = {handlers: {}, addEventListener(type, handler) { this.handlers[type] = handler; }};
-    f.context.nextVideo = next;
-    f.run('setupVideoPreviewPoster(nextVideo, "/clip.mp4")');
-    assert.equal(next.poster, thumbnail.poster);
-    assert.equal(next.played, undefined);
+    f.context.mobileVideo = video; f.context.mobileCard = card;
+    f.run('setupGalleryVideoPreview(mobileCard, mobileVideo); activeGalleryVideo = mobileVideo; playGalleryVideo(mobileVideo);');
+    await new Promise(setImmediate);
+    assert.equal(video.controls, false);
+    assert.equal(video.handlers.click, undefined, 'video must not intercept the card click');
+    assert.equal(video.dataset.autoplayBlocked, 'true');
+    f.run('resumeMobileGalleryPreview({isTrusted:true})');
+    assert.equal(attempts, 2, 'retry must happen synchronously inside the user gesture');
+    await Promise.resolve();
+    assert.equal(video.paused, false);
+    assert.equal(video.dataset.autoplayBlocked, undefined);
+});
+
+test('mobile visibility selects the most visible video and pauses others without rewinding frames', () => {
+    const f = fixture(), first = f.context.document.createElement('video'), second = f.context.document.createElement('video');
+    f.context.window.matchMedia = () => ({matches:false});
+    f.context.document.querySelectorAll = () => [first, second];
+    for (const video of [first, second]) {
+        video.isConnected = true; video.currentTime = 3; video.paused = true;
+        video.play = () => { video.paused = false; return Promise.resolve(); };
+    }
+    f.observers[0]([{target:first,isIntersecting:true,intersectionRatio:.9}, {target:second,isIntersecting:true,intersectionRatio:.1}]);
+    assert.equal(first.paused, false); assert.equal(second.paused, true);
+    assert.equal(first.dataset.galleryVisible, 'true'); assert.equal(second.currentTime, 3);
+    assert.equal(first.autoplay, true); assert.equal(second.autoplay, false);
+    f.observers[0]([{target:first,isIntersecting:true,intersectionRatio:.1}, {target:second,isIntersecting:true,intersectionRatio:.9}]);
+    assert.equal(first.paused, true); assert.equal(first.currentTime, 3);
+    assert.equal(second.paused, false);
+    f.observers[0]([{target:first,isIntersecting:false,intersectionRatio:0}, {target:second,isIntersecting:false,intersectionRatio:0}]);
+    assert.equal(second.paused, true); assert.equal(second.autoplay, false);
+});
+
+test('fresh mobile gallery videos request native muted inline autoplay before any user gesture', () => {
+    const f = fixture(), video = f.context.document.createElement('video'), card = f.context.document.createElement('article');
+    f.context.window.matchMedia = () => ({matches:false});
+    f.context.mobileVideo = video; f.context.mobileCard = card;
+    f.run('setupGalleryVideoPreview(mobileCard, mobileVideo)');
+    assert.equal(video.autoplay, true);
+    assert.equal(video.attrs.autoplay, '');
+    assert.equal(video.muted, true);
+    assert.equal(video.defaultMuted, true);
+    assert.equal(video.playsInline, true);
+    assert.equal(video.controls, false);
+    assert.equal(video.handlers.click, undefined);
+});
+
+test('opening details pauses background videos without rewinding and closing resumes the mobile preview', async () => {
+    const f = fixture(), video = f.context.document.createElement('video');
+    video.currentTime = 12; video.paused = false; video.autoplay = true; video.isConnected = true;
+    video.play = () => {video.paused = false; return Promise.resolve();};
+    f.context.document.querySelectorAll = () => [video];
+    f.context.window.matchMedia = () => ({matches: false});
+    f.context.background = video;
+    f.context.fetch = async () => ({ok: true, json: async () => ({id: 1})});
+    f.run('activeGalleryVideo = background; populateLoraDetailsModal = () => {}; sizePreviewLikeGalleryCard = () => {}; restartLoraModalOpeningAnimation = () => {}; resetLoraDetailsScrollPosition = () => {}; loadPreviewCarousel = async () => {};');
+    await f.run('openLoraDetailsModal(1)');
+    assert.equal(video.paused, true);
+    assert.equal(video.autoplay, false);
+    assert.equal(video.currentTime, 12);
+    f.run('finishClosingLoraDetailsModal(getLoraDetailsModal(), getLoraDetailsModal().querySelector(".lora-details-sheet"))');
+    assert.equal(video.paused, false);
+    assert.equal(video.currentTime, 12);
+});
+
+test('visibility changes and native play events cannot restart gallery videos behind details', () => {
+    const f = fixture(), video = f.context.document.createElement('video'), card = f.context.document.createElement('article');
+    f.context.window.matchMedia = () => ({matches: false});
+    f.context.document.querySelectorAll = () => [video];
+    f.context.background = video; f.context.backgroundCard = card;
+    video.play = () => {throw new Error('Background playback must remain blocked');};
+    f.run('setupGalleryVideoPreview(backgroundCard, background);');
+    f.ids.get('loraDetailsModal').classList.remove('hidden');
+    f.observers[0]([{target: video, isIntersecting: true, intersectionRatio: 1}]);
+    assert.equal(video.paused, true);
+    assert.equal(video.autoplay, false);
+    video.paused = false;
+    video.handlers.play();
+    assert.equal(video.paused, true);
+    f.run('resumeMobileGalleryPreview({isTrusted: true});');
+});
+
+test('a pending gallery play promise is paused if details open before playback settles', async () => {
+    const f = fixture(), video = f.context.document.createElement('video');
+    let resolvePlay;
+    video.play = () => new Promise(resolve => {resolvePlay = resolve;});
+    f.context.background = video;
+    f.context.document.querySelectorAll = () => [video];
+    f.context.window.matchMedia = () => ({matches: false});
+    f.run('playGalleryVideo(background)');
+    f.ids.get('loraDetailsModal').classList.remove('hidden');
+    video.paused = false;
+    resolvePlay();
+    await Promise.resolve();
+    assert.equal(video.paused, true);
+    assert.equal(video.autoplay, false);
 });

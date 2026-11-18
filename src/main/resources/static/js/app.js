@@ -19,6 +19,22 @@ const DEFAULT_PAGE_SIZE = 12;
 
 let currentPage = 0;
 let pageSize = window.LibrarySettings?.pageSize ?? DEFAULT_PAGE_SIZE;
+let archiveRefreshSequence = 0;
+window.addEventListener("library-archive-change", async () => {
+    const request = ++archiveRefreshSequence;
+    const position = {left: window.scrollX || 0, top: window.scrollY || 0, behavior: "instant"};
+    try {
+        await refreshFilterMetadata();
+        if (request !== archiveRefreshSequence) return;
+        await refreshCurrentView();
+        if (request !== archiveRefreshSequence) return;
+        if (currentPage > 0 && currentPage >= totalPages) {
+            currentPage = Math.max(0, totalPages - 1);
+            await refreshCurrentView();
+        }
+        if (request === archiveRefreshSequence) window.scrollTo(position);
+    } catch (error) { console.error("Unable to refresh the library after archiving", error); }
+});
 let totalPages = 0;
 let totalElements = 0;
 window.addEventListener("library-page-size-change", event => {
@@ -45,6 +61,7 @@ let scrollPositionBeforeSearch = 0;
 
 let searchDebounceTimer = null;
 let lastSearchKeyword = "";
+let galleryRequestSequence = 0;
 
 
 /* =========================
@@ -88,151 +105,119 @@ let detailsRequestSequence = 0;
    APPLICATION STARTUP
 ========================= */
 
-document.addEventListener(
-    "DOMContentLoaded",
-    async () => {
+let libraryStartupPromise = Promise.resolve();
+document.addEventListener("DOMContentLoaded", () => {
+    libraryStartupPromise = initializeLibrary().catch(error => {
+        document.body.classList.remove("returning-to-modal");
+        displayGalleryError(error);
+    });
+    return libraryStartupPromise;
+});
 
-        if (getRequestedLoraId()) {
-            document.body.classList.add(
-                "returning-to-modal"
-            );
-        }
+async function initializeLibrary() {
 
-
-        /* -------------------------
-           Gallery
-        ------------------------- */
-
-        setupLayoutButtons();
-        setupPaginationControls();
-        setupGoToTopButton();
-
-
-        /* -------------------------
-           Search / Sort / Filter
-        ------------------------- */
-
-        setupSearch();
-        setupSearchOverlay();
-
-        setupSortModal();
-
-        setupFilterModal();
-        setupFilterSheetSwipe();
-
-
-        /* -------------------------
-           LoRA Details
-        ------------------------- */
-
-        setupLoraDetailsModal();
-        setupLoraDetailsSwipe();
-
-        setupPreviewCarousel();
-        setupExpandedTextModal();
-
-
-        /* -------------------------
-           Menus / Actions
-        ------------------------- */
-
-        setupMenu();
-        setupActionMenu();
-
-        setupImportFolderForm();
-
-        setupBackupExport();
-        setupBackupImport();
-
-
-        /* -------------------------
-           Initial Gallery Load
-        ------------------------- */
-
-        const saved = FormNavigation.restoreState();
-        if (saved) {
-            currentPage = Number.isInteger(saved.page) && saved.page >= 0 ? saved.page : 0;
-            appliedSortBy = ["loraName", "creator", "category", "subCategory", "baseModel"].includes(saved.sortBy) ? saved.sortBy : null;
-            appliedSortDirection = saved.sortDirection === "desc" ? "desc" : "asc";
-            appliedBaseModelFilter = saved.baseModel || "ALL";
-            appliedCategoryFilter = saved.category === "FAVORITES" ? (saved.categoryBeforeFavorites || "ALL") : (saved.category || "ALL");
-            favoritesOnly = saved.favoritesOnly === true || saved.category === "FAVORITES";
-            appliedSubcategoryFilter = saved.subcategory || "ALL";
-            document.getElementById("searchInput").value = saved.search || "";
-            isSearchActive = (saved.search || "").trim().length >= MINIMUM_SEARCH_LENGTH;
-            if (saved.search) document.getElementById("searchOverlay")?.classList.remove("hidden");
-            if (saved.doubleColumn) document.getElementById("doubleColumnButton")?.click();
-            updateSortDisplay();
-            updateFilterButton();
-        }
-        FormNavigation.register(() => ({
-            page: currentPage, sortBy: appliedSortBy, sortDirection: appliedSortDirection,
-            baseModel: appliedBaseModelFilter, category: appliedCategoryFilter, subcategory: appliedSubcategoryFilter,
-            favoritesOnly,
-            search: document.getElementById("searchInput")?.value || "",
-            doubleColumn: document.getElementById("loraList")?.classList.contains("double-column")
-        }));
-        await refreshCurrentView();
-        await reopenRequestedLoraModal();
-        if (saved) window.scrollTo(0, saved.scrollY || 0);
+    if (getRequestedLoraId()) {
+        document.body.classList.add(
+            "returning-to-modal"
+        );
     }
-);
+
+
+    /* -------------------------
+       Gallery
+    ------------------------- */
+
+    setupLayoutButtons();
+    setupPaginationControls();
+    setupGoToTopButton();
+
+
+    /* -------------------------
+       Search / Sort / Filter
+    ------------------------- */
+
+    setupSearch();
+    setupSearchOverlay();
+
+    setupSortModal();
+
+    setupFilterModal();
+    setupFilterSheetSwipe();
+
+
+    /* -------------------------
+       LoRA Details
+    ------------------------- */
+
+    setupLoraDetailsModal();
+    setupLoraDetailsSwipe();
+
+    setupPreviewCarousel();
+    setupExpandedTextModal();
+
+
+    /* -------------------------
+       Menus / Actions
+    ------------------------- */
+
+    setupMenu();
+    setupActionMenu();
+
+    setupImportFolderForm();
+    setupNotesImport();
+
+    setupBackupExport();
+    setupBackupImport();
+
+
+    /* -------------------------
+       Initial Gallery Load
+    ------------------------- */
+
+    const saved = FormNavigation.restoreState();
+    if (saved) {
+        currentPage = Number.isInteger(saved.page) && saved.page >= 0 ? saved.page : 0;
+        appliedSortBy = ["loraName", "creator", "category", "subCategory", "baseModel"].includes(saved.sortBy) ? saved.sortBy : null;
+        appliedSortDirection = saved.sortDirection === "desc" ? "desc" : "asc";
+        appliedBaseModelFilter = saved.baseModel || "ALL";
+        appliedCategoryFilter = saved.category === "FAVORITES" ? (saved.categoryBeforeFavorites || "ALL") : (saved.category || "ALL");
+        favoritesOnly = saved.favoritesOnly === true || saved.category === "FAVORITES";
+        appliedSubcategoryFilter = saved.subcategory || "ALL";
+        document.getElementById("searchInput").value = saved.search || "";
+        isSearchActive = (saved.search || "").trim().length >= MINIMUM_SEARCH_LENGTH;
+        if (saved.search) { document.getElementById("searchOverlay")?.classList.remove("hidden"); const clear = document.getElementById("clearSearchButton"); if (clear) clear.disabled = false; }
+        if (saved.doubleColumn) document.getElementById("doubleColumnButton")?.click();
+        updateSortDisplay();
+        updateFilterButton();
+    }
+    const defaultModel = window.LibrarySettings?.defaultBaseModel;
+    const returningFromForm = Boolean(getRequestedLoraId()) || /\/html\/(add|edit)-lora\.html(?:[?#]|$)/.test(document.referrer || "");
+    const useDefaultModel = typeof defaultModel === "string" && !returningFromForm;
+    if (useDefaultModel) applyDefaultBaseModel(defaultModel);
+    FormNavigation.register(() => ({
+        page: currentPage, sortBy: appliedSortBy, sortDirection: appliedSortDirection,
+        baseModel: appliedBaseModelFilter, category: appliedCategoryFilter, subcategory: appliedSubcategoryFilter,
+        favoritesOnly,
+        search: document.getElementById("searchInput")?.value || "",
+        doubleColumn: document.getElementById("loraList")?.classList.contains("double-column")
+    }));
+    await refreshCurrentView();
+    await reopenRequestedLoraModal();
+    if (saved) window.scrollTo(0, useDefaultModel ? 0 : saved.scrollY || 0);
+}
 
 
 /* =========================
    GALLERY DATA
 ========================= */
 
-async function fetchAllLoras(
-    page = currentPage
-) {
+async function fetchAllLoras(page = currentPage) {
     isSearchActive = false;
     currentSearchResults = [];
-
     try {
-        const url =
-            buildLoraPageUrl(
-                page,
-                pageSize
-            );
-
-        const response =
-            await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(
-                "Failed to fetch LoRAs"
-            );
-        }
-
-        const pageResponse =
-            await response.json();
-
-        validateLoraPageResponse(
-            pageResponse
-        );
-
-        updatePaginationState(
-            pageResponse
-        );
-
-        updatePaginationControls();
-
-        if (
-            pageResponse.content.length === 0
-        ) {
-            displayEmptyGalleryMessage();
-            return;
-        }
-
-        renderLoraPage(
-            pageResponse.content
-        );
-
+        await fetchPaginatedLoras(buildLoraPageUrl(page, pageSize), "Failed to fetch LoRAs");
     } catch (error) {
-        displayGalleryError(
-            error
-        );
+        displayGalleryError(error);
     }
 }
 
@@ -323,13 +308,24 @@ function createLoraCard(
     card.innerHTML = `
         ${imageHtml}
 
-        <button
-            class="favorite-button"
-            type="button"
-            aria-label="Toggle favorite"
-        >
-            ${lora.favorite ? "★" : "☆"}
+        <button class="lora-card-actions-button" type="button" aria-label="LoRA actions"
+                title="LoRA actions" aria-haspopup="menu" aria-expanded="false"
+                aria-controls="lora-card-actions-${lora.id}">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+                <circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/>
+            </svg>
         </button>
+        <div id="lora-card-actions-${lora.id}" class="lora-card-actions-menu" popover="auto" role="menu" aria-label="LoRA actions">
+            <button class="compact-action-button" type="button" role="menuitemcheckbox" data-action="favorite" aria-checked="${Boolean(lora.favorite)}">
+                <span class="compact-action-icon" aria-hidden="true">${lora.favorite ? "★" : "☆"}</span><span>${lora.favorite ? "Unfavorite" : "Favorite"}</span>
+            </button>
+            <button class="compact-action-button" type="button" role="menuitem" data-action="edit">
+                <span class="compact-action-icon" aria-hidden="true">✏</span><span>Edit</span>
+            </button>
+            <button class="compact-action-button" type="button" role="menuitem" data-action="archive">
+                <span class="compact-action-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v5H3zM5 8v13h14V8M9 12h6"/></svg></span><span>Archive</span>
+            </button>
+        </div>
 
         <div class="lora-card-header">
 
@@ -368,25 +364,7 @@ function createLoraCard(
     }
 
 
-    const favoriteButton =
-        card.querySelector(
-            ".favorite-button"
-        );
-
-
-    if (favoriteButton) {
-        favoriteButton.addEventListener(
-            "click",
-            async event => {
-
-                event.stopPropagation();
-
-                await toggleFavorite(
-                    lora.id
-                );
-            }
-        );
-    }
+    setupLoraCardActions(card, lora);
 
 
     card.addEventListener(
@@ -400,6 +378,97 @@ function createLoraCard(
 
 
     return card;
+}
+
+function setupLoraCardActions(card, lora) {
+    const trigger = card.querySelector(".lora-card-actions-button");
+    const menu = card.querySelector(".lora-card-actions-menu");
+    if (!trigger || !menu) return;
+    const favorite = menu.querySelector('[data-action="favorite"]');
+    const edit = menu.querySelector('[data-action="edit"]');
+    const archive = menu.querySelector('[data-action="archive"]');
+    const items = [favorite, edit, archive];
+    function close(focus = false) {
+        if (menu.isConnected && menu.matches(":popover-open")) menu.hidePopover();
+        trigger.setAttribute("aria-expanded", "false");
+        if (focus && trigger.isConnected) trigger.focus();
+    }
+    function open(last = false) {
+        closeLoraDetailsActions();
+        menu.showPopover();
+        trigger.setAttribute("aria-expanded", "true");
+        const anchor = trigger.getBoundingClientRect();
+        const bounds = menu.getBoundingClientRect();
+        menu.style.left = `${Math.max(8, Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - 8))}px`;
+        menu.style.top = `${Math.max(8, Math.min(anchor.top, window.innerHeight - bounds.height - 8))}px`;
+        (last ? archive : favorite).focus();
+    }
+    trigger.addEventListener("click", event => {
+        event.stopPropagation();
+        if (menu.matches(":popover-open")) close(true);
+        else open();
+    });
+    trigger.addEventListener("keydown", event => {
+        if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+            event.preventDefault();
+            event.stopPropagation();
+            open(event.key === "ArrowUp");
+        }
+    });
+    menu.addEventListener("toggle", event => trigger.setAttribute("aria-expanded", String(event.newState === "open")));
+    menu.addEventListener("click", event => event.stopPropagation());
+    menu.addEventListener("focusout", event => {
+        if (event.relatedTarget && !menu.contains(event.relatedTarget)) close();
+    });
+    menu.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation(); close(true);
+        } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const enabled = items.filter(item => !item.disabled);
+            const current = enabled.indexOf(document.activeElement);
+            const next = event.key === "Home" ? 0 : event.key === "End" ? enabled.length - 1
+                : (current + (event.key === "ArrowUp" ? -1 : 1) + enabled.length) % enabled.length;
+            enabled[next]?.focus();
+        } else if (event.key === "Tab") close();
+    });
+    favorite.addEventListener("click", async () => {
+        if (favorite.disabled) return;
+        favorite.disabled = true;
+        try {
+            const updated = await toggleFavorite(lora.id);
+            if (!updated) throw new Error("Unable to update this LoRA's favorite status. Please try again.");
+            close(true);
+        } catch (error) { window.alert(error.message); }
+        finally { favorite.disabled = false; }
+    });
+    edit.addEventListener("click", () => {
+        close();
+        window.location.href = buildEditLoraPageUrl(lora.id, false);
+    });
+    archive.addEventListener("click", async () => {
+        if (archive.disabled) return;
+        archive.disabled = true;
+        try {
+            await setLoraArchived(lora.id, true);
+            close();
+            window.dispatchEvent(new CustomEvent("library-archive-change"));
+        } catch (error) { window.alert(error.message); }
+        finally { archive.disabled = false; }
+    });
+}
+
+function closeLoraCardMenus() {
+    document.querySelectorAll(".lora-card-actions-menu:popover-open").forEach(menu => menu.hidePopover());
+}
+window.addEventListener("scroll", closeLoraCardMenus, {capture: true, passive: true});
+window.addEventListener("resize", closeLoraCardMenus);
+
+async function setLoraArchived(id, archived) {
+    const response = await fetch(`/api/loras/${id}/archive`, {
+        method: "PUT", headers: {"Content-Type": "application/json"}, body: JSON.stringify({archived})
+    });
+    if (!response.ok) throw new Error("Unable to archive this LoRA. Please try again.");
 }
 
 
@@ -418,9 +487,28 @@ function setupGalleryVideoPreview(
         return;
     }
 
+    video.controls = false;
     video.muted = true;
+    video.defaultMuted = true;
     video.loop = true;
     video.playsInline = true;
+    video.setAttribute("muted", "");
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.addEventListener("play", () => {
+        if (isLoraGalleryPlaybackBlocked()) {
+            video.autoplay = false;
+            video.pause();
+        }
+    });
+    const touchPlayback = !window.matchMedia("(hover: hover)").matches;
+    if (touchPlayback) {
+        video.autoplay = true;
+        video.setAttribute("autoplay", "");
+        video.addEventListener("loadeddata", () => {
+            if (video.dataset.galleryVisible === "true" && video.paused) playGalleryVideo(video);
+        });
+    }
 
     if (
         window.matchMedia(
@@ -582,90 +670,32 @@ function clearSearchDebounceTimer() {
 
 
 async function performSearchFromInput() {
-    const searchInput =
-        document.getElementById(
-            "searchInput"
-        );
-
-    if (!searchInput) {
-        return;
-    }
-
-    const keyword =
-        searchInput.value.trim();
-
-    if (keyword === "") {
-        return;
-    }
-
-    if (
-        keyword.length <
-        MINIMUM_SEARCH_LENGTH
-    ) {
-        return;
-    }
-
-    if (
-        keyword === lastSearchKeyword &&
-        isSearchActive
-    ) {
-        return;
-    }
-
-    lastSearchKeyword = keyword;
-
-    await searchLoras(
-        keyword,
-        0
-    );
+    const input = document.getElementById("searchInput");
+    if (!input) return;
+    currentPage = 0;
+    lastSearchKeyword = input.value.trim();
+    isSearchActive = lastSearchKeyword.length >= MINIMUM_SEARCH_LENGTH;
+    await refreshGalleryData();
+    window.scrollTo({top: 0, behavior: "instant"});
 }
 
 
-async function clearSearch() {
-    const searchInput =
-        document.getElementById(
-            "searchInput"
-        );
-
-    const searchOverlay =
-        document.getElementById(
-            "searchOverlay"
-        );
-
-    if (searchInput) {
-        searchInput.value = "";
-    }
-
-    if (searchOverlay) {
-        searchOverlay.classList.add(
-            "hidden"
-        );
-    }
-
+async function clearSearch({close = true} = {}) {
+    galleryRequestSequence++;
+    const input = document.getElementById("searchInput");
+    if (input) input.value = "";
+    if (close) document.getElementById("searchOverlay")?.classList.add("hidden");
+    const clearButton = document.getElementById("clearSearchButton");
+    if (clearButton) clearButton.disabled = true;
     clearSearchDebounceTimer();
-
     lastSearchKeyword = "";
     currentSearchResults = [];
     isSearchActive = false;
-
-    const restoredPage =
-        pageBeforeSearch;
-
-    const restoredScrollPosition =
-        scrollPositionBeforeSearch;
-
-    currentPage = restoredPage;
-
-    await refreshCurrentView();
-
-    window.requestAnimationFrame(
-        () => {
-            window.scrollTo({
-                top: restoredScrollPosition,
-                behavior: "auto"
-            });
-        }
-    );
+    currentPage = 0;
+    await refreshGalleryData();
+    window.scrollTo({top: 0, behavior: "instant"});
+    if (close) document.getElementById("searchIconButton")?.focus();
+    else input?.focus();
 }
 
 
@@ -679,9 +709,15 @@ function setupSearch() {
         return;
     }
 
+    const clearButton = document.getElementById("clearSearchButton");
+    const syncClear = () => { if (clearButton) clearButton.disabled = !searchInput.value; };
+    syncClear();
+    clearButton?.addEventListener("click", () => clearSearch({close: false}));
     searchInput.addEventListener(
         "input",
         () => {
+            syncClear();
+            galleryRequestSequence++;
             clearSearchDebounceTimer();
 
             searchDebounceTimer =
@@ -743,7 +779,6 @@ function setupSearchOverlay() {
 
     if (
         !searchButton ||
-        !closeButton ||
         !searchOverlay ||
         !searchInput
     ) {
@@ -816,26 +851,10 @@ async function searchLoras(
                 parameters
             );
 
-        const response =
-            await fetch(url);
-
-        if (!response.ok) {
-            throw new Error(
-                `Search failed. Status: ${response.status}`
-            );
-        }
-
-        const pageResponse =
-            await response.json();
-
+        const response = await fetchPaginatedLoras(url, "Search failed");
+        if (!response) return;
         isSearchActive = true;
-
-        lastSearchKeyword =
-            normalizedKeyword;
-
-        displayPaginatedLoraResponse(
-            pageResponse
-        );
+        lastSearchKeyword = normalizedKeyword;
 
     } catch (error) {
         console.error(
@@ -870,11 +889,7 @@ async function refreshCurrentView() {
      * search request already includes the
      * currently applied filters and sort.
      */
-    if (
-        isSearchActive &&
-        keyword.length >=
-        MINIMUM_SEARCH_LENGTH
-    ) {
+    if (keyword.length >= MINIMUM_SEARCH_LENGTH) {
         await searchLoras(
             keyword,
             currentPage
@@ -982,6 +997,7 @@ function setupActionMenu() {
                 "hidden"
             );
             openButton.setAttribute("aria-expanded", String(!overlay.classList.contains("hidden")));
+            window.GalleryMenus?.positionActionMenu();
         }
     );
 
@@ -1048,9 +1064,7 @@ async function refreshLoraLibrary() {
     button.setAttribute("aria-busy", "true");
     if (label) label.textContent = "Refreshing...";
     try {
-        await refreshFilterMetadata();
-        // Keep the user's current search, filters, sort and page.
-        await refreshCurrentView();
+        await refreshGalleryData({strict: true});
         closeActionMenu();
         document.getElementById("openActionMenuButton")?.focus();
     } catch (error) {
@@ -1246,7 +1260,6 @@ function setupFilterModal() {
         !modal ||
         !backdrop ||
         !openButton ||
-        !closeButton ||
         !applyButton ||
         !resetButton ||
         !baseModelFilter ||
@@ -1575,6 +1588,7 @@ async function applySelectedFilter() {
 
 
 function clearSearchForFilterChange() {
+    galleryRequestSequence++;
     const searchInput =
         document.getElementById(
             "searchInput"
@@ -1852,6 +1866,7 @@ function closeLoraDetailsActions(focus = false) {
     if (focus) button?.focus();
 }
 function setupLoraDetailsActions() {
+    const archive = document.getElementById("archiveLoraButton");
     const wrapper = document.getElementById("loraDetailsMoreActions");
     const button = document.getElementById("loraDetailsActionsButton");
     const menu = document.getElementById("loraDetailsActionsMenu");
@@ -1860,6 +1875,8 @@ function setupLoraDetailsActions() {
     if (!wrapper || !button || !menu || !favorite || !edit) return;
     function open() {
         updateLoraDetailsFavorite();
+        const archiveLabel = document.getElementById("archiveLoraLabel");
+        if (archiveLabel) archiveLabel.textContent = currentLora?.archived ? "Restore" : "Archive";
         menu.hidden = false;
         button.setAttribute("aria-expanded", "true");
         favorite.focus();
@@ -1868,7 +1885,7 @@ function setupLoraDetailsActions() {
     button.addEventListener("keydown", event => {
         if (["ArrowDown", "ArrowUp"].includes(event.key)) {
             event.preventDefault(); open();
-            if (event.key === "ArrowUp") edit.focus();
+            if (event.key === "ArrowUp") (archive || edit).focus();
         }
     });
     favorite.addEventListener("click", async () => {
@@ -1881,12 +1898,23 @@ function setupLoraDetailsActions() {
             else if (String(currentLora?.id) === String(id)) closeLoraDetailsActions(true);
         } finally { favorite.disabled = false; }
     });
+    archive?.addEventListener("click", async () => {
+        if (!currentLora?.id || archive.disabled) return;
+        const id = currentLora.id;
+        archive.disabled = true;
+        try {
+            await setLoraArchived(id, !currentLora.archived);
+            if (String(currentLora?.id) === String(id)) closeLoraDetailsModal();
+            window.dispatchEvent(new CustomEvent("library-archive-change"));
+        } catch (error) { window.alert(error.message); }
+        finally { archive.disabled = false; }
+    });
     menu.addEventListener("keydown", event => {
         if (event.key === "Escape") {
             event.preventDefault(); event.stopPropagation(); closeLoraDetailsActions(true);
         } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
             event.preventDefault();
-            const items = [favorite, edit].filter(item => !item.disabled);
+            const items = [favorite, edit, archive].filter(item => item && !item.disabled);
             if (!items.length) return;
             const current = items.indexOf(document.activeElement);
             const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1
@@ -1907,11 +1935,6 @@ function setupLoraDetailsActions() {
 
 function setupLoraDetailsModal() {
     setupLoraDetailsActions();
-    const closeButton =
-        document.getElementById(
-            "closeLoraDetailsButton"
-        );
-
     const modalOverlay =
         document.getElementById(
             "loraDetailsModal"
@@ -1923,17 +1946,17 @@ function setupLoraDetailsModal() {
         );
 
     if (
-        !closeButton ||
         !modalOverlay ||
         !editButton
     ) {
         return;
     }
 
-    closeButton.addEventListener(
-        "click",
-        closeLoraDetailsModal
-    );
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape" && !event.defaultPrevented && !modalOverlay.classList.contains("hidden")) {
+            closeLoraDetailsModal();
+        }
+    });
 
     modalOverlay.addEventListener(
         "click",
@@ -2165,6 +2188,7 @@ async function openLoraDetailsModal(
             "closing"
         );
         modal.setAttribute("aria-hidden", "false");
+        pauseLoraGalleryForModal();
         sizePreviewLikeGalleryCard();
 
         restartLoraModalOpeningAnimation(
@@ -2215,6 +2239,7 @@ function finishClosingLoraDetailsModal(
         "opening",
         "closing"
     );
+    if (activeGalleryVideo) resumeMobileGalleryPreview({isTrusted: true});
 }
 
 
@@ -2602,7 +2627,7 @@ function exitLoraEditMode() {
 ========================= */
 
 function buildEditLoraPageUrl(
-    loraId
+    loraId, reopenDetails = true
 ) {
     const queryParameters =
         new URLSearchParams({
@@ -2610,7 +2635,8 @@ function buildEditLoraPageUrl(
         });
 
     const returnUrl = new URL(window.location.href);
-    returnUrl.searchParams.set("openLora", String(loraId));
+    if (reopenDetails) returnUrl.searchParams.set("openLora", String(loraId));
+    else returnUrl.searchParams.delete("openLora");
     return FormNavigation.formUrl(`/html/edit-lora.html?${queryParameters}`, returnUrl.href);
 }
 
@@ -2995,11 +3021,6 @@ function setupMenu() {
             "sideMenu"
         );
 
-    const closeMenuButton =
-        document.getElementById(
-            "closeMenuButton"
-        );
-
     const menuBackdrop =
         document.getElementById(
             "menuBackdrop"
@@ -3008,7 +3029,6 @@ function setupMenu() {
     if (
         !optionsButton ||
         !sideMenu ||
-        !closeMenuButton ||
         !menuBackdrop
     ) {
         return;
@@ -3059,11 +3079,6 @@ function setupMenu() {
         openMenu
     );
 
-    closeMenuButton.addEventListener(
-        "click",
-        closeMenu
-    );
-
     menuBackdrop.addEventListener(
         "click",
         closeMenu
@@ -3074,6 +3089,122 @@ function setupMenu() {
 /* =========================
    IMPORT FOLDER
 ========================= */
+
+function setupNotesImport() {
+    const button = document.getElementById("importNotesButton");
+    const input = document.getElementById("notesFileInput");
+    const result = document.getElementById("notesImportResult");
+    if (!button || !input || !result) return;
+    const dialog = document.getElementById("notesImportListDialog");
+    const dialogTitle = document.getElementById("notesImportListTitle");
+    const dialogContent = document.getElementById("notesImportListContent");
+    document.getElementById("closeNotesImportList").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => {
+        if (event.target === dialog) {
+            const bounds = dialog.getBoundingClientRect();
+            if (event.clientX < bounds.left || event.clientX > bounds.right
+                || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+        }
+    });
+    function showList(entries, failed) {
+        dialogTitle.textContent = failed ? "Failed List" : "Skipped List";
+        dialogContent.replaceChildren();
+        for (const entry of entries) {
+            if (failed) {
+                const details = document.createElement("details");
+                details.open = entry.reason === "No matching library entry";
+                const title = document.createElement("summary");
+                title.textContent = `${entry.title} — ${entry.reason}`;
+                const content = document.createElement("pre");
+                content.className = "notes-import-text";
+                content.textContent = [entry.url, entry.positivePrompt].filter(Boolean).join("\n\n");
+                details.append(title, content);
+                dialogContent.append(details);
+            } else {
+                const item = document.createElement("p");
+                item.textContent = `${entry.title} — Skipped, existing positive prompt`;
+                dialogContent.append(item);
+            }
+        }
+        dialog.showModal();
+    }
+    button.addEventListener("click", () => input.click());
+    input.addEventListener("change", async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        button.disabled = true;
+        result.classList.remove("hidden", "import-result-error", "import-result-success");
+        result.textContent = "Importing notes…";
+        try {
+            const data = new FormData();
+            data.append("file", file);
+            const response = await fetch("/api/loras/notes-import", { method: "POST", body: data });
+            if (!response.ok) throw new Error("Could not import notes. Choose a UTF-8 or UTF-16 plain-text file (up to 25 MB) and try again.");
+            const summary = await response.json();
+            result.replaceChildren();
+            result.classList.add(summary.failed ? "import-result-error" : "import-result-success");
+            const heading = document.createElement("h3");
+            heading.textContent = "Notes Import Complete";
+            result.append(heading);
+            const counts = document.createElement("div");
+            counts.className = "import-summary-list";
+            for (const [label, count] of [["✅ Imported", summary.imported], ["❌ Failed", summary.failed], ["⏭ Existing prompt", summary.skipped]]) {
+                const row = document.createElement("div");
+                row.className = "import-summary-row";
+                const title = document.createElement("span");
+                title.textContent = label;
+                const value = document.createElement("strong");
+                value.textContent = count;
+                row.append(title, value);
+                counts.append(row);
+            }
+            result.append(counts);
+            const actions = document.createElement("div");
+            actions.className = "notes-import-list-actions";
+            for (const [label, entries, failed] of [["Show Failed List", summary.failures, true], ["Show Skipped List", summary.existingPrompts, false]]) {
+                if (!entries.length) continue;
+                const listButton = document.createElement("button");
+                listButton.className = "compact-action-button";
+                listButton.type = "button";
+                listButton.textContent = label;
+                listButton.setAttribute("aria-haspopup", "dialog");
+                listButton.setAttribute("aria-controls", "notesImportListDialog");
+                listButton.addEventListener("click", () => showList(entries, failed));
+                actions.append(listButton);
+            }
+            if (summary.failures.length) {
+                const downloadButton = document.createElement("button");
+                downloadButton.className = "compact-action-button";
+                downloadButton.type = "button";
+                downloadButton.textContent = "Download Failed Notes";
+                downloadButton.addEventListener("click", () => {
+                    const notes = summary.failures.map(entry => entry.rawNotes).join("\n-------------------------------------------------------------\n");
+                    const blob = new Blob([notes + "\n"], {type: "text/plain;charset=utf-8"});
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.href = url;
+                    link.download = file.name.replace(/\.[^.]+$/, "") + "-failed.txt";
+                    document.body.append(link);
+                    link.click();
+                    link.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                });
+                actions.append(downloadButton);
+            }
+            result.append(actions);
+            if (summary.imported) {
+                try { await refreshCurrentView(); }
+                catch (error) { console.error("Notes imported, but the gallery could not refresh", error); }
+            }
+        } catch (error) {
+            result.classList.add("import-result-error");
+            result.textContent = error.message;
+        } finally {
+            button.disabled = false;
+            input.value = "";
+        }
+    });
+}
 
 function setupImportFolderForm() {
     const importForm =
@@ -3518,47 +3649,73 @@ function isVideoPreview(
 }
 
 
-const galleryVideoObserver =
-    new IntersectionObserver(
-        entries => {
-            entries.forEach(
-                entry => {
-                    if (
-                        !window.matchMedia(
-                            "(hover: none)"
-                        ).matches
-                    ) {
-                        return;
-                    }
+const visibleGalleryVideos = new Map();
+let activeGalleryVideo = null;
+function isLoraGalleryPlaybackBlocked() {
+    const modal = document.getElementById("loraDetailsModal");
+    return Boolean(modal && !modal.classList.contains("hidden"));
+}
 
-                    const video =
-                        entry.target;
+function pauseLoraGalleryForModal() {
+    document.querySelectorAll(".lora-card video.lora-card-image").forEach(video => {
+        video.autoplay = false;
+        video.pause();
+    });
+}
 
-                    if (
-                        entry.isIntersecting
-                    ) {
-                        playGalleryVideo(
-                            video
-                        );
-
-                    } else {
-                        resetGalleryVideo(
-                            video
-                        );
-                    }
-                }
-            );
-        },
-        {
-            threshold: 0.65
+function resumeMobileGalleryPreview(event) {
+    if (event.isTrusted === false || window.matchMedia("(hover: hover)").matches) return;
+    const modal = document.getElementById("loraDetailsModal");
+    if (modal && !modal.classList.contains("hidden")) return;
+    const video = activeGalleryVideo;
+    if (video && video.isConnected !== false && video.paused) playGalleryVideo(video);
+}
+document.addEventListener("touchend", resumeMobileGalleryPreview, {capture: true, passive: true});
+if ("PointerEvent" in window) document.addEventListener("pointerup",
+    resumeMobileGalleryPreview, {capture: true, passive: true});
+document.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") resumeMobileGalleryPreview(event);
+}, {capture: true});
+const galleryVideoObserver = new IntersectionObserver(entries => {
+    if (window.matchMedia("(hover: hover)").matches) return;
+    for (const entry of entries) {
+        const video = entry.target;
+        if (entry.isIntersecting) visibleGalleryVideos.set(video, entry.intersectionRatio);
+        else {
+            visibleGalleryVideos.delete(video);
+            video.dataset.galleryVisible = "false";
+            video.autoplay = false;
+            video.pause();
         }
-    );
-
+    }
+    for (const video of visibleGalleryVideos.keys()) {
+        if (video.isConnected === false) visibleGalleryVideos.delete(video);
+    }
+    let next = null, best = -1;
+    for (const [video, ratio] of visibleGalleryVideos) {
+        if (ratio > best || (ratio === best && video === activeGalleryVideo)) {
+            next = video; best = ratio;
+        }
+    }
+    for (const video of visibleGalleryVideos.keys()) {
+        video.dataset.galleryVisible = String(video === next);
+        video.autoplay = video === next && !isLoraGalleryPlaybackBlocked();
+        if (video !== next) video.pause();
+    }
+    if (next && (next !== activeGalleryVideo || next.paused)) playGalleryVideo(next);
+    activeGalleryVideo = next;
+}, {threshold: [0, 0.25, 0.5, 0.75, 1]});
 
 function playGalleryVideo(
     video
 ) {
     if (!video) {
+        return;
+    }
+
+    if (isLoraGalleryPlaybackBlocked()) {
+        video.autoplay = false;
+        video.pause();
         return;
     }
 
@@ -3574,11 +3731,16 @@ function playGalleryVideo(
         typeof playPromise.catch ===
         "function"
     ) {
-        playPromise.catch(
-            () => {
-                // Autoplay may be blocked.
+        playPromise.then(() => {
+            if (isLoraGalleryPlaybackBlocked()) {
+                video.autoplay = false;
+                video.pause();
+                return;
             }
-        );
+            delete video.dataset.autoplayBlocked;
+        }).catch(error => {
+            if (error?.name === "NotAllowedError") video.dataset.autoplayBlocked = "true";
+        });
     }
 }
 
@@ -3596,23 +3758,20 @@ function pauseOtherGalleryVideos(
                     video !==
                     activeVideo
                 ) {
-                    resetGalleryVideo(
-                        video
-                    );
+                    resetGalleryVideo(video, {rewind: window.matchMedia("(hover: hover)").matches});
                 }
             }
         );
 }
 
 
-function resetGalleryVideo(
-    video
-) {
+function resetGalleryVideo(video, {rewind = true} = {}) {
     if (!video) {
         return;
     }
 
     video.pause();
+    if (!rewind) return;
 
     try {
         video.currentTime = 0;
@@ -3763,27 +3922,20 @@ function displayPaginatedLoraResponse(
 }
 
 
-async function fetchPaginatedLoras(
-    url,
-    errorMessage
-) {
-    const response =
-        await fetch(url);
-
-    if (!response.ok) {
-        throw new Error(
-            `${errorMessage}. Status: ${response.status}`
-        );
+async function fetchPaginatedLoras(url, errorMessage) {
+    const request = ++galleryRequestSequence;
+    try {
+        const response = await fetch(url, {cache: "no-store"});
+        if (request !== galleryRequestSequence) return null;
+        if (!response.ok) throw new Error(`${errorMessage}. Status: ${response.status}`);
+        const pageResponse = await response.json();
+        if (request !== galleryRequestSequence) return null;
+        displayPaginatedLoraResponse(pageResponse);
+        return pageResponse;
+    } catch (error) {
+        if (request !== galleryRequestSequence) return null;
+        throw error;
     }
-
-    const pageResponse =
-        await response.json();
-
-    displayPaginatedLoraResponse(
-        pageResponse
-    );
-
-    return pageResponse;
 }
 
 
@@ -4374,7 +4526,7 @@ function renderPreviewPath(previewPath) {
     media.addEventListener("error", () => {
         if (!retriedSource && localPreviewUrl(previewPath) !== previewPath) {
             retriedSource = true;
-            media.src = isVideo && !previewPath.includes("#") ? `${previewPath}#t=0.1` : previewPath;
+            media.src = previewPath;
             return;
         }
         // A late error from the previous preview must not replace the current one.
@@ -4386,12 +4538,11 @@ function renderPreviewPath(previewPath) {
         media.loop = true;
         media.playsInline = true;
         media.preload = "metadata";
-        setupVideoPreviewPoster(media, previewPath);
         setupPreviewPromptVisibility(media);
     } else {
         media.alt = `${currentLora?.loraName || "LoRA"} — preview ${currentPreviewIndex + 1}`;
     }
-    media.src = isVideo ? videoThumbnailUrl(previewPath) : localPreviewUrl(previewPath);
+    media.src = localPreviewUrl(previewPath);
     imageContainer.appendChild(media);
     if (isVideo) media.play().catch(() => { /* Autoplay may be blocked. */ });
 }
@@ -4521,7 +4672,6 @@ function renderPreviewIndicators() {
                 thumbnail.playsInline = true;
                 thumbnail.preload = "metadata";
                 thumbnail.tabIndex = -1;
-                setupVideoPreviewPoster(thumbnail, path, {thumbnail: true});
                 const badge = document.createElement("span");
                 badge.className = "preview-video-badge";
                 badge.textContent = "▶";
@@ -4536,13 +4686,13 @@ function renderPreviewIndicators() {
             thumbnail.addEventListener("error", () => {
                 if (!retriedSource && localPreviewUrl(path) !== path) {
                     retriedSource = true;
-                    thumbnail.src = isVideoPreview(path) && !path.includes("#") ? `${path}#t=0.1` : path;
+                    thumbnail.src = path;
                     return;
                 }
                 thumbnail.remove();
                 button.classList.add("preview-unavailable");
             });
-            thumbnail.src = isVideoPreview(path) ? videoThumbnailUrl(path) : localPreviewUrl(path);
+            thumbnail.src = localPreviewUrl(path);
             button.appendChild(thumbnail);
             button.addEventListener("click", () => {
                 currentPreviewIndex = index;
@@ -5275,10 +5425,53 @@ function setupLoraDetailsSwipe() {
         modalSheet,
         scrollContainer,
         finishDraggedLoraDetailsClose,
-        {allowVideoSwipe: true}
+        {handleWhileScrolled: true, allowVideoSwipe: true}
     );
 }
-// Returning through browser Back may restore a cached document rather than rerun startup.
-window.addEventListener("pageshow", event => {
-    if (event.persisted) refreshCurrentView();
+// pageshow follows the browser load event for fresh visits, reloads, and
+// cross-page navigation, and also fires for back/forward cache restores.
+window.addEventListener("pageshow", async () => {
+    await libraryStartupPromise;
+    // Allow the initial cards to enter layout before running the Refresh action.
+    await new Promise(resolve => window.requestAnimationFrame(resolve));
+    if (document.getElementById("refreshLorasButton")) await refreshLoraLibrary();
+    else await refreshGalleryData();
+});
+
+async function refreshGalleryData({strict = false} = {}) {
+    if (strict) {
+        await refreshFilterMetadata();
+        await refreshCurrentView();
+        return;
+    }
+    // Filter choices do not have to finish loading before cards can render.
+    const metadata = refreshFilterMetadata().catch(error => {
+        console.error("Unable to refresh filter choices", error);
+    });
+    await refreshCurrentView();
+    await metadata;
+}
+window.addEventListener("gallery-navigation-refresh", async () => {
+    currentPage = 0;
+    if (document.getElementById("refreshLorasButton")) await refreshLoraLibrary();
+    else await refreshGalleryData();
+    window.scrollTo({top: 0, behavior: "instant"});
+});
+
+function applyDefaultBaseModel(baseModel) {
+    appliedBaseModelFilter = baseModel || "ALL";
+    appliedCategoryFilter = "ALL";
+    appliedSubcategoryFilter = "ALL";
+    favoritesOnly = false;
+    clearSearchForFilterChange();
+    document.getElementById("searchOverlay")?.classList.add("hidden");
+    const clearButton = document.getElementById("clearSearchButton");
+    if (clearButton) clearButton.disabled = true;
+    updateFilterButton();
+}
+window.addEventListener("library-default-model-change", async event => {
+    if (!document.getElementById("loraList")) return;
+    applyDefaultBaseModel(event.detail.baseModel);
+    await refreshCurrentView();
+    window.scrollTo({top: 0, behavior: "instant"});
 });

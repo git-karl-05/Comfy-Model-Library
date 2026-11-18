@@ -10,11 +10,15 @@
 
     <title>Add LoRA</title>
 
-    <link rel="stylesheet" href="/css/styles.css?v=uniform-filter-width-1">
-    <script src="/js/appearance-settings.js?v=settings-pagination-1"></script>
-    <script src="/js/form-navigation.js" defer></script>
-    <script src="/js/add-lora.js?v=lora-prompt-1" defer></script>
-    <script src="/js/edit-field-tools.js" defer></script>
+    <link rel="stylesheet" href="/css/styles.css?v=settings-library-sections-2">
+    <script src="/js/appearance-settings.js?v=settings-library-sections-2"></script>
+    <script src="/js/form-navigation.js?v=search-clear-visible-2" defer></script>
+    <script src="/js/add-lora.js?v=add-lora-spacing-1" defer></script>
+    <script src="/js/edit-field-tools.js?v=expanded-text-2" defer></script>
+    <script src="/js/gallery-header.js?v=shared-menu-alignment-2" defer></script>
+    <script src="/js/preview-media.js" defer></script>
+    <script src="/js/preview-editor.js?v=6" defer></script>
+    <script src="/js/application-settings.js?v=desktop-1" defer></script>
 </head>
 
 <body>
@@ -41,8 +45,8 @@
             <a
                     href="/html/index.html"
                     class="page-close-button"
-                    aria-label="Cancel and return to LoRA Library"
-                    title="Return to LoRA Library"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
+                    aria-label="Cancel and return to Library"
+                    title="Return to Library"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></a>
 
         </header>
 
@@ -61,22 +65,12 @@
             <div class="side-menu-header">
                 <h2>Menu</h2>
 
-                <button
-                        type="button"
-                        id="closeMenuButton"
-                        class="menu-close-button"
-                        aria-label="Close navigation menu">
-                    ×
-                </button>
+
             </div>
 
-            <a href="/html/index.html" class="side-menu-link">
-                LoRA Library
-            </a>
+            <a href="/html/index.html" class="side-menu-link"><span class="compact-action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h5v16H4zM10 4h5v16h-5zM17 4l4 1-3 15-4-1z"/></svg></span><span>Library</span></a>
 
-            <a href="/html/poses.html" class="side-menu-link">
-                Pose Gallery
-            </a>
+            <a href="/html/poses.html" class="side-menu-link"><span class="compact-action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></svg></span><span>Gallery</span></a>
 
         </nav>
 
@@ -86,34 +80,15 @@
 
             <section class="add-image-section">
 
-                <label
-                        id="addImagePreviewContainer"
-                        class="details-image-container add-image-preview"
-                        for="previewImage">
-
-                    <div class="lora-card-placeholder">
-                        Click to choose a preview image
-                    </div>
-
-                    <button
-                            type="button"
-                            id="removePreviewImageButton"
-                            class="remove-preview-image-button hidden"
-                            aria-label="Remove preview image"
-                            title="Remove preview image">
-                        ×
-                    </button>
-
-                </label>
+                <div id="addImagePreviewContainer" class="details-image-container add-image-preview"></div>
 
                 <input
                         type="file"
                         id="previewImage"
                         name="previewImage"
                         class="hidden-file-input"
-                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/ogg"
                 >
-
 
 
             </section>
@@ -122,7 +97,7 @@
             <section class="details-edit-grid add-lora-details-grid">
 
                 <label class="details-edit-full-width">
-                    LoRA Name
+                    <strong class="record-input-label">LoRA Name</strong>
 
                     <input
                             type="text"
@@ -134,7 +109,7 @@
                 </label>
 
                 <label class="details-edit-full-width">
-                    Creator
+                    <strong class="record-input-label">Creator</strong>
 
                     <input
                             type="text"
@@ -145,7 +120,7 @@
                 </label>
 
                 <label>
-                    Version
+                    <strong class="record-input-label">Version</strong>
 
                     <input
                             type="text"
@@ -156,7 +131,7 @@
                 </label>
 
                 <label>
-                    Category
+                    <strong class="record-input-label">Category</strong>
 
                     <select
                             id="category"
@@ -172,7 +147,7 @@
                 </label>
 
                 <label>
-                    Subcategory
+                    <strong class="record-input-label">Subcategory</strong>
 
                     <input
                             type="text"
@@ -183,7 +158,7 @@
                 </label>
 
                 <label>
-                    Base Model
+                    <strong class="record-input-label">Base Model</strong>
 
                     <input
                             type="text"
@@ -194,7 +169,6 @@
                 </label>
 
             </section>
-
 
 
             <section class="details-prompt-section">
@@ -253,7 +227,6 @@
             </p>
 
 
-
             <div class="shared-form-action-bar add-lora-action-bar">
 
                 <a
@@ -287,5 +260,6 @@
     </section>
 </div>
 
+<dialog id="formOutputPicker" class="output-page-dialog" aria-label="Choose a preview"><iframe title="ComfyUI output preview selection"></iframe></dialog>
 </body>
 </html>

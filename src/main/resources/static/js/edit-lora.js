@@ -1,3 +1,4 @@
+let editPreviewEditor = null;
 const API_BASE_URL = "/api/loras";
 
 /*
@@ -570,6 +571,12 @@ function setupRemovePreviewButton() {
 }
 
 function setupPreviewSelection() {
+    if (window.PreviewEditor) {
+        editPreviewEditor = PreviewEditor.create({media: getPreviewContainer(),
+            picker: getElement("formOutputPicker"), input: getPreviewInput(), disabled: true});
+        window.addEventListener("pagehide", event => { if (!event.persisted) editPreviewEditor.destroy(); });
+        return;
+    }
     const previewInput =
         getPreviewInput();
 
@@ -642,7 +649,7 @@ function populateEditForm(lora) {
         lora.notes
     );
 
-    renderSavedPreview(lora);
+    if (!editPreviewEditor) renderSavedPreview(lora);
 }
 
 
@@ -928,13 +935,15 @@ async function updateLora(
         }
     );
 
-    formData.append("removePreview", String(removeSavedPreview));
-    if (previewFile) {
+    if (!editPreviewEditor) formData.append("removePreview", String(removeSavedPreview));
+    if (previewFile && !editPreviewEditor) {
         formData.append(
             "preview",
             previewFile
         );
     }
+
+    editPreviewEditor?.appendTo(formData);
 
     const response = await fetch(
         `${API_BASE_URL}/${loraId}`,
@@ -1071,9 +1080,6 @@ function setupMenu() {
     const optionsButton =
         getElement("optionsButton");
 
-    const closeMenuButton =
-        getElement("closeMenuButton");
-
     const menuBackdrop =
         getElement("menuBackdrop");
 
@@ -1082,12 +1088,7 @@ function setupMenu() {
         openMenu
     );
 
-    closeMenuButton?.addEventListener(
-        "click",
-        closeMenu
-    );
-
-    menuBackdrop?.addEventListener(
+menuBackdrop?.addEventListener(
         "click",
         closeMenu
     );
@@ -1117,9 +1118,22 @@ async function loadLoraForEditing() {
         currentLora =
             await fetchLora(loraId);
 
-        populateEditForm(
-            currentLora
-        );
+        populateEditForm(currentLora);
+        if (editPreviewEditor) {
+            const response = await fetch(`${API_BASE_URL}/${loraId}/images`);
+            if (!response.ok) throw new Error("Unable to load all previews. Reload before editing.");
+            const images = await response.json();
+            if (!Array.isArray(images)) throw new Error("Invalid preview list. Reload before editing.");
+            const entries = [];
+            if (currentLora.filePath) entries.push({source: "existing", ref: "primary", path: currentLora.filePath, url: currentLora.filePath});
+            images.forEach((image, index) => {
+                if (index === 0 && image.filePath === currentLora.filePath) return;
+                if (image.id == null || !image.filePath) throw new Error("Invalid preview reference. Reload before editing.");
+                entries.push({source: "existing", ref: String(image.id), path: image.filePath, url: image.filePath});
+            });
+            editPreviewEditor.load(entries);
+        }
+        setSaveButtonLoading(false);
 
     } catch (error) {
         console.error(
@@ -1283,6 +1297,7 @@ async function initializeEditLoraPage() {
     setupEditForm();
     setupPageCleanup();
 
+    setSaveButtonLoading(true);
     await loadLoraForEditing();
 }
 

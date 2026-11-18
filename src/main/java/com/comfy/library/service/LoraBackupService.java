@@ -57,6 +57,7 @@ public class LoraBackupService {
             item.setSeedNumber(entity.getSeedNumber());
             item.setNotes(entity.getNotes());
             item.setFavorite(entity.isFavorite());
+            item.setArchived(entity.isArchived());
             item.setUrl(entity.getUrl());
             item.setFilePath(entity.getFilePath());
             item.setModelFilePath(entity.getModelFilePath());
@@ -105,6 +106,7 @@ public class LoraBackupService {
             if (item.hasField("seedNumber")) entity.setSeedNumber(item.getSeedNumber());
             if (item.hasField("notes")) entity.setNotes(item.getNotes());
             if (item.hasField("favorite")) entity.setFavorite(Boolean.TRUE.equals(item.getFavorite()));
+            if (item.hasField("archived")) entity.setArchived(Boolean.TRUE.equals(item.getArchived()));
             if (item.hasField("url")) entity.setUrl(item.getUrl());
             if (item.hasField("filePath")) entity.setFilePath(item.getFilePath());
             if (item.hasField("modelFilePath")) entity.setModelFilePath(item.getModelFilePath());
@@ -187,7 +189,6 @@ public class LoraBackupService {
             validateLength(prefix + ".baseModel", item.getBaseModel(), 255);
             validateLength(prefix + ".groupName", item.getGroupName(), 255);
             validateLength(prefix + ".prompt", item.getPrompt(), 5000);
-            validateLength(prefix + ".positivePrompt", item.getPositivePrompt(), 5000);
             validateLength(prefix + ".negativePrompt", item.getNegativePrompt(), 5000);
             validateLength(prefix + ".notes", item.getNotes(), 5000);
             validateLength(prefix + ".url", item.getUrl(), 255);

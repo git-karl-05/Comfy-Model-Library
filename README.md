@@ -31,3 +31,7 @@
 - Preserve workflow versions
 - Associate generated images with the workflows that created them
 
+
+## Windows desktop app
+
+See [Windows installation and migration](docs/windows-installation.md) for the installer build, first-run import, tray controls, and startup settings.

@@ -6,6 +6,7 @@ function fixture({scrollTop = 0, interactive = false, handle = false, handleWhil
     const handlers = {}, options = {}, classes = new Set(), timers = new Map();
     let nextTimer = 0, dismissed = 0, prevented = 0;
     const sheet = {style: {}, classList: {add: value => classes.add(value), remove: value => classes.delete(value)},
+        setPointerCapture(id) { this.pointer = id; }, hasPointerCapture(id) { return this.pointer === id; }, releasePointerCapture() { this.pointer = null; },
         addEventListener(name, handler, config) { (handlers[name] ||= []).push(handler); options[name] = config; }};
     const target = {closest(selector) { return selector.includes('button') ? interactive : handle; }};
     const context = vm.createContext({setTimeout(handler) { timers.set(++nextTimer, handler); return nextTimer; }, clearTimeout(id) { timers.delete(id); }});
@@ -45,11 +46,53 @@ test('buttons, scrolled content, horizontal swipes and upward scrolling never st
     const f = fixture(); f.send('touchstart', 0, 100); f.send('touchmove', 0, 50); f.send('touchend'); f.flush();
     assert.equal(f.dismissed, 0); assert.equal(f.prevented, 0);
 });
-test('Pose handle can dismiss scrolled details; ordinary LoRA scrolled-content behavior stays unchanged', () => {
+test('enabled handles dismiss scrolled details while ordinary content keeps scrolling', () => {
     for (const enabled of [true, false]) {
         const f = fixture({scrollTop:100, handle:true, handleWhileScrolled:enabled});
         f.send('touchstart'); f.send('touchmove', 0, 150); f.send('touchend'); f.flush();
         assert.equal(f.dismissed, enabled ? 1 : 0);
+    }
+});
+
+test('mouse dragging the handle dismisses even at the bottom, while short and cancelled drags return', () => {
+    for (const [distance, cancelled, expected] of [[150,false,1],[50,false,0],[150,true,0]]) {
+        const f = fixture({scrollTop:900,handle:true,handleWhileScrolled:true});
+        const pointer = {pointerType:'mouse',pointerId:1,button:0,clientX:20,clientY:20};
+        f.send('pointerdown',0,0,pointer);
+        f.send('pointermove',0,0,{...pointer,clientY:20+distance});
+        assert.equal(f.sheet.style.transform,`translateY(${distance}px)`);
+        f.send(cancelled ? 'pointercancel' : 'pointerup',0,0,pointer);
+        f.flush();
+        assert.equal(f.dismissed,expected);
+        assert.equal(f.sheet.pointer,null);
+    }
+});
+
+test('scrolled content outside the handle cannot start a mouse dismissal', () => {
+    const f = fixture({scrollTop:900,handleWhileScrolled:true});
+    const pointer = {pointerType:'mouse',pointerId:1,button:0,clientX:20,clientY:20};
+    f.send('pointerdown',0,0,pointer);
+    f.send('pointermove',0,0,{...pointer,clientY:200});
+    f.send('pointerup',0,0,pointer);
+    f.flush();
+    assert.equal(f.dismissed,0);
+    assert.equal(f.sheet.style.transform,undefined);
+});
+
+test('pinned title can dismiss scrolled details while header buttons remain clickable', () => {
+    for (const interactive of [false,true]) {
+        const f = fixture({scrollTop:900,handleWhileScrolled:true});
+        const target = {closest(selector) {
+            if (selector.includes('button')) return interactive ? {} : null;
+            return selector.includes('[data-sheet-drag-handle]') ? {} : null;
+        }};
+        const pointer = {target,pointerType:'mouse',pointerId:1,button:0,clientX:20,clientY:20};
+        f.send('pointerdown',0,0,pointer);
+        f.send('pointermove',0,0,{...pointer,clientY:200});
+        f.send('pointerup',0,0,pointer);
+        f.flush();
+        assert.equal(f.dismissed,interactive ? 0 : 1);
+        if (interactive) assert.equal(f.prevented,0);
     }
 });
 test('cancelled/multitouch drags return; close/open reset cancels pending dismissal; setup is idempotent', () => {

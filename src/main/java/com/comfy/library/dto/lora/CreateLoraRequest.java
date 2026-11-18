@@ -3,6 +3,9 @@ package com.comfy.library.dto.lora;
 import com.comfy.library.entity.LoraCategory;
 
 public class CreateLoraRequest {
+    private String previewManifest;
+    public String getPreviewManifest() { return previewManifest; }
+    public void setPreviewManifest(String previewManifest) { this.previewManifest = previewManifest; }
     private String loraName;
     private String version;
     private String creator;

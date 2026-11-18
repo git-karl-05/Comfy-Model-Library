@@ -1,6 +1,7 @@
 const API_BASE_URL = "/api/loras";
 
 let selectedPreviewUrl = null;
+let addPreviewEditor = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     loadCategories();
@@ -60,6 +61,12 @@ async function loadCategories() {
 ========================= */
 
 function setupImagePreview() {
+    if (window.PreviewEditor) {
+        addPreviewEditor = PreviewEditor.create({media: document.getElementById("addImagePreviewContainer"),
+            picker: document.getElementById("formOutputPicker"), input: document.getElementById("previewImage")});
+        window.addEventListener("pagehide", event => { if (!event.persisted) addPreviewEditor.destroy(); });
+        return;
+    }
     const imageInput = document.getElementById("previewImage");
     const previewContainer = document.getElementById(
         "addImagePreviewContainer"
@@ -151,13 +158,11 @@ function showImagePreview(imageFile) {
 function setupMenu() {
     const optionsButton = document.getElementById("optionsButton");
     const sideMenu = document.getElementById("sideMenu");
-    const closeMenuButton = document.getElementById("closeMenuButton");
     const menuBackdrop = document.getElementById("menuBackdrop");
 
     if (
         !optionsButton ||
         !sideMenu ||
-        !closeMenuButton ||
         !menuBackdrop
     ) {
         return;
@@ -173,7 +178,7 @@ function setupMenu() {
 
         document.body.classList.add("menu-open");
 
-        closeMenuButton.focus();
+        sideMenu.querySelector(".side-menu-link")?.focus();
     };
 
     const closeMenu = () => {
@@ -190,7 +195,6 @@ function setupMenu() {
     };
 
     optionsButton.addEventListener("click", openMenu);
-    closeMenuButton.addEventListener("click", closeMenu);
     menuBackdrop.addEventListener("click", closeMenu);
 
     document.addEventListener("keydown", event => {
@@ -303,7 +307,7 @@ function setupAddLoraForm() {
             console.error("Error saving LoRA:", error);
 
             displayAddLoraMessage(
-                "Unable to save the LoRA. Check the backend logs.",
+                error.message || "Unable to save the LoRA.",
                 true
             );
 
@@ -382,13 +386,14 @@ function buildAddLoraFormData() {
     const previewImage =
         imageInput?.files[0];
 
-    if (previewImage) {
+    if (previewImage && !addPreviewEditor) {
         formData.append(
             "previewImage",
             previewImage
         );
     }
 
+    addPreviewEditor?.appendTo(formData);
     return formData;
 }
 

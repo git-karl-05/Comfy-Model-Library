@@ -20,14 +20,15 @@ async function fixture() {
     const listings=[{folder:'',page:0,hasMore:true,totalMedia:3,mediaOffset:0,entries:[entry('one.png'),entry('two.png')]},
         {folder:'',page:1,hasMore:false,totalMedia:3,mediaOffset:2,entries:[entry('three.png')]}];
     let swipe;const requests=[], urls=[];
-    const context=vm.createContext({URLSearchParams,location:{origin:'http://localhost'},window:{parent:{postMessage(){}}},
+    const listeners={};
+    const context=vm.createContext({URLSearchParams,location:{origin:'http://localhost'},window:{parent:{postMessage(){}},addEventListener(type,callback){listeners[type]=callback;}},
         document:{getElementById:id=>elements.get(id),createElement:node,addEventListener(){},querySelector:selector=>selector==='.output-page'?page:area},
         setupHorizontalPreviewSwipe(container,config){swipe=config;},
         fetch:async url=>{const index=Number(new URL(url,'http://localhost').searchParams.get('page'));requests.push(index);urls.push(url);return {ok:true,json:async()=>listings[index]};}});
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/output-date-groups.js','utf8'),context);
     vm.runInContext(fs.readFileSync('src/main/resources/static/js/output.js','utf8'),context);
     await new Promise(setImmediate);
-    return {elements,area,page,requests,urls,swipe};
+    return {elements,area,page,requests,urls,swipe,listeners,parent:context.window.parent};
 }
 test('full preview overlays show name and folder position; close restores scroll',async()=>{
     const f=await fixture();f.area.scrollTop=250;
@@ -119,4 +120,19 @@ test('each sort cycles ascending, descending, off and back to ascending without 
             assert.equal(f.elements.get(`sortOutput${name}Direction`).textContent, '');
         }
     }
+});
+
+
+test('reopening from a form returns to the latest output page instead of its expanded preview',async()=>{
+    const f=await fixture();f.elements.get('outputGrid').querySelectorAll()[1].onclick();
+    await f.swipe.next();
+    assert.equal(f.elements.get('previewName').textContent,'three.png');
+    f.listeners.message({origin:'https://other.test',source:f.parent,data:{type:'output-browse'}});
+    assert.equal(f.page.classList.contains('preview-active'),true);
+    f.listeners.message({origin:'http://localhost',source:{},data:{type:'output-browse'}});
+    assert.equal(f.page.classList.contains('preview-active'),true);
+    f.listeners.message({origin:'http://localhost',source:f.parent,data:{type:'output-browse'}});
+    assert.equal(f.page.classList.contains('preview-active'),false);
+    assert.equal(f.elements.get('outputFullPreview').classList.contains('hidden'),true);
+    assert.deepEqual(f.requests,[0,1],'Stay on the last selected page, rather than reloading the original page');
 });

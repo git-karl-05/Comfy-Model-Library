@@ -9,11 +9,11 @@ function fixture(page) {
     const elements = new Map();
     function element(id = '') {
         const classes = new Set();
-        return {reset() {}, reportValidity() { return true; }, replaceChildren() { this.children = []; }, appendChild(child) { (this.children ||= []).push(child); }, id, dataset: {}, textContent: '', value: '', style: {}, attrs: {}, handlers: {}, inert: true,
+        return {get firstChild() { return this.children?.[0]; }, reset() {}, reportValidity() { return true; }, replaceChildren(...nodes) { this.children = []; nodes.forEach(node=>this.appendChild(node)); }, appendChild(child) { child.remove?.(); child.parentElement=this; (this.children ||= []).push(child); return child; }, insertBefore(node,before) { node.remove?.(); node.parentElement=this; const index=before?this.children.indexOf(before):(this.children||[]).length; (this.children||=[]).splice(index,0,node); }, append(...nodes) { nodes.forEach(node=>this.appendChild(node)); }, before(node) { const parent=this.parentElement; node.parentElement=parent; parent.children.splice(parent.children.indexOf(this),0,node); }, remove() { if(this.parentElement) this.parentElement.children=this.parentElement.children.filter(node=>node!==this); this.parentElement=null; }, pause() { this.paused=true; }, id, children: [], dataset: {}, textContent: '', value: '', style: {}, attrs: {}, handlers: {}, inert: true,
             classList: {add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c), toggle(c, yes) { if (yes ?? !classes.has(c)) classes.add(c); else classes.delete(c); }},
-            setAttribute(k,v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; },
+            getAttribute(k) { return this.attrs[k] ?? this[k] ?? null; }, setAttribute(k,v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; },
             addEventListener(k, f) { this.handlers[k] = f; }, focus() { this.focused = true; },
-            querySelectorAll() { return []; }, querySelector() { return null; }};
+            contains(node) { return node===this || (this.children||[]).some(child=>child.contains(node)); }, querySelectorAll() { return []; }, querySelector(tag) { return this.children?.find(node=>node.tagName===tag.toUpperCase()) ?? null; }};
     }
     for (const match of html.matchAll(/id="([^"]+)"/g)) elements.set(match[1], element(match[1]));
     const options = [...html.matchAll(/data-sort-field="([^"]+)"\s+data-sort-label="([^"]+)"/g)].map(match => {
@@ -27,9 +27,9 @@ function fixture(page) {
         modal.querySelectorAll = () => options;
         modal.querySelector = () => options[0];
     }
-    const listeners = {};
+    const listeners = {}, windowListeners = {};
     const document = {createElement: tag => Object.assign(element(), {tagName: tag.toUpperCase()}), getElementById: id => elements.get(id) || null, body: element(), addEventListener(name, handler) { listeners[name] = handler; }, querySelector: () => null};
-    const context = vm.createContext({document, window: {location: {href: `http://localhost/html/${page}.html`, origin: 'http://localhost', pathname: `/html/${page}.html`, search: ''}, scrollTo() {}, addEventListener() {}}, URL, IntersectionObserver: class { observe() {} unobserve() {} }, console, URLSearchParams, setTimeout, clearTimeout});
+    const context = vm.createContext({document, window: {location: {href: `http://localhost/html/${page}.html`, origin: 'http://localhost', pathname: `/html/${page}.html`, search: ''}, scrollTo() {}, addEventListener(name, handler) { windowListeners[name] = handler; }}, getComputedStyle: () => ({paddingLeft:'0',paddingRight:'0'}), URL, IntersectionObserver: class { observe() {} unobserve() {} }, console, URLSearchParams, setTimeout, clearTimeout});
     context.FormData = class {
         constructor() { this.values = new Map([...elements].filter(([id]) => /^pose.*Input$/.test(id)).map(([id, element]) => { const field = id.slice(4, -5); return [field[0].toLowerCase() + field.slice(1), element.value]; })); }
         delete(key) { this.values.delete(key); }
@@ -41,8 +41,17 @@ function fixture(page) {
     vm.runInContext(fs.readFileSync(`${root}js/sheet-swipe.js`, 'utf8'), context);
     vm.runInContext(fs.readFileSync(`${root}js/gallery-sort.js`, 'utf8'), context);
     vm.runInContext(fs.readFileSync(`${root}js/preview-media.js`, 'utf8'), context);
+    if (['add-pose','edit-pose'].includes(page)) {
+        context.location=context.window.location;
+        const section=element(); section.children=[];
+        section.appendChild(elements.get('poseImagePreviewContainer'));
+        const frame=elements.get('outputPageFrame'); frame.tagName='IFRAME'; frame.contentWindow={postMessage(){}};
+        elements.get('poseImagePicker').appendChild(frame);
+        vm.runInContext(fs.readFileSync(`${root}js/preview-editor.js`, 'utf8'), context);
+        context.PreviewEditor=context.window.PreviewEditor;
+    }
     vm.runInContext(fs.readFileSync(`${root}js/${page === 'index' ? 'app' : 'poses'}.js`, 'utf8'), context);
-    return {context, elements, options, listeners};
+    return {context, elements, options, listeners, windowListeners};
 }
 for (const page of ['index', 'poses']) {
     test(`${page}: sort sheet is interactive, toggles direction, resets pagination and updates indicators`, async () => {
@@ -398,87 +407,55 @@ test('confirmed Pose deletion prevents duplicate submissions, keeps failures ope
 });
 
 for (const page of ['add-pose','edit-pose']) {
-    test(`${page}: choose a ComfyUI output image from the preview and submit it as the default without losing existing images`, async () => {
-        const {context,elements,listeners}=fixture(page);
-        context.window.location.search='?id=7';
-        const dialog=elements.get('poseImagePicker');
-        dialog.showModal=()=>{dialog.open=true;}; dialog.close=()=>{dialog.open=false;};
-        let submitted;
-        context.fetch=async(url,options)=>{
-            if(options) { submitted=options.body; return {ok:true,json:async()=>({id:7})}; }
-            return {ok:true,json:async()=>url.includes('/output-images?')
-                ? {folder:'',page:0,hasMore:false,entries:[{name:'Latest image.png',path:'Latest image.png',directory:false}]}
-                : url.endsWith('/categories') ? [] : {id:7,name:'Existing',images:['/uploads/pose/old.png']}};
-        };
-        vm.runInContext('FormNavigation.finish=()=>{};',context);
-        await listeners.DOMContentLoaded();
-        const preview=elements.get('poseImagePreviewContainer');
-        await preview.handlers.click({target:{closest:()=>null},preventDefault(){}});
-        assert.equal(dialog.open,true);
-        const choices=elements.get('comfyOutputImages').children;
-        assert.equal(choices.length,1);
-        assert.match(choices[0].children[0].src,/thumbnail=true&size=1280&path=Latest%20image.png/);
-        choices[0].handlers.click();
-        assert.equal(dialog.open,false);
-        assert.equal(preview.children[0].src,'/api/poses/output-image?path=Latest%20image.png');
-        elements.get('poseNameInput').value='Pose';
-        await elements.get('poseForm').handlers.submit({preventDefault(){}});
-        assert.equal(submitted.get('outputImage'),'Latest image.png');
-        assert.equal(submitted.get('retainedImages'),page==='edit-pose'?'["/uploads/pose/old.png"]':'[]');
-    });
+    for (const path of ['Latest image.png','Video/Animation.mp4']) {
+        test(`${page}: output selection replaces the chosen slot and submits the complete pending preview list (${path})`, async () => {
+            const {context,elements,listeners,windowListeners}=fixture(page);
+            context.window.location.search='?id=7';
+            const dialog=elements.get('poseImagePicker');
+            dialog.showModal=()=>{dialog.open=true;}; dialog.close=()=>{dialog.open=false;};
+            let submitted;
+            context.fetch=async(url,options)=> {
+                if(options) {submitted=options.body;return {ok:true,json:async()=>({id:7})};}
+                return {ok:true,json:async()=>url.endsWith('/categories')?[]:{id:7,name:'Existing',images:['/uploads/pose/old.png','/uploads/pose/second.png']}};
+            };
+            vm.runInContext('FormNavigation.finish=()=>{};',context);
+            await listeners.DOMContentLoaded();
+            const before=vm.runInContext('posePreviewEditor.draft.entries.length',context);
+            assert.equal(before,page==='edit-pose'?2:0);
+            if(page==='edit-pose') vm.runInContext('posePreviewEditor.draft.navigate(1)',context);
+            const preview=elements.get('poseImagePreviewContainer');
+            if(page==='edit-pose') preview.parentElement.children.find(node=>node.className==='form-preview-actions').children.find(node=>node.textContent==='Replace selected').handlers.click({preventDefault(){},stopPropagation(){}});
+            else preview.handlers.click({target:preview});
+            assert.equal(dialog.open,true);
+            assert.equal(elements.get('outputPageFrame').src,'/html/output.html');
+            windowListeners.message({origin:'http://localhost',source:elements.get('outputPageFrame').contentWindow,data:{type:'output-select',path}});
+            assert.equal(dialog.open,false);
+            assert.equal(preview.children[0].tagName,path.endsWith('.mp4')?'VIDEO':'IMG');
+            elements.get('poseNameInput').value='Pose';
+            await elements.get('poseForm').handlers.submit({preventDefault(){}});
+            const manifest=JSON.parse(submitted.get('previewManifest'));
+            assert.equal(manifest.entries.length,page==='edit-pose'?2:1);
+            const selected=manifest.entries.at(-1);
+            assert.equal(selected.source,'output');assert.equal(selected.path,path);
+            if(page==='edit-pose') assert.equal(manifest.entries[0].path,'/uploads/pose/old.png');
+            assert.equal(submitted.get('outputImage'),undefined);
+            assert.equal(submitted.get('retainedImages'),undefined);
+        });
+    }
 }
 
-test('ComfyUI browser opens directly, shows errors and has no device upload step', async () => {
-    const {context,elements,listeners}=fixture('add-pose');
-    const dialog=elements.get('poseImagePicker');
-    dialog.showModal=()=>{dialog.open=true;}; dialog.close=()=>{dialog.open=false;};
-    context.fetch=async url=>url.includes('/output-images?')
-        ? {ok:false,text:async()=> 'ComfyUI output folder is unavailable'}
-        : {ok:true,json:async()=>[]};
+test('Pose forms keep their text and preview draft when the output picker is cancelled',async()=>{
+    const {context,elements,listeners,windowListeners}=fixture('add-pose');
+    const dialog=elements.get('poseImagePicker');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};
+    context.fetch=async()=>({ok:true,json:async()=>[]});
     await listeners.DOMContentLoaded();
-    await elements.get('poseImagePreviewContainer').handlers.click({target:{closest:()=>null},preventDefault(){}});
-    assert.match(elements.get('comfyOutputMessage').textContent,/folder is unavailable/);
+    elements.get('posePromptInput').value='Unsaved prompt';
+    const preview=elements.get('poseImagePreviewContainer');preview.handlers.click({target:preview});
+    windowListeners.message({origin:'http://localhost',source:elements.get('outputPageFrame').contentWindow,data:{type:'output-cancel'}});
+    assert.equal(dialog.open,false);assert.equal(elements.get('posePromptInput').value,'Unsaved prompt');
+    assert.equal(vm.runInContext('posePreviewEditor.draft.entries.length',context),0);
     assert.equal(elements.has('uploadPoseImage'),false);
-    assert.equal(elements.has('browseComfyOutput'),false);
-    elements.get('comfyOutputLayoutToggle').handlers.click();
-    assert.equal(elements.get('comfyOutputImages').classList.contains('double-column'),true);
-    assert.equal(elements.get('comfyOutputLayoutToggle').attrs['aria-pressed'],'true');
-    elements.get('comfyOutputLayoutToggle').handlers.click();
-    assert.equal(elements.get('comfyOutputImages').classList.contains('double-column'),false);
-    assert.equal(elements.get('comfyOutputLayoutToggle').attrs['aria-pressed'],'false');
 });
-
-
-for (const page of ['add-pose','edit-pose']) {
-    test(`${page}: ComfyUI video selection renders a video and submits the chosen default`, async () => {
-        const {context,elements,listeners}=fixture(page);
-        context.window.location.search='?id=7';
-        const dialog=elements.get('poseImagePicker');
-        dialog.showModal=()=>{dialog.open=true;}; dialog.close=()=>{dialog.open=false;};
-        let submitted;
-        context.fetch=async(url,options)=>{
-            if(options) { submitted=options.body; return {ok:true,json:async()=>({id:7})}; }
-            return {ok:true,json:async()=>url.includes('/output-images?')
-                ? {folder:'Video',page:0,hasMore:false,entries:[{name:'Animation.mp4',path:'Video/Animation.mp4',directory:false,video:true}]}
-                : url.endsWith('/categories') ? [] : {id:7,name:'Existing',images:['/uploads/pose/old.png']}};
-        };
-        vm.runInContext('FormNavigation.finish=()=>{};',context);
-        await listeners.DOMContentLoaded();
-        const preview=elements.get('poseImagePreviewContainer');
-        await preview.handlers.click({target:{closest:()=>null},preventDefault(){}});
-        const choice=elements.get('comfyOutputImages').children[0];
-        const video=choice.children.find(child=>child.tagName==='VIDEO');
-        assert.match(video.src,/thumbnail=false&size=1280&path=Video%2FAnimation.mp4/);
-        assert.equal(video.muted,true);
-        choice.handlers.click();
-        assert.equal(preview.children[0].tagName,'VIDEO');
-        assert.equal(preview.children[0].autoplay,true);
-        assert.equal(dialog.open,false);
-        elements.get('poseNameInput').value='Video pose';
-        await elements.get('poseForm').handlers.submit({preventDefault(){}});
-        assert.equal(submitted.get('outputImage'),'Video/Animation.mp4');
-    });
-}
 
 test('LoRA metadata sort controls toggle directions, reset pagination and use their exact backend fields', async () => {
     const {context,elements,options}=fixture('index');
@@ -498,7 +475,34 @@ test('LoRA metadata sort controls toggle directions, reset pagination and use th
     }
 });
 
-test('LoRA modal actions replace the edit icon, keep editing functional and leave Delete disabled',()=>{
+test('archiving retains the current gallery page, filters, sorting and scroll position', async () => {
+    const {context, windowListeners} = fixture('index');
+    const pages = [], scrolls = [];
+    context.window.scrollY = 840;
+    context.window.scrollX = 0;
+    context.window.scrollTo = position => scrolls.push(position);
+    context.recordPage = page => pages.push(page);
+    vm.runInContext('currentPage=3;totalPages=6;appliedBaseModelFilter="Illustrious";appliedSortBy="loraName";refreshFilterMetadata=async()=>{};refreshCurrentView=async()=>recordPage(currentPage);', context);
+    await windowListeners['library-archive-change']();
+    assert.deepEqual(pages, [3]);
+    assert.equal(vm.runInContext('currentPage', context), 3);
+    assert.equal(vm.runInContext('appliedBaseModelFilter', context), 'Illustrious');
+    assert.equal(vm.runInContext('appliedSortBy', context), 'loraName');
+    assert.equal(scrolls[0].top, 840);
+    assert.equal(scrolls[0].behavior, 'instant');
+});
+
+test('archiving the last item on the last page moves to the nearest remaining page', async () => {
+    const {context, windowListeners} = fixture('index');
+    const pages = [];
+    context.recordPage = page => pages.push(page);
+    vm.runInContext('currentPage=3;totalPages=4;refreshFilterMetadata=async()=>{};refreshCurrentView=async()=>{recordPage(currentPage);totalPages=3;};', context);
+    await windowListeners['library-archive-change']();
+    assert.deepEqual(pages, [3, 2]);
+    assert.equal(vm.runInContext('currentPage', context), 2);
+});
+
+test('LoRA modal actions keep editing functional and place Archive with its icon last',()=>{
     const {context,elements,listeners}=fixture('index');
     const menu=elements.get('loraDetailsActionsMenu'); menu.hidden=true;
     const wrapper=elements.get('loraDetailsMoreActions'); wrapper.contains=target=>['loraDetailsActionsButton','favoriteLoraDetailsButton','editLoraButton'].includes(target?.id);
@@ -515,8 +519,17 @@ test('LoRA modal actions replace the edit icon, keep editing functional and leav
     assert.equal(target.pathname,'/html/edit-lora.html');assert.equal(target.searchParams.get('id'),'17');
     assert.match(target.searchParams.get('returnTo'),/openLora=17/);
     assert.equal(menu.hidden,true);
-    assert.equal(elements.get('deleteLoraDetailsButton').handlers.click,undefined);
-    assert.match(fs.readFileSync(`${root}html/index.html`,'utf8'),/id="deleteLoraDetailsButton"[^>]*\bdisabled\b/);
+    assert.equal(elements.has('deleteLoraDetailsButton'),false);
+    assert.equal(elements.get('archiveLoraLabel').textContent,'Archive');
+    for (const page of ['index', 'character-gallery']) {
+        const html = fs.readFileSync(`${root}html/${page}.html`,'utf8');
+        assert.doesNotMatch(html,/id="deleteLoraDetailsButton"/);
+        assert.ok(html.indexOf('id="archiveLoraButton"') > html.indexOf('id="editLoraButton"'));
+        assert.match(html,/id="archiveLoraButton"[\s\S]*?<svg[\s\S]*?id="archiveLoraLabel"/);
+    }
+    trigger.handlers.click();
+    menu.handlers.keydown({key:'End',preventDefault(){}});
+    assert.equal(elements.get('archiveLoraButton').focused,true);
 });
 
 test('LoRA modal Favorite reuses the existing endpoint, updates modal state and refreshes the gallery',async()=>{
@@ -596,6 +609,109 @@ test('Pose modal favorite failure keeps its state, recovers the button and Escap
     assert.match(alerts[0],/Unavailable/);
     elements.get('poseDetailsActionsMenu').handlers.keydown({key:'Escape',preventDefault(){},stopPropagation(){}});
     assert.equal(elements.get('poseDetailsActionsMenu').hidden,true);
+});
+
+function poseCardMenuFixture() {
+    const f = fixture('poses');
+    const card = vm.runInContext('createPoseCard({id: 7, name: "Selected pose", favorite: true})', f.context);
+    const trigger = card.children.find(child => child.className === 'lora-card-actions-button');
+    const menu = card.children.find(child => child.className === 'lora-card-actions-menu');
+    menu.isConnected = trigger.isConnected = true;
+    menu.matches = () => Boolean(menu.open);
+    menu.showPopover = () => {menu.open = true;};
+    menu.hidePopover = () => {menu.open = false;};
+    trigger.getBoundingClientRect = () => ({top: 20, right: 300});
+    menu.getBoundingClientRect = () => ({width: 148, height: 160});
+    f.context.window.innerWidth = 320;
+    f.context.window.innerHeight = 640;
+    return {...f, card, trigger, menu};
+}
+
+test('Pose card menus open independently and support keyboard navigation, Escape and outside focus', () => {
+    const {context, card, trigger, menu} = poseCardMenuFixture();
+    card.handlers.click = () => assert.fail('Opening card actions must not open details');
+    let stopped = false;
+    trigger.handlers.click({stopPropagation() {stopped = true;}});
+    assert.equal(stopped, true);
+    assert.equal(menu.open, true);
+    assert.equal(trigger.attrs['aria-expanded'], 'true');
+    assert.equal(menu.children[0].focused, true);
+    context.document.activeElement = menu.children[0];
+    menu.handlers.keydown({key: 'ArrowDown', preventDefault() {}});
+    assert.equal(menu.children[1].focused, true);
+    menu.handlers.focusout({relatedTarget: menu.children[1]});
+    assert.equal(menu.open, true);
+    menu.handlers.keydown({key: 'Escape', preventDefault() {}, stopPropagation() {}});
+    assert.equal(menu.open, false);
+    assert.equal(trigger.focused, true);
+    trigger.handlers.keydown({key: 'ArrowUp', preventDefault() {}, stopPropagation() {}});
+    assert.equal(menu.children[2].focused, true);
+    menu.handlers.focusout({relatedTarget: {}});
+    assert.equal(menu.open, false);
+});
+
+test('Pose card Favorite and Edit target the selected card without loading its details', async () => {
+    const {context, trigger, menu} = poseCardMenuFixture();
+    const calls = [];
+    context.fetch = async (url, options) => {calls.push([url, options.method]); return {ok: true, json: async () => ({id: 7, favorite: false})};};
+    vm.runInContext('refreshCurrentView = async () => {}; currentPose = {id: 99};', context);
+    trigger.handlers.click({stopPropagation() {}});
+    await menu.children[0].handlers.click();
+    assert.deepEqual(calls, [['/api/poses/7/favorite', 'PATCH']]);
+    assert.equal(menu.open, false);
+    assert.equal(menu.children[0].disabled, false);
+    context.destination = null;
+    vm.runInContext('FormNavigation.go = url => {destination = url;}', context);
+    menu.children[1].handlers.click();
+    assert.equal(context.destination, '/html/edit-pose.html?id=7');
+    assert.equal(vm.runInContext('currentPose.id', context), 99);
+});
+
+test('Pose card Delete confirms the selected card and Cancel returns focus without deleting', () => {
+    const {context, elements, trigger, menu} = poseCardMenuFixture();
+    const dialog = elements.get('deletePoseDialog');
+    dialog.showModal = () => {dialog.open = true;};
+    dialog.close = () => {dialog.open = false;};
+    context.fetch = () => assert.fail('Opening or cancelling confirmation must not delete');
+    vm.runInContext('currentPose = {id: 99};', context);
+    trigger.handlers.click({stopPropagation() {}});
+    menu.children[2].handlers.click();
+    assert.equal(menu.open, false);
+    assert.equal(dialog.open, true);
+    assert.equal(vm.runInContext('poseToDelete.id', context), 7);
+    assert.match(elements.get('deletePosePrompt').textContent, /Selected pose/);
+    vm.runInContext('cancelDeletePose()', context);
+    assert.equal(dialog.open, false);
+    assert.equal(trigger.focused, true);
+    assert.equal(vm.runInContext('poseToDelete', context), null);
+});
+
+test('Pose modals pause background gallery videos without rewinding them or changing page scroll', () => {
+    const {context, elements} = fixture('poses');
+    const video = context.document.createElement('video');
+    video.currentTime = 17;
+    video.autoplay = true;
+    elements.get('poseList').querySelectorAll = () => [video];
+    context.window.scrollY = 720;
+    vm.runInContext('showModal("poseDetailsModal", true)', context);
+    assert.equal(video.paused, true);
+    assert.equal(video.autoplay, false);
+    assert.equal(video.currentTime, 17);
+    assert.equal(context.window.scrollY, 720);
+    vm.runInContext('showModal("poseDetailsModal", false)', context);
+    assert.equal(context.window.scrollY, 720);
+});
+
+test('Pose gallery videos cannot start playing behind an open modal', () => {
+    const {context, elements} = fixture('poses');
+    const card = vm.runInContext('createPoseCard({id: 1, name: "Video pose", filePath: "/preview.mp4"})', context);
+    const video = card.children[0];
+    assert.equal(video.tagName, 'VIDEO');
+    context.document.querySelector = () => elements.get('poseDetailsModal');
+    video.paused = false;
+    video.handlers.play();
+    assert.equal(video.paused, true);
+    assert.equal(video.autoplay, false);
 });
 
 test('Pose details reopen at the top after closing a scrolled modal and selecting another pose',async()=>{
@@ -780,25 +896,12 @@ test('Pose filter Apply and Reset synchronize the toolbar Favorites icon',async(
 });
 
 
-for (const page of ['add-pose', 'edit-pose']) {
-    test(`${page}: picker breadcrumbs navigate to an ancestor and reset pagination`, async () => {
-        const {context, elements, listeners} = fixture(page);
-        let requested;
-        context.fetch = async url => {
-            requested = url;
-            return {ok: true, json: async () => url.includes('/output-images?')
-                ? {folder: 'Images/Today', page: 2, hasMore: false, entries: []}
-                : url.endsWith('/categories') ? [] : {id:7,name:'Existing',images:[]}};
-        };
-        await listeners.DOMContentLoaded();
-        await vm.runInContext('loadComfyOutput("Images/Today", 2)', context);
-        const crumbs = elements.get('comfyOutputFolder').children;
-        assert.deepEqual(crumbs.map(c => c.textContent), ['ComfyUI output', '\u203a', 'Images', '\u203a', 'Today']);
-        assert.equal(crumbs[4].attrs['aria-current'], 'page');
-        await crumbs[2].handlers.click();
-        assert.match(requested, /folder=Images&page=0/);
-        assert.equal(elements.has('comfyOutputUp'), false);
-        assert.equal(elements.has('comfyOutputSingleColumn'), false);
+for (const page of ['add-pose','edit-pose']) {
+    test(`${page}: the output page is reused instead of duplicating browser controls in the form`,()=>{
+        const html=fs.readFileSync(`${root}html/${page}.html`,'utf8');
+        assert.match(html,/id="outputPageFrame"/);
+        assert.match(html,/preview-editor\.js/);
+        assert.doesNotMatch(html,/id="comfyOutputUp"|id="comfyOutputSingleColumn"/);
     });
 }
 
@@ -832,3 +935,164 @@ for (const library of ['index','poses']) {
         }
     });
 }
+
+test('Library startup after a sidebar arrival renders without requiring manual Refresh', async () => {
+    const f = fixture('index');
+    f.context.fetch = async url => ({ok:true, json:async()=> url.includes('filter-options') ? [] : {content:[],number:0,size:12,totalPages:0,totalElements:0}});
+    f.context.window.matchMedia = () => ({matches:false});
+    vm.runInContext('FormNavigation.restoreState = () => ({page:0, scrollY:0});', f.context);
+    await f.listeners.DOMContentLoaded();
+    assert.match(f.elements.get('loraList').innerHTML, /No LoRAs/);
+});
+
+test('Library runs Refresh after page load, startup and layout on initial visits and restores', async () => {
+    const f = fixture('index');
+    f.context.window.matchMedia = () => ({matches:false});
+    vm.runInContext('FormNavigation.restoreState = () => ({page:0, scrollY:0});', f.context);
+    const list = f.elements.get('loraList');
+    Object.defineProperty(list, 'innerHTML', {set() { this.children = []; }});
+    const card = {id:1, loraName:'Visible LoRA', filePath:null};
+    let releaseFirst, listingRequests = 0;
+    f.context.fetch = async (url, options) => {
+        if (url.includes('filter-options')) return {ok:true,json:async()=>[]};
+        assert.equal(options.cache, 'no-store');
+        listingRequests++;
+        if (listingRequests === 1) await new Promise(resolve => { releaseFirst = resolve; });
+        return {ok:true,json:async()=>({content:[card],number:0,size:12,totalPages:1,totalElements:1})};
+    };
+    const startup = f.listeners.DOMContentLoaded();
+    while (!releaseFirst) await new Promise(setImmediate);
+    let paint;
+    f.context.window.requestAnimationFrame = callback => { paint = callback; };
+    const shown = f.windowListeners.pageshow({persisted:false});
+    assert.equal(listingRequests, 1, 'pageshow must not race the initial request');
+    releaseFirst();
+    await startup;
+    await new Promise(setImmediate);
+    assert.equal(listingRequests, 1, 'Refresh must wait until initial layout');
+    assert.equal(typeof paint, 'function');
+    paint(); await shown;
+    assert.equal(listingRequests, 2, 'fresh visits and Gallery-to-Library arrivals run Refresh');
+    assert.equal(f.elements.get('refreshLorasLabel').textContent, 'Refresh');
+    f.context.window.requestAnimationFrame = callback => callback();
+    await f.windowListeners.pageshow({persisted:false});
+    assert.equal(listingRequests, 3, 'browser reloads also run Refresh');
+    await f.windowListeners.pageshow({persisted:true});
+    assert.equal(listingRequests, 4, 'back-forward restores also run Refresh');
+    assert.equal(f.elements.get('loraList').children.length, 1);
+    assert.match(f.elements.get('loraList').children.at(-1).innerHTML, /Visible LoRA/);
+});
+
+test('initial Library, Filter Reset and Wan filter render identical video cards through the shared response path', async () => {
+    const f = fixture('index'), urls = [];
+    const list = f.elements.get('loraList');
+    Object.defineProperty(list, 'innerHTML', {set() { this.children = []; }});
+    f.elements.get('searchInput').value = '';
+    f.context.fetch = async (url, options) => {
+        urls.push(url); assert.equal(options.cache, 'no-store');
+        return {ok:true,json:async()=>({content:[{id:1,loraName:'Wan video',filePath:'/preview.mp4'}],number:0,size:12,totalPages:1,totalElements:1})};
+    };
+    await vm.runInContext('refreshCurrentView()', f.context);
+    const initial = list.children[0].innerHTML;
+    await vm.runInContext('resetFilterSelection()', f.context);
+    assert.equal(urls[0], urls[1], 'Filter Reset uses the same unfiltered request as startup');
+    assert.equal(list.children[0].innerHTML, initial);
+    f.elements.get('baseModelFilter').value = 'Wan 2.2';
+    f.elements.get('categoryFilter').value = 'ALL';
+    f.elements.get('subcategoryFilter').value = 'ALL';
+    await vm.runInContext('applySelectedFilter()', f.context);
+    assert.match(urls[2], /baseModel=Wan/);
+    assert.equal(list.children[0].innerHTML, initial);
+    assert.doesNotMatch(initial, /<video\b[^>]*(?:\scontrols\b|\sposter=|#t=)/);
+});
+
+test('Library applies the saved default Base Model before its first request and manual filters still work', async () => {
+    const f = fixture('index'), urls = [];
+    f.context.window.LibrarySettings = {pageSize:12, defaultBaseModel:'Illustrious'};
+    f.context.window.matchMedia = () => ({matches:false});
+    vm.runInContext('FormNavigation.restoreState = () => ({page:3, scrollY:400, baseModel:"Wan 2.2", category:"STYLE", search:"old search"})',f.context);
+    f.context.fetch = async url => {
+        urls.push(url);
+        return {ok:true,json:async()=>({content:[],number:0,size:12,totalPages:0,totalElements:0})};
+    };
+    await f.listeners.DOMContentLoaded();
+    assert.equal(urls.length, 1);
+    assert.match(urls[0], /baseModel=Illustrious/);
+    assert.doesNotMatch(urls[0], /keyword|category=STYLE/);
+    assert.equal(f.elements.get('searchInput').value, '');
+    f.elements.get('baseModelFilter').value = 'Wan 2.2';
+    f.elements.get('categoryFilter').value = 'ALL'; f.elements.get('subcategoryFilter').value = 'ALL';
+    await vm.runInContext('applySelectedFilter()',f.context);
+    assert.match(urls[1], /baseModel=Wan/);
+    assert.equal(f.context.window.LibrarySettings.defaultBaseModel, 'Illustrious');
+});
+
+test('returning from an edit form retains its gallery filter instead of forcing the startup default', async () => {
+    const f = fixture('index'), urls = [];
+    f.context.window.LibrarySettings = {defaultBaseModel:'Illustrious'};
+    f.context.document.referrer = 'http://localhost/html/edit-lora.html?id=1';
+    vm.runInContext('FormNavigation.restoreState = () => ({page:0, baseModel:"Wan 2.2"})',f.context);
+    f.context.fetch = async url => {
+        urls.push(url); return {ok:true,json:async()=>({content:[],number:0,size:12,totalPages:0,totalElements:0})};
+    };
+    await f.listeners.DOMContentLoaded();
+    assert.match(urls[0], /baseModel=Wan/);
+});
+
+test('Library typing and Enter search from page one; clear and close restore filtered results', async () => {
+    const f = fixture('index'), requests = []; let pending;
+    f.context.window.setTimeout = callback => { pending = callback; return 1; };
+    f.context.window.clearTimeout = () => { pending = null; };
+    f.context.fetch = async url => {
+        if (url.includes('filter-options')) return {ok:true,json:async()=>[]};
+        requests.push(new URL(url,'http://localhost'));
+        return {ok:true,json:async()=>({content:[],number:0,size:12,totalPages:0,totalElements:0})};
+    };
+    vm.runInContext('appliedBaseModelFilter="Flux"; favoritesOnly=true; appliedSortBy="loraName"; appliedSortDirection="desc"; currentPage=4; setupSearch(); setupSearchOverlay();',f.context);
+    const input = f.elements.get('searchInput');
+    input.value = 'portrait'; input.handlers.input();
+    assert.equal(f.elements.get('clearSearchButton').disabled, false);
+    await pending();
+    assert.equal(requests[0].pathname, '/api/loras/search');
+    assert.equal(requests[0].searchParams.get('keyword'), 'portrait');
+    assert.equal(requests[0].searchParams.get('page'), '0');
+    assert.equal(requests[0].searchParams.get('baseModel'), 'Flux');
+    assert.equal(requests[0].searchParams.get('favorite'), 'true');
+    assert.equal(requests[0].searchParams.get('sortDirection'), 'desc');
+    input.value = 'landscape'; input.handlers.input();
+    await input.handlers.keydown({key:'Enter',preventDefault(){}});
+    assert.equal(pending, null);
+    assert.equal(requests.at(-1).searchParams.get('keyword'), 'landscape');
+    await f.elements.get('clearSearchButton').handlers.click();
+    assert.equal(input.value, ''); assert.equal(input.focused, true);
+    assert.equal(requests.at(-1).searchParams.has('keyword'), false);
+    assert.equal(requests.at(-1).searchParams.get('baseModel'), 'Flux');
+    await f.elements.get('closeSearchButton').handlers.click();
+    assert.equal(f.elements.get('searchOverlay').classList.contains('hidden'), true);
+    assert.equal(f.elements.get('searchIconButton').focused, true);
+});
+
+test('late search responses cannot overwrite a newer query or a cleared search', async () => {
+    const f = fixture('index'), waiting = new Map(), rendered = [];
+    const page = name => ({content:[{loraName:name}],number:0,size:12,totalPages:1,totalElements:1});
+    f.context.renderResponse = response => rendered.push(response.content[0].loraName);
+    vm.runInContext('displayPaginatedLoraResponse = renderResponse;',f.context);
+    f.context.fetch = url => {
+        const query = new URL(url,'http://localhost');
+        if (url.includes('filter-options')) return Promise.resolve({ok:true,json:async()=>[]});
+        const keyword = query.searchParams.get('keyword');
+        if (!keyword) return Promise.resolve({ok:true,json:async()=>page('All')});
+        return new Promise(resolve => waiting.set(keyword, resolve));
+    };
+    const input = f.elements.get('searchInput');
+    input.value = 'older'; const older = vm.runInContext('refreshCurrentView()',f.context);
+    input.value = 'newer'; const newer = vm.runInContext('refreshCurrentView()',f.context);
+    waiting.get('newer')({ok:true,json:async()=>page('Newer')}); await newer;
+    waiting.get('older')({ok:true,json:async()=>page('Older')}); await older;
+    assert.deepEqual(rendered, ['Newer']);
+    input.value = 'pending'; const stale = vm.runInContext('refreshCurrentView()',f.context);
+    await vm.runInContext('clearSearch({close:false})',f.context);
+    waiting.get('pending')({ok:true,json:async()=>page('Stale')}); await stale;
+    assert.deepEqual(rendered, ['Newer','All']);
+    assert.equal(vm.runInContext('isSearchActive',f.context),false);
+});

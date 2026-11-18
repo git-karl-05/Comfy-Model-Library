@@ -148,7 +148,7 @@ test('Refresh blocks duplicate clicks during loading and recovers after a metada
     assert.equal(f.elements.get('refreshLorasLabel').textContent, 'Refresh');
 });
 
-test('Backup below Refresh toggles accessible JSON actions without changing their handlers', () => {
+test('LoRA backup tools retain accessible JSON actions after moving into Settings', () => {
     const f = fixture();
     f.run('setupBackupExport(); setupBackupImport(); setupActionMenu();');
     const options = f.elements.get('backupOptions');
@@ -164,8 +164,8 @@ test('Backup below Refresh toggles accessible JSON actions without changing thei
     assert.equal(toggle.attrs['aria-expanded'], 'false');
     const html = fs.readFileSync('src/main/resources/static/html/index.html', 'utf8');
     assert.ok(html.indexOf('id="refreshLorasButton"') < html.indexOf('id="backupMenuButton"'));
-    assert.match(html, /Export \(JSON\)/);
-    assert.match(html, /Import \(JSON\)/);
+    assert.match(html, /Export LoRA Backup \(JSON\)/);
+    assert.match(html, /Import LoRA Backup \(JSON\)/);
 });
 
 
@@ -197,4 +197,31 @@ test('category is disabled until a base model is selected; Favorites is never a 
     f.elements.get('categoryFilter').handlers.change();
     assert.equal(visible('subcategoryFilter').length, 0);
     assert.equal(f.elements.get('subcategoryFilter').disabled, true);
+});
+
+test('search and clearing refresh gallery metadata/results from page one and scroll to the top', async () => {
+    const f = fixture(); let metadata = 0, results = 0, top;
+    f.context.window.scrollTo = value => { top = value.top; };
+    f.context.metadataRefresh = async () => { metadata++; };
+    f.context.resultRefresh = async () => { results++; };
+    f.run('refreshFilterMetadata = metadataRefresh; refreshCurrentView = resultRefresh; currentPage = 5;');
+    f.elements.get('searchInput').value = 'portrait';
+    await f.run('performSearchFromInput()');
+    assert.equal(metadata, 1); assert.equal(results, 1); assert.equal(top, 0);
+    assert.equal(f.run('currentPage'), 0);
+    await f.run('clearSearch({close: false})');
+    assert.equal(f.elements.get('searchInput').value, '');
+    assert.equal(f.elements.get('searchInput').focused, true);
+    assert.equal(metadata, 2); assert.equal(results, 2);
+});
+
+test('initial gallery cards render while filter choices are still loading', async () => {
+    const f = fixture(); let releaseMetadata, rendered = false;
+    f.context.loadMetadata = () => new Promise(resolve => { releaseMetadata = resolve; });
+    f.context.renderCards = async () => { rendered = true; };
+    f.run('refreshFilterMetadata = loadMetadata; refreshCurrentView = renderCards;');
+    const loading = f.run('refreshGalleryData()');
+    await new Promise(setImmediate);
+    assert.equal(rendered, true, 'slow filter metadata must not leave the card area empty');
+    releaseMetadata(); await loading;
 });

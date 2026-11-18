@@ -4,6 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const editor = document.getElementById("expandedFieldValue");
     let source = null;
     let opener = null;
+    let previousOverflow = "";
+    function sizeEditor() {
+        editor.style.height = "auto";
+        editor.style.height = `${editor.scrollHeight}px`;
+    }
     function close() {
         if (!source) return;
         source.value = editor.value;
@@ -11,8 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.classList.add("hidden");
         modal.setAttribute("aria-hidden", "true");
         modal.inert = true;
-        document.body.style.overflow = "";
-        opener?.focus();
+        document.body.style.overflow = previousOverflow;
+        opener?.focus({preventScroll: true});
         source = null;
     }
     document.querySelectorAll("[data-edit-copy]").forEach(button => {
@@ -44,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
         button.addEventListener("click", () => {
             source = document.getElementById(button.dataset.editExpand);
             opener = button;
+            previousOverflow = document.body.style.overflow;
             editor.value = source.value;
             document.getElementById("expandedFieldTitle").textContent = button.dataset.fieldLabel;
             editor.setAttribute("aria-label", button.dataset.fieldLabel);
@@ -51,9 +57,12 @@ document.addEventListener("DOMContentLoaded", () => {
             modal.classList.remove("hidden");
             modal.setAttribute("aria-hidden", "false");
             document.body.style.overflow = "hidden";
-            editor.focus();
+            sizeEditor();
+            editor.scrollTop = 0;
+            document.getElementById("closeExpandedFieldEditor").focus({preventScroll: true});
         });
     });
+    editor?.addEventListener("input", sizeEditor);
     document.getElementById("closeExpandedFieldEditor")?.addEventListener("click", close);
     modal?.addEventListener("click", event => { if (event.target === modal) close(); });
     modal?.addEventListener("keydown", event => {

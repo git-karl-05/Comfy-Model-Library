@@ -7,10 +7,11 @@ function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileSc
     if (sheetSwipeControllers.has(sheet)) return sheetSwipeControllers.get(sheet);
     let startX = 0, startY = 0, distance = 0;
     let tracking = false, dragging = false, settling = false, suppressClick = false;
-    let timer = null, clickTimer = null;
+    let timer = null, clickTimer = null, mousePointer = null;
     function reset() {
         clearTimeout(timer);
         timer = null;
+        mousePointer = null;
         tracking = dragging = settling = false;
         distance = 0;
         sheet.classList.remove("dragging");
@@ -39,7 +40,7 @@ function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileSc
             // Native controls retarget touches to VIDEO. Keep their bottom strip interactive.
             if (target.controls && event.touches[0].clientY >= target.getBoundingClientRect().bottom - 64) return;
         }
-        const handle = target.closest(".sheet-drag-handle, .filter-sheet-handle");
+        const handle = target.closest(".sheet-drag-handle, .filter-sheet-handle, [data-sheet-drag-handle]");
         if (scrollContainer?.scrollTop > 2 && !(handleWhileScrolled && handle)) return;
         startX = event.touches[0].clientX;
         startY = event.touches[0].clientY;
@@ -49,8 +50,11 @@ function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileSc
     sheet.addEventListener("touchmove", event => {
         if (!tracking) return;
         if (event.touches.length !== 1) { if (dragging) settle(false); else tracking = false; return; }
-        const dx = event.touches[0].clientX - startX;
-        const dy = event.touches[0].clientY - startY;
+        move(event.touches[0].clientX, event.touches[0].clientY, event);
+    }, {passive: false});
+    function move(clientX, clientY, event) {
+        const dx = clientX - startX;
+        const dy = clientY - startY;
         if (!dragging) {
             if (dy < -8 || (Math.abs(dx) >= 8 && Math.abs(dx) > Math.abs(dy))) { tracking = false; return; }
             if (dy < 8) return;
@@ -63,7 +67,33 @@ function setupSwipeDownToClose(sheet, scrollContainer, onDismiss, {handleWhileSc
         sheet.classList.add("dragging");
         sheet.style.transition = "none";
         sheet.style.transform = `translateY(${distance}px)`;
-    }, {passive: false});
+    }
+    sheet.addEventListener("pointerdown", event => {
+        if (!handleWhileScrolled || event.pointerType !== "mouse" || event.button !== 0 || settling) return;
+        if (event.target.closest('button, a, input, select, textarea, [role="button"], [contenteditable="true"]')) return;
+        if (!event.target.closest(".sheet-drag-handle, .filter-sheet-handle, [data-sheet-drag-handle]")) return;
+        event.preventDefault();
+        clearTimeout(clickTimer);
+        suppressClick = false;
+        startX = event.clientX;
+        startY = event.clientY;
+        distance = 0;
+        tracking = true;
+        mousePointer = event.pointerId;
+        sheet.setPointerCapture(event.pointerId);
+    });
+    sheet.addEventListener("pointermove", event => {
+        if (mousePointer === event.pointerId && tracking) move(event.clientX, event.clientY, event);
+    });
+    function finishMouse(event, cancelled) {
+        if (mousePointer !== event.pointerId) return;
+        mousePointer = null;
+        finish(cancelled);
+        if (sheet.hasPointerCapture(event.pointerId)) sheet.releasePointerCapture(event.pointerId);
+    }
+    sheet.addEventListener("pointerup", event => finishMouse(event, false));
+    sheet.addEventListener("pointercancel", event => finishMouse(event, true));
+    sheet.addEventListener("lostpointercapture", event => finishMouse(event, true));
     function finish(cancelled) {
         if (!tracking) return;
         tracking = false;

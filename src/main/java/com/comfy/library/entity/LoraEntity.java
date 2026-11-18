@@ -22,7 +22,7 @@ public class LoraEntity {
     private String groupName;
     @Column(length = 5000)
     private String prompt;
-    @Column(length = 5000)
+    @Lob
     private String positivePrompt;
     @Column(length = 5000)
     private String negativePrompt;
@@ -30,6 +30,11 @@ public class LoraEntity {
     @Column(length = 5000)
     private String notes;
     private boolean favorite;
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean archived;
+
+    public boolean isArchived() { return archived; }
+    public void setArchived(boolean archived) { this.archived = archived; }
     private String filePath;
 
     private String modelFilePath;

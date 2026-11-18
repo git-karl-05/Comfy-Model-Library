@@ -1,3 +1,4 @@
+let posePreviewEditor = null;
 const API_BASE_URL = "/api/poses";
 let currentPage = 0;
 window.addEventListener("library-page-size-change", () => {
@@ -16,6 +17,7 @@ let previewIndex = 0;
 let poseDetailsSwipe = null;
 let posePreviewSwipe = null;
 let poseToDelete = null;
+let poseDeleteReturnFocus = null;
 let deletingPose = false;
 let retainedImages = [];
 let selectedPoseFiles = [];
@@ -52,6 +54,10 @@ function showModal(id, open) {
     modal.inert = !open;
     modal.classList.toggle("hidden", !open);
     modal.setAttribute("aria-hidden", String(!open));
+    if (open) byId("poseList")?.querySelectorAll("video").forEach(video => {
+        video.autoplay = false;
+        video.pause();
+    });
     document.body.style.overflow = document.querySelector('.modal-overlay:not(.hidden), .filter-modal:not(.hidden)') ? "hidden" : "";
 }
 function message(id, text) {
@@ -106,6 +112,12 @@ function createPoseCard(pose) {
         img.className = "lora-card-image";
         img.alt = pose.name || "Pose preview";
         img.loading = "lazy";
+        if (img.tagName === "VIDEO") img.addEventListener("play", () => {
+            if (document.querySelector('.modal-overlay:not(.hidden), .filter-modal:not(.hidden)')) {
+                img.autoplay = false;
+                img.pause();
+            }
+        });
         card.appendChild(img);
     } else {
         const placeholder = document.createElement("div");
@@ -113,16 +125,7 @@ function createPoseCard(pose) {
         placeholder.textContent = "No Image";
         card.appendChild(placeholder);
     }
-    const favorite = document.createElement("button");
-    favorite.type = "button";
-    favorite.className = "favorite-button";
-    favorite.textContent = pose.favorite ? "★" : "☆";
-    favorite.setAttribute("aria-label", "Toggle favorite");
-    favorite.addEventListener("click", async event => {
-        event.stopPropagation();
-        try { await togglePoseFavorite(pose.id); }
-        catch (error) { window.alert(error.message); }
-    });
+    setupPoseCardActions(card, pose);
     const header = document.createElement("div");
     header.className = "lora-card-header";
     const meta = document.createElement("p");
@@ -131,10 +134,114 @@ function createPoseCard(pose) {
     const title = document.createElement("h2");
     title.textContent = pose.name || "Untitled Pose";
     header.append(meta, title);
-    card.append(favorite, header);
+    card.appendChild(header);
     card.addEventListener("click", () => openPoseDetails(pose.id));
     return card;
 }
+
+function setupPoseCardActions(card, pose) {
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "lora-card-actions-button";
+    trigger.title = "Pose actions";
+    trigger.setAttribute("aria-label", "Pose actions");
+    trigger.setAttribute("aria-haspopup", "menu");
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.setAttribute("aria-controls", `pose-card-actions-${pose.id}`);
+    trigger.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
+    const menu = document.createElement("div");
+    menu.id = `pose-card-actions-${pose.id}`;
+    menu.className = "lora-card-actions-menu";
+    menu.setAttribute("popover", "auto");
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-label", "Pose actions");
+    const item = (label, icon, action) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "compact-action-button";
+        button.dataset.action = action;
+        button.setAttribute("role", "menuitem");
+        const symbol = document.createElement("span");
+        symbol.className = "compact-action-icon";
+        symbol.setAttribute("aria-hidden", "true");
+        symbol.textContent = icon;
+        const text = document.createElement("span");
+        text.textContent = label;
+        button.append(symbol, text);
+        menu.appendChild(button);
+        return button;
+    };
+    const favorite = item(pose.favorite ? "Unfavorite" : "Favorite", pose.favorite ? "★" : "☆", "favorite");
+    favorite.setAttribute("role", "menuitemcheckbox");
+    favorite.setAttribute("aria-checked", String(Boolean(pose.favorite)));
+    const edit = item("Edit", "✏", "edit");
+    const remove = item("Delete", "🗑", "delete");
+    const items = [favorite, edit, remove];
+    function close(focus = false) {
+        if (menu.isConnected && menu.matches(":popover-open")) menu.hidePopover();
+        trigger.setAttribute("aria-expanded", "false");
+        if (focus && trigger.isConnected) trigger.focus();
+    }
+    function open(last = false) {
+        closePoseDetailsActions();
+        menu.showPopover();
+        trigger.setAttribute("aria-expanded", "true");
+        const anchor = trigger.getBoundingClientRect(), bounds = menu.getBoundingClientRect();
+        menu.style.left = `${Math.max(8, Math.min(anchor.right - bounds.width, window.innerWidth - bounds.width - 8))}px`;
+        menu.style.top = `${Math.max(8, Math.min(anchor.top, window.innerHeight - bounds.height - 8))}px`;
+        (last ? remove : favorite).focus();
+    }
+    trigger.addEventListener("click", event => {
+        event.stopPropagation();
+        if (menu.matches(":popover-open")) close(true);
+        else open();
+    });
+    trigger.addEventListener("keydown", event => {
+        if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+            event.preventDefault(); event.stopPropagation(); open(event.key === "ArrowUp");
+        }
+    });
+    menu.addEventListener("toggle", event => trigger.setAttribute("aria-expanded", String(event.newState === "open")));
+    menu.addEventListener("click", event => event.stopPropagation());
+    menu.addEventListener("focusout", event => {
+        if (event.relatedTarget && !menu.contains(event.relatedTarget)) close();
+    });
+    menu.addEventListener("keydown", event => {
+        if (event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation(); close(true);
+        } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+            event.preventDefault();
+            const enabled = items.filter(button => !button.disabled);
+            const current = enabled.indexOf(document.activeElement);
+            const next = event.key === "Home" ? 0 : event.key === "End" ? enabled.length - 1
+                : (current + (event.key === "ArrowUp" ? -1 : 1) + enabled.length) % enabled.length;
+            enabled[next]?.focus();
+        } else if (event.key === "Tab") close();
+    });
+    favorite.addEventListener("click", async () => {
+        if (favorite.disabled) return;
+        favorite.disabled = true;
+        try { await togglePoseFavorite(pose.id); close(true); }
+        catch (error) { window.alert(error.message); }
+        finally { favorite.disabled = false; }
+    });
+    edit.addEventListener("click", () => {
+        close();
+        FormNavigation.go(`/html/edit-pose.html?id=${pose.id}`);
+    });
+    remove.addEventListener("click", () => {
+        close();
+        requestDeletePose(pose, trigger);
+    });
+    card.append(trigger, menu);
+}
+
+function closePoseCardMenus() {
+    document.querySelectorAll(".lora-card-actions-menu:popover-open").forEach(menu => menu.hidePopover());
+}
+window.addEventListener("scroll", closePoseCardMenus, {capture: true, passive: true});
+window.addEventListener("resize", closePoseCardMenus);
+
 function updatePoseFilterButtons() {
     const count = Number(category !== "ALL");
     byId("filterCountBadge").textContent = count;
@@ -267,9 +374,13 @@ function setupPoseDetailsActions() {
 }
 
 function openDeletePoseDialog() {
-    if (!currentPose || deletingPose) return;
+    requestDeletePose(currentPose, byId("poseDetailsActionsButton"));
+}
+function requestDeletePose(pose, returnFocus) {
+    if (!pose || deletingPose) return;
     closePoseDetailsActions();
-    poseToDelete = {id: currentPose.id, name: currentPose.name};
+    poseToDelete = {id: pose.id, name: pose.name};
+    poseDeleteReturnFocus = returnFocus;
     byId("deletePosePrompt").textContent = `Are you sure you want to delete "${poseToDelete.name || "this pose"}"? This cannot be undone.`;
     message("deletePoseError", "");
     byId("deletePoseDialog").showModal();
@@ -279,7 +390,9 @@ function cancelDeletePose() {
     if (deletingPose) return;
     byId("deletePoseDialog").close();
     poseToDelete = null;
-    byId("poseDetailsActionsButton").focus();
+    if (poseDeleteReturnFocus?.isConnected !== false) poseDeleteReturnFocus?.focus();
+    else byId("openActionMenuButton").focus();
+    poseDeleteReturnFocus = null;
 }
 async function confirmDeletePose() {
     if (!poseToDelete || deletingPose) return;
@@ -302,6 +415,7 @@ async function confirmDeletePose() {
     }
     byId("deletePoseDialog").close();
     poseToDelete = null;
+    poseDeleteReturnFocus = null;
     showModal("poseDetailsModal", false);
     if (currentPage > 0 && byId("poseList").children.length <= 1) currentPage--;
     try {
@@ -395,6 +509,7 @@ function openPoseForm(pose = null) {
         byId(`pose${field[0].toUpperCase() + field.slice(1)}Input`).value = pose?.[field] ?? "";
     }
     retainedImages = pose ? [...poseImages(pose)] : [];
+    if (posePreviewEditor) posePreviewEditor.load(retainedImages.map((path, index) => ({source: "existing", ref: String(index), path, url: path})));
     selectedPoseFiles = [];
     selectedImageUrls.forEach(url => URL.revokeObjectURL(url));
     selectedImageUrls = [];
@@ -405,6 +520,7 @@ function openPoseForm(pose = null) {
     byId("poseNameInput").focus();
 }
 function renderExistingImages() {
+    if (posePreviewEditor) return;
     updatePoseImagePreview();
     const container = byId("poseExistingImages");
     if (window.location.pathname.endsWith("/edit-pose.html")) { container.replaceChildren(); return; }
@@ -482,8 +598,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         byId("backupOptions").classList.toggle("hidden", !expanded);
         byId("backupMenuButton").setAttribute("aria-expanded", String(expanded));
     });
-    const refreshFromStart = () => { currentPage = 0; return refreshCurrentView(); };
-    on("searchInput", () => { clearTimeout(searchTimer); searchTimer = setTimeout(refreshFromStart, 400); }, "input");
+    const refreshFromStart = async () => {
+        currentPage = 0;
+        const clear = byId("clearSearchButton");
+        if (clear) clear.disabled = !byId("searchInput").value;
+        try { await loadCategories(); } catch (error) { console.error("Unable to refresh categories", error); }
+        await refreshCurrentView();
+        window.scrollTo({top: 0, behavior: "instant"});
+    };
+    window.addEventListener("gallery-navigation-refresh", refreshFromStart);
+    on("clearSearchButton", () => {
+        clearTimeout(searchTimer); byId("searchInput").value = "";
+        byId("searchInput").focus(); return refreshFromStart();
+    });
+    on("searchInput", event => {
+        if (event.key === "Enter") { event.preventDefault(); clearTimeout(searchTimer); refreshFromStart(); }
+    }, "keydown");
+    on("searchInput", () => { const clear = byId("clearSearchButton"); if (clear) clear.disabled = !byId("searchInput").value; clearTimeout(searchTimer); searchTimer = setTimeout(refreshFromStart, 400); }, "input");
     on("searchIconButton", () => { byId("searchOverlay").classList.remove("hidden"); byId("searchInput").focus(); });
     on("closeSearchButton", () => { clearTimeout(searchTimer); byId("searchOverlay").classList.add("hidden"); byId("searchInput").value = ""; refreshFromStart(); });
     on("previousPageButton", () => { if (currentPage > 0) { currentPage--; refreshCurrentView(); } });
@@ -513,17 +644,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         byId("optionsButton").setAttribute("aria-expanded", String(open));
     }
     on("optionsButton", () => menu(true));
-    on("closeMenuButton", () => menu(false));
     on("menuBackdrop", () => menu(false));
     on("openActionMenuButton", () => {
         byId("actionMenuOverlay").classList.toggle("hidden");
         byId("openActionMenuButton").setAttribute("aria-expanded", String(!byId("actionMenuOverlay").classList.contains("hidden")));
+        window.GalleryMenus?.positionActionMenu();
     });
     on("actionMenuOverlay", event => { if (event.target === byId("actionMenuOverlay")) closeActions(); });
     on("addPoseActionButton", () => FormNavigation.go("/html/add-pose.html"));
     on("editPoseButton", () => { closePoseDetailsActions(); if (currentPose) FormNavigation.go(`/html/edit-pose.html?id=${currentPose.id}`); });
     for (const id of ["closePoseFormButton", "cancelPoseFormButton", "poseFormBackdrop"]) on(id, () => showModal("poseFormModal", false));
-    on("closePoseDetailsButton", () => showModal("poseDetailsModal", false));
     on("poseDetailsModal", event => { if (event.target === byId("poseDetailsModal")) showModal("poseDetailsModal", false); });
     on("previousPreviewButton", () => changePosePreview(-1));
     on("nextPreviewButton", () => changePosePreview(1));
@@ -610,7 +740,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         category = saved.category || "ALL";
         favorites = saved.favorites === "true" ? "true" : "ALL";
         byId("searchInput").value = saved.search || "";
-        if (saved.search) byId("searchOverlay").classList.remove("hidden");
+        if (saved.search) { byId("searchOverlay").classList.remove("hidden"); if (byId("clearSearchButton")) byId("clearSearchButton").disabled = false; }
         if (saved.doubleColumn) byId("doubleColumnButton").click();
         updatePoseFilterButtons();
         gallerySort.update();
@@ -634,6 +764,7 @@ function setupPoseSubmission() {
             data.delete("images");
             selectedPoseFiles.forEach(file => data.append("images", file));
         }
+        posePreviewEditor?.appendTo(data);
         const id = byId("poseIdInput").value;
         byId("savePoseButton").disabled = true;
         try {
@@ -659,7 +790,6 @@ async function setupPosePage() {
         byId("optionsButton").setAttribute("aria-expanded", String(open));
     }
     byId("optionsButton").addEventListener("click", () => menu(true));
-    byId("closeMenuButton").addEventListener("click", () => menu(false));
     byId("menuBackdrop").addEventListener("click", () => menu(false));
     byId("poseImagesInput").addEventListener("change", renderSelectedImages);
     setupPoseImagePicker();
@@ -696,6 +826,7 @@ function renderSelectedImages() {
 }
 
 function updatePoseImagePreview() {
+    if (posePreviewEditor) return;
     const container = byId("poseImagePreviewContainer");
     if (!container) return;
     container.querySelectorAll("video").forEach(video => video.pause());
@@ -767,6 +898,11 @@ window.addEventListener("pageshow", event => {
 
 
 function setupPoseImagePicker() {
+    if (window.PreviewEditor && byId("poseImagePreviewContainer")) {
+        posePreviewEditor = PreviewEditor.create({media: byId("poseImagePreviewContainer"), picker: byId("poseImagePicker"), disabled: window.location.pathname.endsWith("/edit-pose.html")});
+        window.addEventListener("pagehide", event => { if (!event.persisted) posePreviewEditor.destroy(); });
+        return;
+    }
     const picker = byId("poseImagePicker");
     if (!picker) return;
     const preview = byId("poseImagePreviewContainer"), frame = byId("outputPageFrame");

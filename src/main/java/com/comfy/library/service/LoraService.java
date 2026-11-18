@@ -239,6 +239,7 @@ public class LoraService {
     // UPDATE
     // =========================================================
 
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public LoraResponse updateLoraWithPreviewById(
             Long loraId,
             UpdateLoraRequest request,
@@ -293,6 +294,7 @@ public class LoraService {
             UpdateLoraRequest request,
             LoraEntity entity
     ) {
+        LoraModelFileRenamer.rename(entity, request.getLoraName(), objectMapper);
         entity.setLoraName(
                 request.getLoraName()
         );
@@ -418,7 +420,7 @@ public class LoraService {
 
     public List<LoraResponse> getAllLoras() {
         return loraRepository
-                .findAll()
+                .findByArchivedFalse()
                 .stream()
                 .map(LoraResponse::new)
                 .collect(
@@ -572,6 +574,7 @@ public class LoraService {
 
                     List<Predicate> predicates =
                             new ArrayList<>();
+                    predicates.add(criteriaBuilder.isFalse(root.get("archived")));
 
                     if (
                             keyword != null &&
@@ -667,7 +670,7 @@ public class LoraService {
 
         Page<LoraEntity> entityPage =
                 loraRepository
-                        .findByFavoriteTrue(
+                        .findByFavoriteTrueAndArchivedFalse(
                                 pageable
                         );
 
@@ -1763,7 +1766,7 @@ public class LoraService {
                 );
 
         Page<LoraEntity> entityPage =
-                loraRepository.findAll(
+                loraRepository.findByArchivedFalse(
                         pageable
                 );
 
@@ -1787,7 +1790,7 @@ public class LoraService {
                 );
 
         Page<LoraEntity> entityPage =
-                loraRepository.findByCategory(
+                loraRepository.findByCategoryAndArchivedFalse(
                         category,
                         pageable
                 );
@@ -1813,7 +1816,7 @@ public class LoraService {
 
         Page<LoraEntity> entityPage =
                 loraRepository
-                        .findByGroupNameIgnoreCase(
+                        .findByGroupNameIgnoreCaseAndArchivedFalse(
                                 groupName,
                                 pageable
                         );
@@ -1968,6 +1971,7 @@ public class LoraService {
 
             List<Predicate> predicates =
                     new ArrayList<>();
+            predicates.add(criteriaBuilder.isFalse(root.get("archived")));
 
             addBaseModelPredicate(
                     predicates,

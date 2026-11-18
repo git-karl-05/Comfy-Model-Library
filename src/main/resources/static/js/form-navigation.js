@@ -26,7 +26,14 @@ const FormNavigation = (() => {
         try { sessionStorage.setItem(key(), JSON.stringify({...stateProvider(), scrollY: window.scrollY})); } catch { /* Storage may be disabled. */ }
     }
     function restoreState() {
-        try { return JSON.parse(sessionStorage.getItem(key()) || "null"); } catch { return null; }
+        try {
+            const saved = JSON.parse(sessionStorage.getItem(key()) || "null");
+            if (sessionStorage.getItem("gallery-navigation-top") === window.location.pathname) {
+                sessionStorage.removeItem("gallery-navigation-top");
+                return {...saved, page: 0, scrollY: 0};
+            }
+            return saved;
+        } catch { return null; }
     }
     function formUrl(target, returnTarget) {
         saveState();
@@ -43,6 +50,21 @@ const FormNavigation = (() => {
         const link = event.target.closest("a[href]");
         if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target || link.hasAttribute("download")) return;
         const url = new URL(link.href, window.location.href);
+        if (url.origin === window.location.origin && link.classList?.contains("side-menu-link")) {
+            try { sessionStorage.setItem("gallery-navigation-top", url.pathname); } catch { /* Navigation still works without storage. */ }
+            if (url.pathname === window.location.pathname && url.search === window.location.search) {
+                event.preventDefault();
+                try { sessionStorage.removeItem("gallery-navigation-top"); } catch {}
+                document.getElementById("sideMenu")?.classList.add("hidden");
+                document.getElementById("sideMenu")?.setAttribute("aria-hidden", "true");
+                document.getElementById("menuBackdrop")?.classList.add("hidden");
+                document.getElementById("menuBackdrop")?.setAttribute("aria-hidden", "true");
+                document.getElementById("optionsButton")?.setAttribute("aria-expanded", "false");
+                document.body.classList.remove("menu-open");
+                window.dispatchEvent(new CustomEvent("gallery-navigation-refresh"));
+            }
+            return;
+        }
         if (url.origin === window.location.origin && formPaths.has(url.pathname)) {
             event.preventDefault();
             go(url.href);

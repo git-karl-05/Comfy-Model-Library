@@ -31,6 +31,17 @@
         previewCard?.focus({preventScroll: true});
         mediaArea().scrollTop = gridScroll;
     }
+    // Reopening the picker returns to the current output page, beside the latest
+    // selection, rather than leaving the previous full-screen preview open.
+    window.addEventListener("message", event => {
+        if (event.origin !== location.origin || event.source !== window.parent || event.data?.type !== "output-browse") return;
+        if (!previewOpen()) return;
+        const selectedPath = selected?.path;
+        closePreview(); previewOrigin = null;
+        const card = mediaEntries.find(item => item.entry.path === selectedPath)?.card;
+        const cardRect = card?.getBoundingClientRect?.(), areaRect = mediaArea().getBoundingClientRect?.();
+        if (cardRect && areaRect) mediaArea().scrollTop = Math.max(0, mediaArea().scrollTop + cardRect.top - areaRect.top - 16);
+    });
     function closeSelectedPreview() {
         const origin = previewOrigin;
         previewOrigin = null;

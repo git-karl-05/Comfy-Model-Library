@@ -4,11 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Edit Pose</title>
-    <link rel="stylesheet" href="/css/styles.css?v=uniform-filter-width-1">
-    <script src="/js/appearance-settings.js?v=settings-pagination-1"></script>
-    <script src="/js/edit-field-tools.js" defer></script>
-    <script src="/js/form-navigation.js" defer></script>
-    <script src="/js/poses.js?v=pose-picker-2" defer></script>
+    <link rel="stylesheet" href="/css/styles.css?v=settings-library-sections-2">
+    <script src="/js/appearance-settings.js?v=settings-library-sections-2"></script>
+    <script src="/js/edit-field-tools.js?v=expanded-text-2" defer></script>
+    <script src="/js/form-navigation.js?v=search-clear-visible-2" defer></script>
+    <script src="/js/poses.js?v=preview-editor-7" defer></script>
+    <script src="/js/gallery-header.js?v=shared-menu-alignment-2" defer></script>
+    <script src="/js/preview-media.js" defer></script>
+    <script src="/js/preview-editor.js?v=6" defer></script>
+    <script src="/js/application-settings.js?v=desktop-1" defer></script>
 </head>
 <body>
 <main class="edit-lora-page record-form-page">
@@ -16,39 +20,37 @@
         <header class="edit-lora-header">
             <button id="optionsButton" class="options-button" type="button" aria-label="Open navigation menu" aria-controls="sideMenu" aria-expanded="false">☰</button>
             <h1 id="poseFormTitle">Edit Pose</h1>
-            <button id="closePoseFormButton" class="page-close-button" type="button" aria-label="Cancel and return" title="Return to Pose Gallery"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
+            <button id="closePoseFormButton" class="page-close-button" type="button" aria-label="Cancel and return" title="Return to Gallery"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
         </header>
         <div id="menuBackdrop" class="menu-backdrop hidden" aria-hidden="true"></div>
         <nav id="sideMenu" class="side-menu hidden" aria-label="Main navigation" aria-hidden="true">
-            <div class="side-menu-header"><h2>Menu</h2><button id="closeMenuButton" class="menu-close-button" type="button" aria-label="Close navigation menu">×</button></div>
-            <a href="/html/index.html" class="side-menu-link">LoRA Library</a>
-            <a href="/html/poses.html" class="side-menu-link">Pose Gallery</a>
+            <div class="side-menu-header"><h2>Menu</h2></div>
+            <a href="/html/index.html" class="side-menu-link"><span class="compact-action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h5v16H4zM10 4h5v16h-5zM17 4l4 1-3 15-4-1z"/></svg></span><span>Library</span></a>
+            <a href="/html/poses.html" class="side-menu-link"><span class="compact-action-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></svg></span><span>Gallery</span></a>
         </nav>
         <form id="poseForm" class="edit-lora-form" enctype="multipart/form-data">
             <input id="poseIdInput" name="id" type="hidden">
             <section class="edit-image-section">
-                <label id="poseImagePreviewContainer" tabindex="0" role="button" aria-label="Choose pose preview from ComfyUI" class="details-image-container add-image-preview">
-                    <div class="lora-card-placeholder">Tap to choose from ComfyUI</div>
-                </label>
+                <div id="poseImagePreviewContainer" class="details-image-container add-image-preview"></div>
                 <input id="poseImagesInput" name="images" hidden disabled aria-hidden="true" class="hidden-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple>
                 <div id="poseSelectedImages" class="hidden" aria-live="polite"></div>
                 <div id="poseExistingImages" class="hidden"></div>
             </section>
             <section class="details-edit-grid edit-lora-details-grid">
-                <label class="details-edit-full-width">Pose Name
+                <label class="details-edit-full-width"><strong class="record-input-label">Pose Name</strong>
                     <input id="poseNameInput" name="name" class="details-edit-input" type="text" maxlength="255" required>
                 </label>
 
-                <label>Base Model
+                <label><strong class="record-input-label">Base Model</strong>
                     <input id="poseBaseModelInput" name="baseModel" class="details-edit-input" type="text" maxlength="255">
                 </label>
-                <label>Category
+                <label><strong class="record-input-label">Category</strong>
                     <input id="poseCategoryInput" name="category" class="details-edit-input" type="text" maxlength="255" list="poseCategorySuggestions">
                     <datalist id="poseCategorySuggestions"></datalist>
                 </label>
                 <div class="pose-seed-field">
                     <div class="details-field-header">
-                        <label for="poseSeedInput">Seed</label>
+                        <label for="poseSeedInput" class="details-field-label"><strong>Seed</strong></label>
                         <div class="details-field-actions"><button type="button" class="copy-field-button" data-edit-copy="poseSeedInput" data-copy-label="Copy Seed" aria-label="Copy Seed" title="Copy">⧉</button></div>
                     </div>
                     <input id="poseSeedInput" name="seed" class="details-edit-input" type="number" step="1" min="-2147483648" max="2147483647">

@@ -7,7 +7,7 @@ function fixture(href = 'https://library.test/html/poses.html?page=3#cards', ref
     const storage = new Map();
     const listeners = {};
     const context = vm.createContext({URL, URLSearchParams,
-        sessionStorage: {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)},
+        sessionStorage: {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key)},
         document: {referrer, addEventListener: (event, callback) => { listeners[event] = callback; }},
         window: {location: {...new URL(href).toJSON(), href, origin: new URL(href).origin, pathname: new URL(href).pathname, search: new URL(href).search,
             assign: url => calls.push(['assign', url]), replace: url => calls.push(['replace', url])},
@@ -44,4 +44,23 @@ test('referrer is accepted only when same-origin; an explicitly invalid return t
     assert.equal(fixture('https://library.test/html/add-pose.html', 'https://library.test/html/poses.html?q=1').run('FormNavigation.returnUrl()'), '/html/poses.html?q=1');
     assert.equal(fixture('https://library.test/html/add-pose.html', 'https://evil.test/').run('FormNavigation.returnUrl()'), '/html/index.html');
     assert.equal(fixture('https://library.test/html/add-pose.html?returnTo=https://evil.test/', 'https://library.test/html/poses.html').run('FormNavigation.returnUrl()'), '/html/index.html');
+});
+
+test('sidebar arrivals refresh from page one and the top while keeping filters', () => {
+    const f = fixture();
+    f.run('FormNavigation.register(() => ({page: 4, category: "Action"})); FormNavigation.formUrl("/html/add-pose.html"); sessionStorage.setItem("gallery-navigation-top", window.location.pathname)');
+    const state = JSON.parse(f.run('JSON.stringify(FormNavigation.restoreState())'));
+    assert.equal(state.page, 0); assert.equal(state.scrollY, 0); assert.equal(state.category, 'Action');
+    assert.equal(f.run('sessionStorage.getItem("gallery-navigation-top")'), undefined);
+});
+
+test('selecting the current sidebar page refreshes without reloading the document', () => {
+    const f = fixture(); let refreshed = 0, prevented = false;
+    f.context.CustomEvent = class { constructor(type) { this.type = type; } };
+    f.context.window.dispatchEvent = event => { assert.equal(event.type, 'gallery-navigation-refresh'); refreshed++; };
+    f.context.document.getElementById = () => null;
+    f.context.document.body = {classList: {remove(){}}};
+    const link = {href: f.context.window.location.href, classList: {contains: c => c === 'side-menu-link'}, hasAttribute: () => false};
+    f.listeners.click({target:{closest:()=>link},button:0,preventDefault(){prevented = true;}});
+    assert.equal(prevented, true); assert.equal(refreshed, 1);
 });
